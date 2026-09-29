@@ -73,10 +73,44 @@ export class ApiError extends Error {
   }
 }
 
+/** Safely parse JSON response with clear error messages if HTML or malformed data is returned */
+const parseJsonResponse = async <T>(response: Response): Promise<T> => {
+  const text = await response.text();
+  if (!text || !text.trim()) {
+    return undefined as T;
+  }
+  const trimmed = text.trim();
+  if (trimmed.startsWith('<') || trimmed.startsWith('<!DOCTYPE')) {
+    console.error(`[API Error] Received HTML response instead of JSON from: ${response.url}`, text.slice(0, 300));
+    throw new ApiError(
+      response.status,
+      `API server returned an HTML page instead of JSON (HTTP ${response.status}). ` +
+      `Please ensure your backend service on Railway is running and that VITE_API_URL is properly configured to your backend domain.`
+    );
+  }
+  try {
+    return JSON.parse(text) as T;
+  } catch (err) {
+    console.error(`[API Error] Failed to parse JSON from: ${response.url}`, err, text.slice(0, 300));
+    throw new ApiError(
+      response.status,
+      `Failed to parse server response as JSON (HTTP ${response.status}).`
+    );
+  }
+};
+
 /** Parse error response from FastAPI */
 const parseError = async (response: Response): Promise<ApiError> => {
   try {
-    const data = await response.json();
+    const text = await response.text();
+    const trimmed = text.trim();
+    if (trimmed.startsWith('<') || trimmed.startsWith('<!DOCTYPE')) {
+      return new ApiError(
+        response.status,
+        `Backend service returned an HTML error page (HTTP ${response.status}). The backend on Railway may be starting up, crashed, or unreachable.`
+      );
+    }
+    const data = JSON.parse(text);
     const detail =
       typeof data.detail === 'string'
         ? data.detail
@@ -137,9 +171,14 @@ const fetchCsrfToken = async (): Promise<string | null> => {
     }).then(async (res) => {
       csrfPromise = null;
       if (res.ok) {
-        const data = await res.json();
-        csrfToken = data.csrf_token || getCookie('csrf_token');
-        return csrfToken;
+        try {
+          const text = await res.text();
+          if (text.trim().startsWith('{')) {
+            const data = JSON.parse(text);
+            csrfToken = data.csrf_token || getCookie('csrf_token');
+            return csrfToken;
+          }
+        } catch {}
       }
       return null;
     }).catch(() => {
@@ -242,7 +281,7 @@ export const apiGet = async <T>(path: string): Promise<T> => {
     headers: buildHeaders(),
     credentials: 'include',
   });
-  return response.json() as Promise<T>;
+  return parseJsonResponse<T>(response);
 };
 
 /** GET request that returns text/html */
@@ -267,7 +306,7 @@ export const apiPost = async <T>(path: string, body?: unknown): Promise<T> => {
   if (response.status === 204) {
     return undefined as T;
   }
-  return response.json() as Promise<T>;
+  return parseJsonResponse<T>(response);
 };
 
 /** Core POST request with FormData (multipart/form-data) */
@@ -278,7 +317,7 @@ export const apiPostFormData = async <T>(path: string, formData: FormData): Prom
     credentials: 'include',
     body: formData,
   });
-  return response.json() as Promise<T>;
+  return parseJsonResponse<T>(response);
 };
 
 /** Core PATCH request (JSON body) */
@@ -289,7 +328,7 @@ export const apiPatch = async <T>(path: string, body?: unknown): Promise<T> => {
     credentials: 'include',
     body: body !== undefined ? JSON.stringify(body) : undefined,
   });
-  return response.json() as Promise<T>;
+  return parseJsonResponse<T>(response);
 };
 
 /** Core PATCH request with FormData (multipart) */
@@ -300,7 +339,7 @@ export const apiPatchFormData = async <T>(path: string, formData: FormData): Pro
     credentials: 'include',
     body: formData,
   });
-  return response.json() as Promise<T>;
+  return parseJsonResponse<T>(response);
 };
 
 /** Core PUT request (JSON body) */
@@ -311,7 +350,7 @@ export const apiPut = async <T>(path: string, body?: unknown): Promise<T> => {
     credentials: 'include',
     body: body !== undefined ? JSON.stringify(body) : undefined,
   });
-  return response.json() as Promise<T>;
+  return parseJsonResponse<T>(response);
 };
 
 /** Core DELETE request */
@@ -325,7 +364,7 @@ export const apiDelete = async <T>(path: string): Promise<T> => {
   if (response.status === 204) {
     return undefined as T;
   }
-  return response.json() as Promise<T>;
+  return parseJsonResponse<T>(response);
 };
 
 /** Get response as Blob (for PDF downloads) */
