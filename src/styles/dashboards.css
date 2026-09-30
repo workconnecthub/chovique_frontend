@@ -2704,23 +2704,74 @@
 }
 
 .admin-mobile-logo-img {
-  width: 26px;
-  height: 26px;
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
   border: 1px solid #c9a84c;
   object-fit: contain;
 }
 
+.admin-mobile-brand-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  line-height: 1;
+}
+
 .admin-mobile-logo-text {
   font-family: var(--font-display, 'Playfair Display', serif);
-  font-size: 1.05rem;
+  font-size: 0.98rem;
   font-weight: 800;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.12em;
   color: #c9a84c;
   background: linear-gradient(135deg, #c9a84c 0%, #e5c875 50%, #c9a84c 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+  line-height: 1.1;
+}
+
+.admin-mobile-brand-role {
+  font-size: 0.54rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: #e5c875;
+  background: rgba(201, 168, 76, 0.16);
+  border: 1px solid rgba(201, 168, 76, 0.4);
+  padding: 1px 5px;
+  border-radius: 4px;
+  margin-top: 1px;
+  line-height: 1.1;
+  display: inline-block;
+}
+
+.admin-mobile-view-store-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  height: 30px;
+  padding: 0 8px;
+  background: rgba(201, 168, 76, 0.12);
+  border: 1px solid rgba(201, 168, 76, 0.35);
+  border-radius: 6px;
+  color: #e5c875;
+  cursor: pointer;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.admin-mobile-view-store-btn:hover,
+.admin-mobile-view-store-btn:active {
+  background: rgba(201, 168, 76, 0.25);
+  border-color: #c9a84c;
+  color: #ffffff;
+  transform: translateY(-1px);
 }
 
 .admin-mobile-role-pill {

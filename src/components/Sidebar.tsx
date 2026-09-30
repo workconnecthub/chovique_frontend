@@ -53,7 +53,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, onReq
   const navigate = useNavigate();
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
   const [isOpen, setIsOpen] = useState(false);
-  const [showAllModules, setShowAllModules] = useState(false);
   const drawerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -145,6 +144,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, onReq
   // Mobile Remaining Items for Hamburger Toggle
   const adminRemainingItems = [
     { id: 'categories', label: 'Categories', icon: FolderTree },
+    { id: 'delivery-boys', label: 'Delivery Management', icon: Bike },
     { id: 'coupons', label: 'Coupons & Discounts', icon: Tag },
     { id: 'reward-settings', label: 'Reward Coins System', icon: Coins },
     { id: 'home-mgmt', label: 'Banner & Carousel', icon: Image },
@@ -202,7 +202,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, onReq
             <Menu size={22} color="#c9a84c" />
           </button>
 
-          {/* Center: Brand logo + "CHOVIQUE" + Role Badge */}
+          {/* Center: Brand logo + "CHOVIQUE" + Role Badge stacked down of branding */}
           <div
             className="admin-mobile-topnav-logo"
             onClick={() => handleTabSelect(role === 'superadmin' ? 'enterprise' : 'dashboard')}
@@ -216,12 +216,25 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, onReq
                 (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1548907040-4d42b52115ca?auto=format&fit=crop&w=100&q=80';
               }}
             />
-            <span className="admin-mobile-logo-text">CHOVIQUE</span>
-            <span className="admin-mobile-role-pill">{roleLabel}</span>
+            <div className="admin-mobile-brand-stack">
+              <span className="admin-mobile-logo-text">CHOVIQUE</span>
+              <span className="admin-mobile-brand-role">{role === 'superadmin' ? 'SUPERADMIN' : 'ADMIN'}</span>
+            </div>
           </div>
 
-          {/* Right: Notification dropdown + User avatar link */}
+          {/* Right: View Public Store button + Notification dropdown + User avatar link */}
           <div className="admin-mobile-topnav-right">
+            <button
+              type="button"
+              onClick={() => navigate('/')}
+              className="admin-mobile-view-store-btn"
+              title="View Public Store"
+              aria-label="View Public Store"
+            >
+              <ExternalLink size={13} />
+              <span>Store</span>
+            </button>
+
             <NotificationHeaderDropdown
               onNavigateTab={handleTabSelect}
               isSuperadmin={role === 'superadmin'}
@@ -254,7 +267,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, onReq
       )}
 
       {/* ══════════════════════════════════════════════════════════════
-          MOBILE HAMBURGER DRAWER (Remaining Items + Account Tools)
+          MOBILE HAMBURGER DRAWER (Non-redundant Workspace Modules)
           ══════════════════════════════════════════════════════════════ */}
       {isMobile && (
         <aside
@@ -264,7 +277,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, onReq
         >
           {/* Drawer Header */}
           <div className="admin-drawer-header">
-            <div className="admin-drawer-user-info">
+            <div
+              className="admin-drawer-user-info"
+              onClick={() => handleTabSelect('profile')}
+              style={{ cursor: 'pointer' }}
+              title="View Profile"
+            >
               <div className="admin-drawer-avatar">
                 {avatarUrl ? (
                   <img src={avatarUrl} alt={user?.name || 'Admin'} referrerPolicy="no-referrer" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
@@ -298,10 +316,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, onReq
 
           {/* Drawer Scrollable Content */}
           <div className="admin-drawer-body">
-            {/* Section 1: Remaining Workspace Modules */}
+            {/* Workspace Modules (Only items not already in bottom or top nav) */}
             <div className="admin-drawer-section">
               <div className="admin-drawer-section-title">
-                <span>REMAINING MODULES</span>
+                <span>MODULES</span>
                 <span className="admin-drawer-badge">{remainingItems.length}</span>
               </div>
               <div className="admin-drawer-items-list">
@@ -322,97 +340,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, onReq
                     </button>
                   );
                 })}
-              </div>
-            </div>
-
-            {/* Section 2: All Workspace Modules (Collapsible) */}
-            <div className="admin-drawer-section">
-              <button
-                type="button"
-                className="admin-drawer-section-toggle"
-                onClick={() => setShowAllModules(!showAllModules)}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <Layers size={14} color="#c9a84c" />
-                  <span>ALL MODULES ({desktopItems.length})</span>
-                </div>
-                {showAllModules ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-              </button>
-
-              {showAllModules && (
-                <div className="admin-drawer-items-list" style={{ marginTop: '8px' }}>
-                  {desktopItems.map((item) => {
-                    const Icon = item.icon;
-                    const isActive = activeTab === item.id;
-                    return (
-                      <button
-                        key={`all-${item.id}`}
-                        onClick={() => handleTabSelect(item.id)}
-                        className={`admin-drawer-item ${isActive ? 'active' : ''}`}
-                      >
-                        <div className="admin-drawer-item-icon">
-                          <Icon size={18} />
-                        </div>
-                        <span className="admin-drawer-item-label">{item.label}</span>
-                        {isActive && <div className="admin-drawer-item-dot" />}
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-
-            {/* Section 3: Account & Quick Navigation */}
-            <div className="admin-drawer-section">
-              <div className="admin-drawer-section-title">
-                <span>ACCOUNT & STORE</span>
-              </div>
-              <div className="admin-drawer-items-list">
-                <button
-                  onClick={() => {
-                    setIsOpen(false);
-                    navigate('/');
-                  }}
-                  className="admin-drawer-item"
-                >
-                  <div className="admin-drawer-item-icon">
-                    <ExternalLink size={18} />
-                  </div>
-                  <span className="admin-drawer-item-label">View Public Store</span>
-                </button>
-
-                <button
-                  onClick={() => handleTabSelect('notifications')}
-                  className={`admin-drawer-item ${activeTab === 'notifications' ? 'active' : ''}`}
-                >
-                  <div className="admin-drawer-item-icon">
-                    <Bell size={18} />
-                  </div>
-                  <span className="admin-drawer-item-label">Notifications</span>
-                  {activeTab === 'notifications' && <div className="admin-drawer-item-dot" />}
-                </button>
-
-                <button
-                  onClick={() => handleTabSelect('profile')}
-                  className={`admin-drawer-item ${(activeTab === 'profile' || activeTab === 'change-password') ? 'active' : ''}`}
-                >
-                  <div className="admin-drawer-item-icon">
-                    <UserIcon size={18} />
-                  </div>
-                  <span className="admin-drawer-item-label">My Account</span>
-                  {(activeTab === 'profile' || activeTab === 'change-password') && <div className="admin-drawer-item-dot" />}
-                </button>
-
-                <button
-                  onClick={() => handleTabSelect(role === 'superadmin' ? 'audit-logs' : 'activity-logs')}
-                  className={`admin-drawer-item ${(activeTab === 'audit-logs' || activeTab === 'activity-logs') ? 'active' : ''}`}
-                >
-                  <div className="admin-drawer-item-icon">
-                    <FileClock size={18} />
-                  </div>
-                  <span className="admin-drawer-item-label">Activity & Audit Logs</span>
-                  {(activeTab === 'audit-logs' || activeTab === 'activity-logs') && <div className="admin-drawer-item-dot" />}
-                </button>
               </div>
             </div>
           </div>
