@@ -18,6 +18,9 @@ import {
   Download,
   CheckCircle,
   ShieldCheck,
+  ExternalLink,
+  Compass,
+  UserPlus,
 } from 'lucide-react';
 import { adminService } from '../../services/adminService';
 import { exportToCSV } from '../../utils/exportCsv';
@@ -230,6 +233,26 @@ export const CustomerDirectory: React.FC<CustomerDirectoryProps> = ({
   } | null>(null);
   const [isConfirming, setIsConfirming] = useState(false);
 
+  // Add Customer Modal State
+  const [isAddCustomerOpen, setIsAddCustomerOpen] = useState(false);
+  const [isSubmittingCustomer, setIsSubmittingCustomer] = useState(false);
+  const [addCustomerForm, setAddCustomerForm] = useState({
+    full_name: '',
+    email: '',
+    phone: '',
+    password: '',
+    gender: '',
+    house_number: '',
+    street: '',
+    area: '',
+    landmark: '',
+    city: '',
+    district: '',
+    state: 'Telangana',
+    zip: '',
+    is_active: true,
+  });
+
   // Fetch paginated customer directory & summary statistics from DB
   const fetchCustomersList = useCallback(async () => {
     const currentReqId = ++reqIdRef.current;
@@ -294,6 +317,68 @@ export const CustomerDirectory: React.FC<CustomerDirectoryProps> = ({
 
   const handleSelectCustomer = (cust: any) => {
     setSelectedCustomerId(cust.id);
+  };
+
+  const handleAddCustomerSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!addCustomerForm.full_name.trim()) {
+      addToast('error', 'Full name is required.', 'Validation Error');
+      return;
+    }
+    if (!addCustomerForm.email.trim()) {
+      addToast('error', 'Email is required.', 'Validation Error');
+      return;
+    }
+    setIsSubmittingCustomer(true);
+    try {
+      const res = await adminService.createCustomer({
+        full_name: addCustomerForm.full_name.trim(),
+        email: addCustomerForm.email.trim().toLowerCase(),
+        phone: addCustomerForm.phone.trim() || undefined,
+        password: addCustomerForm.password.trim() || undefined,
+        gender: addCustomerForm.gender.trim() || undefined,
+        house_number: addCustomerForm.house_number.trim() || undefined,
+        street: addCustomerForm.street.trim() || undefined,
+        area: addCustomerForm.area.trim() || undefined,
+        landmark: addCustomerForm.landmark.trim() || undefined,
+        city: addCustomerForm.city.trim() || undefined,
+        district: addCustomerForm.district.trim() || undefined,
+        state: addCustomerForm.state.trim() || undefined,
+        zip: addCustomerForm.zip.trim() || undefined,
+        is_active: addCustomerForm.is_active,
+      });
+
+      addToast('success', `Customer ${(res?.user as any)?.full_name || addCustomerForm.full_name} created successfully!`, 'Customer Added');
+      setIsAddCustomerOpen(false);
+      setAddCustomerForm({
+        full_name: '',
+        email: '',
+        phone: '',
+        password: '',
+        gender: '',
+        house_number: '',
+        street: '',
+        area: '',
+        landmark: '',
+        city: '',
+        district: '',
+        state: 'Telangana',
+        zip: '',
+        is_active: true,
+      });
+      await fetchCustomersList();
+      if (onRefreshUsers) {
+        await onRefreshUsers();
+      }
+      if (res?.user?.id) {
+        setSelectedCustomerId(res.user.id);
+      }
+    } catch (err: any) {
+      console.error('Failed to create customer:', err);
+      addToast('error', err?.detail || err?.message || 'Failed to create customer account.', 'Creation Failed');
+    } finally {
+      setIsSubmittingCustomer(false);
+    }
   };
 
   // Initiate Toggle Active/Deactivate confirmation
@@ -384,14 +469,32 @@ export const CustomerDirectory: React.FC<CustomerDirectoryProps> = ({
   const totalSpentAmount = customerDetails?.total_spent != null ? customerDetails.total_spent : (customerOrdersList.length > 0 ? customerOrdersList.filter((o: any) => o.status !== 'Cancelled').reduce((sum: number, o: any) => sum + (o.total || 0), 0) : (selectedCust?.total_spent ?? 0));
   const totalRewardCoins = customerDetails?.reward_coins != null ? customerDetails.reward_coins : (selectedCust?.reward_coins ?? 0);
 
-  // Address Extraction
+  // Address Extraction (Version 2 Logistics & Precision Location)
   const defaultAddr = customerDetails?.default_address || (customerDetails?.addresses && customerDetails.addresses.length > 0 ? customerDetails.addresses[0] : null);
+  const addrHouseNumber = defaultAddr?.house_number || '';
   const addrStreet = defaultAddr?.street || defaultAddr?.address || customerDetails?.user?.profile?.address?.street || '';
+  const addrArea = defaultAddr?.area || '';
+  const addrLandmark = defaultAddr?.landmark || '';
   const addrCity = defaultAddr?.city || customerDetails?.user?.profile?.address?.city || '';
+  const addrDistrict = defaultAddr?.district || '';
   const addrState = defaultAddr?.state || customerDetails?.user?.profile?.address?.state || '';
-  const addrZip = defaultAddr?.zip || defaultAddr?.zip_code || defaultAddr?.pincode || customerDetails?.user?.profile?.address?.zip || '';
+  const addrZip = defaultAddr?.pincode || defaultAddr?.zip || defaultAddr?.zip_code || customerDetails?.user?.profile?.address?.zip || '';
   const addrPhone = defaultAddr?.phone || selectedCust?.phone || '';
-  const hasAddress = Boolean(addrStreet || addrCity || addrState || addrZip);
+  const addrLat = defaultAddr?.latitude != null ? Number(defaultAddr.latitude) : null;
+  const addrLng = defaultAddr?.longitude != null ? Number(defaultAddr.longitude) : null;
+  const addrFormatted = defaultAddr?.formatted_address || defaultAddr?.formattedAddress || '';
+  const addrLocationSource = defaultAddr?.location_source || defaultAddr?.locationSource || (addrLat != null ? 'CURRENT_LOCATION' : 'MANUAL');
+  const hasAddress = Boolean(addrHouseNumber || addrStreet || addrCity || addrState || addrZip);
+
+  // Authoritative Google Maps URL
+  const googleMapsUrl =
+    addrLat != null && addrLng != null
+      ? `https://www.google.com/maps/search/?api=1&query=${addrLat},${addrLng}`
+      : hasAddress
+      ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+          [addrHouseNumber, addrStreet, addrArea, addrCity, addrState, addrZip].filter(Boolean).join(', ')
+        )}`
+      : null;
 
   const [isRefreshing, setIsRefreshing] = useState(false);
 
@@ -424,21 +527,38 @@ export const CustomerDirectory: React.FC<CustomerDirectoryProps> = ({
           <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '2.4rem', color: 'var(--cream)', margin: 0 }}>
             Customer Directory
           </h1>
-          <button
-            onClick={handleManualRefresh}
-            disabled={isRefreshing}
-            style={{
-              display: 'flex', alignItems: 'center', gap: '8px',
-              padding: '9px 16px', borderRadius: '6px', fontSize: '0.82rem', fontWeight: 600,
-              cursor: isRefreshing ? 'not-allowed' : 'pointer',
-              border: '1px solid rgba(201,168,76,0.35)',
-              background: 'rgba(201,168,76,0.08)', color: 'var(--gold)',
-              opacity: isRefreshing ? 0.7 : 1,
-            }}
-          >
-            <RefreshCw size={14} style={{ animation: isRefreshing ? 'spin 1s linear infinite' : 'none' }} />
-            {isRefreshing ? 'Refreshing...' : 'Refresh Directory'}
-          </button>
+          <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+            <button
+              onClick={() => setIsAddCustomerOpen(true)}
+              style={{
+                display: 'flex', alignItems: 'center', gap: '8px',
+                padding: '9px 18px', borderRadius: '6px', fontSize: '0.82rem', fontWeight: 600,
+                cursor: 'pointer',
+                border: 'none',
+                background: 'var(--gold)', color: '#0e0a06',
+                boxShadow: '0 2px 10px rgba(201,168,76,0.3)',
+                transition: 'all 0.2s ease',
+              }}
+            >
+              <UserPlus size={15} />
+              Add Customer
+            </button>
+            <button
+              onClick={handleManualRefresh}
+              disabled={isRefreshing}
+              style={{
+                display: 'flex', alignItems: 'center', gap: '8px',
+                padding: '9px 16px', borderRadius: '6px', fontSize: '0.82rem', fontWeight: 600,
+                cursor: isRefreshing ? 'not-allowed' : 'pointer',
+                border: '1px solid rgba(201,168,76,0.35)',
+                background: 'rgba(201,168,76,0.08)', color: 'var(--gold)',
+                opacity: isRefreshing ? 0.7 : 1,
+              }}
+            >
+              <RefreshCw size={14} style={{ animation: isRefreshing ? 'spin 1s linear infinite' : 'none' }} />
+              {isRefreshing ? 'Refreshing...' : 'Refresh Directory'}
+            </button>
+          </div>
         </div>
       </div>
 
@@ -854,25 +974,41 @@ export const CustomerDirectory: React.FC<CustomerDirectoryProps> = ({
                       </div>
                     </div>
 
-                    {/* Customer Default Address Section */}
+                    {/* Customer Default Address Section (V2 Logistics & Maps) */}
                     <div style={{ background: 'rgba(255,255,255,0.025)', padding: '14px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.06)' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', flexWrap: 'wrap', gap: '6px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.72rem', color: 'var(--gold)', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 700 }}>
                           <MapPin size={13} /> Default Delivery Address
                         </div>
-                        {hasAddress && (
-                          <span style={{ fontSize: '0.65rem', fontWeight: 700, padding: '2px 7px', borderRadius: '4px', background: 'rgba(46,204,113,0.15)', color: '#2ecc71', border: '1px solid rgba(46,204,113,0.3)' }}>
-                            DEFAULT
-                          </span>
-                        )}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          {addrLat != null && addrLng != null && (
+                            <span style={{ fontSize: '0.65rem', fontWeight: 700, padding: '2px 7px', borderRadius: '4px', background: 'rgba(74, 222, 128, 0.15)', color: '#4ade80', border: '1px solid rgba(74, 222, 128, 0.3)' }}>
+                              📍 GPS VERIFIED
+                            </span>
+                          )}
+                          {hasAddress && (
+                            <span style={{ fontSize: '0.65rem', fontWeight: 700, padding: '2px 7px', borderRadius: '4px', background: 'rgba(201, 168, 76, 0.15)', color: 'var(--gold)', border: '1px solid rgba(201, 168, 76, 0.3)' }}>
+                              DEFAULT
+                            </span>
+                          )}
+                        </div>
                       </div>
 
                       {hasAddress ? (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', color: 'var(--cream)', fontSize: '0.84rem' }}>
-                          {addrStreet && <div style={{ fontWeight: 500, lineHeight: 1.4 }}>{addrStreet}</div>}
-                          {(addrCity || addrState || addrZip) && (
+                          <div style={{ fontWeight: 500, lineHeight: 1.4 }}>
+                            {addrHouseNumber ? `${addrHouseNumber}, ` : ''}
+                            {addrStreet}
+                            {addrArea ? `, ${addrArea}` : ''}
+                          </div>
+                          {addrLandmark && (
+                            <div style={{ fontSize: '0.76rem', color: 'var(--gold-light)' }}>
+                              Landmark: {addrLandmark}
+                            </div>
+                          )}
+                          {(addrCity || addrDistrict || addrState || addrZip) && (
                             <div style={{ color: 'var(--beige)', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', marginTop: '2px' }}>
-                              <span>{[addrCity, addrState].filter(Boolean).join(', ')}</span>
+                              <span>{[addrCity, addrDistrict, addrState].filter(Boolean).join(', ')}</span>
                               {addrZip && (
                                 <span style={{ background: 'rgba(201,168,76,0.15)', color: 'var(--gold)', padding: '1px 6px', borderRadius: '4px', fontSize: '0.72rem', fontWeight: 700, border: '1px solid rgba(201,168,76,0.3)' }}>
                                   PIN: {addrZip}
@@ -883,6 +1019,34 @@ export const CustomerDirectory: React.FC<CustomerDirectoryProps> = ({
                           {addrPhone && (
                             <div style={{ fontSize: '0.75rem', color: 'var(--grey-light)', marginTop: '2px' }}>
                               Contact: {addrPhone}
+                            </div>
+                          )}
+
+                          {/* Action Button: Open in Google Maps */}
+                          {googleMapsUrl && (
+                            <div style={{ marginTop: '8px' }}>
+                              <a
+                                href={googleMapsUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                style={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '6px',
+                                  fontSize: '0.75rem',
+                                  padding: '5px 12px',
+                                  borderRadius: '4px',
+                                  background: 'rgba(201, 168, 76, 0.15)',
+                                  color: 'var(--gold)',
+                                  border: '1px solid rgba(201, 168, 76, 0.3)',
+                                  textDecoration: 'none',
+                                  fontWeight: 600,
+                                  transition: 'all 0.2s ease',
+                                }}
+                              >
+                                <ExternalLink size={12} />
+                                <span>Open in Google Maps</span>
+                              </a>
                             </div>
                           )}
                         </div>
@@ -985,6 +1149,511 @@ export const CustomerDirectory: React.FC<CustomerDirectoryProps> = ({
                 {isConfirming ? 'Processing...' : 'Confirm Action'}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── ADD NEW CUSTOMER MODAL ─────────────────────────────────── */}
+      {isAddCustomerOpen && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 9600,
+            background: 'rgba(0,0,0,0.85)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '20px',
+            backdropFilter: 'blur(8px)',
+          }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget && !isSubmittingCustomer) {
+              setIsAddCustomerOpen(false);
+            }
+          }}
+        >
+          <div
+            style={{
+              background: '#0e0a06',
+              border: '1px solid rgba(201,168,76,0.4)',
+              borderRadius: '14px',
+              maxWidth: '680px',
+              width: '100%',
+              maxHeight: '90vh',
+              display: 'flex',
+              flexDirection: 'column',
+              boxShadow: '0 20px 50px rgba(0,0,0,0.9), 0 0 30px rgba(201,168,76,0.15)',
+              overflow: 'hidden',
+            }}
+          >
+            {/* Modal Header */}
+            <div
+              style={{
+                padding: '20px 24px',
+                borderBottom: '1px solid rgba(201,168,76,0.2)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                background: 'rgba(201,168,76,0.04)',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div
+                  style={{
+                    width: '38px',
+                    height: '38px',
+                    borderRadius: '8px',
+                    background: 'rgba(201,168,76,0.15)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    border: '1px solid rgba(201,168,76,0.3)',
+                  }}
+                >
+                  <UserPlus size={20} color="var(--gold)" />
+                </div>
+                <div>
+                  <h3
+                    style={{
+                      fontFamily: 'var(--font-display)',
+                      fontSize: '1.25rem',
+                      color: 'var(--cream)',
+                      margin: 0,
+                    }}
+                  >
+                    Add New Customer
+                  </h3>
+                  <p style={{ margin: 0, fontSize: '0.78rem', color: 'var(--grey-light)' }}>
+                    Directly register and configure a customer profile in Chovique
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => !isSubmittingCustomer && setIsAddCustomerOpen(false)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: 'var(--grey-light)',
+                  cursor: isSubmittingCustomer ? 'not-allowed' : 'pointer',
+                  padding: '6px',
+                  borderRadius: '6px',
+                  display: 'flex',
+                }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Modal Body / Form */}
+            <form
+              onSubmit={handleAddCustomerSubmit}
+              style={{
+                padding: '24px',
+                overflowY: 'auto',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '20px',
+              }}
+            >
+              {/* SECTION 1: ACCOUNT CREDENTIALS */}
+              <div>
+                <div
+                  style={{
+                    fontSize: '0.75rem',
+                    fontWeight: 700,
+                    letterSpacing: '1px',
+                    textTransform: 'uppercase',
+                    color: 'var(--gold)',
+                    marginBottom: '12px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                  }}
+                >
+                  <User size={13} />
+                  Account Details
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '14px' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.78rem', color: 'var(--beige)', marginBottom: '5px' }}>
+                      Full Name <span style={{ color: '#e74c3c' }}>*</span>
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. Rohith Sharma"
+                      value={addCustomerForm.full_name}
+                      onChange={(e) => setAddCustomerForm({ ...addCustomerForm, full_name: e.target.value })}
+                      style={{
+                        width: '100%',
+                        padding: '9px 12px',
+                        background: 'rgba(255,255,255,0.04)',
+                        border: '1px solid rgba(255,255,255,0.12)',
+                        borderRadius: '6px',
+                        color: 'var(--cream)',
+                        fontSize: '0.85rem',
+                        outline: 'none',
+                        boxSizing: 'border-box',
+                      }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.78rem', color: 'var(--beige)', marginBottom: '5px' }}>
+                      Email Address <span style={{ color: '#e74c3c' }}>*</span>
+                    </label>
+                    <input
+                      type="email"
+                      required
+                      placeholder="e.g. rohith@example.com"
+                      value={addCustomerForm.email}
+                      onChange={(e) => setAddCustomerForm({ ...addCustomerForm, email: e.target.value })}
+                      style={{
+                        width: '100%',
+                        padding: '9px 12px',
+                        background: 'rgba(255,255,255,0.04)',
+                        border: '1px solid rgba(255,255,255,0.12)',
+                        borderRadius: '6px',
+                        color: 'var(--cream)',
+                        fontSize: '0.85rem',
+                        outline: 'none',
+                        boxSizing: 'border-box',
+                      }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.78rem', color: 'var(--beige)', marginBottom: '5px' }}>
+                      Phone Number
+                    </label>
+                    <input
+                      type="tel"
+                      placeholder="e.g. 9876543210"
+                      value={addCustomerForm.phone}
+                      onChange={(e) => setAddCustomerForm({ ...addCustomerForm, phone: e.target.value })}
+                      style={{
+                        width: '100%',
+                        padding: '9px 12px',
+                        background: 'rgba(255,255,255,0.04)',
+                        border: '1px solid rgba(255,255,255,0.12)',
+                        borderRadius: '6px',
+                        color: 'var(--cream)',
+                        fontSize: '0.85rem',
+                        outline: 'none',
+                        boxSizing: 'border-box',
+                      }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.78rem', color: 'var(--beige)', marginBottom: '5px' }}>
+                      Temporary Password (Default: Customer@123)
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Customer@123"
+                      value={addCustomerForm.password}
+                      onChange={(e) => setAddCustomerForm({ ...addCustomerForm, password: e.target.value })}
+                      style={{
+                        width: '100%',
+                        padding: '9px 12px',
+                        background: 'rgba(255,255,255,0.04)',
+                        border: '1px solid rgba(255,255,255,0.12)',
+                        borderRadius: '6px',
+                        color: 'var(--cream)',
+                        fontSize: '0.85rem',
+                        outline: 'none',
+                        boxSizing: 'border-box',
+                      }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.78rem', color: 'var(--beige)', marginBottom: '5px' }}>
+                      Gender
+                    </label>
+                    <select
+                      value={addCustomerForm.gender}
+                      onChange={(e) => setAddCustomerForm({ ...addCustomerForm, gender: e.target.value })}
+                      style={{
+                        width: '100%',
+                        padding: '9px 12px',
+                        background: '#15110d',
+                        border: '1px solid rgba(255,255,255,0.12)',
+                        borderRadius: '6px',
+                        color: 'var(--cream)',
+                        fontSize: '0.85rem',
+                        outline: 'none',
+                        boxSizing: 'border-box',
+                      }}
+                    >
+                      <option value="">Prefer not to say</option>
+                      <option value="Male">Male</option>
+                      <option value="Female">Female</option>
+                      <option value="Other">Other</option>
+                    </select>
+                  </div>
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', paddingTop: '24px' }}>
+                    <input
+                      type="checkbox"
+                      id="customer_is_active_toggle"
+                      checked={addCustomerForm.is_active}
+                      onChange={(e) => setAddCustomerForm({ ...addCustomerForm, is_active: e.target.checked })}
+                      style={{ width: '16px', height: '16px', accentColor: 'var(--gold)', cursor: 'pointer' }}
+                    />
+                    <label htmlFor="customer_is_active_toggle" style={{ fontSize: '0.82rem', color: 'var(--cream)', cursor: 'pointer' }}>
+                      Active Account (Can login &amp; place orders)
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              {/* SECTION 2: DEFAULT SHIPPING & DELIVERY ADDRESS */}
+              <div>
+                <div
+                  style={{
+                    fontSize: '0.75rem',
+                    fontWeight: 700,
+                    letterSpacing: '1px',
+                    textTransform: 'uppercase',
+                    color: 'var(--gold)',
+                    marginBottom: '12px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                  }}
+                >
+                  <MapPin size={13} />
+                  Delivery Address (Optional)
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 2fr', gap: '14px', marginBottom: '14px' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.78rem', color: 'var(--beige)', marginBottom: '5px' }}>
+                      Flat / House / Building
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Flat 402, Royal Palms"
+                      value={addCustomerForm.house_number}
+                      onChange={(e) => setAddCustomerForm({ ...addCustomerForm, house_number: e.target.value })}
+                      style={{
+                        width: '100%',
+                        padding: '9px 12px',
+                        background: 'rgba(255,255,255,0.04)',
+                        border: '1px solid rgba(255,255,255,0.12)',
+                        borderRadius: '6px',
+                        color: 'var(--cream)',
+                        fontSize: '0.85rem',
+                        outline: 'none',
+                        boxSizing: 'border-box',
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.78rem', color: 'var(--beige)', marginBottom: '5px' }}>
+                      Street Address / Road
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Road No. 36, Jubilee Hills"
+                      value={addCustomerForm.street}
+                      onChange={(e) => setAddCustomerForm({ ...addCustomerForm, street: e.target.value })}
+                      style={{
+                        width: '100%',
+                        padding: '9px 12px',
+                        background: 'rgba(255,255,255,0.04)',
+                        border: '1px solid rgba(255,255,255,0.12)',
+                        borderRadius: '6px',
+                        color: 'var(--cream)',
+                        fontSize: '0.85rem',
+                        outline: 'none',
+                        boxSizing: 'border-box',
+                      }}
+                    />
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '14px', marginBottom: '14px' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.78rem', color: 'var(--beige)', marginBottom: '5px' }}>
+                      Area / Locality
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Madhapur"
+                      value={addCustomerForm.area}
+                      onChange={(e) => setAddCustomerForm({ ...addCustomerForm, area: e.target.value })}
+                      style={{
+                        width: '100%',
+                        padding: '9px 12px',
+                        background: 'rgba(255,255,255,0.04)',
+                        border: '1px solid rgba(255,255,255,0.12)',
+                        borderRadius: '6px',
+                        color: 'var(--cream)',
+                        fontSize: '0.85rem',
+                        outline: 'none',
+                        boxSizing: 'border-box',
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.78rem', color: 'var(--beige)', marginBottom: '5px' }}>
+                      Landmark
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Near Metro Pillar 1400"
+                      value={addCustomerForm.landmark}
+                      onChange={(e) => setAddCustomerForm({ ...addCustomerForm, landmark: e.target.value })}
+                      style={{
+                        width: '100%',
+                        padding: '9px 12px',
+                        background: 'rgba(255,255,255,0.04)',
+                        border: '1px solid rgba(255,255,255,0.12)',
+                        borderRadius: '6px',
+                        color: 'var(--cream)',
+                        fontSize: '0.85rem',
+                        outline: 'none',
+                        boxSizing: 'border-box',
+                      }}
+                    />
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr 1fr', gap: '14px' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.78rem', color: 'var(--beige)', marginBottom: '5px' }}>
+                      City
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Hyderabad"
+                      value={addCustomerForm.city}
+                      onChange={(e) => setAddCustomerForm({ ...addCustomerForm, city: e.target.value })}
+                      style={{
+                        width: '100%',
+                        padding: '9px 12px',
+                        background: 'rgba(255,255,255,0.04)',
+                        border: '1px solid rgba(255,255,255,0.12)',
+                        borderRadius: '6px',
+                        color: 'var(--cream)',
+                        fontSize: '0.85rem',
+                        outline: 'none',
+                        boxSizing: 'border-box',
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.78rem', color: 'var(--beige)', marginBottom: '5px' }}>
+                      State
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Telangana"
+                      value={addCustomerForm.state}
+                      onChange={(e) => setAddCustomerForm({ ...addCustomerForm, state: e.target.value })}
+                      style={{
+                        width: '100%',
+                        padding: '9px 12px',
+                        background: 'rgba(255,255,255,0.04)',
+                        border: '1px solid rgba(255,255,255,0.12)',
+                        borderRadius: '6px',
+                        color: 'var(--cream)',
+                        fontSize: '0.85rem',
+                        outline: 'none',
+                        boxSizing: 'border-box',
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.78rem', color: 'var(--beige)', marginBottom: '5px' }}>
+                      PIN Code
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. 500081"
+                      value={addCustomerForm.zip}
+                      onChange={(e) => setAddCustomerForm({ ...addCustomerForm, zip: e.target.value })}
+                      style={{
+                        width: '100%',
+                        padding: '9px 12px',
+                        background: 'rgba(255,255,255,0.04)',
+                        border: '1px solid rgba(255,255,255,0.12)',
+                        borderRadius: '6px',
+                        color: 'var(--cream)',
+                        fontSize: '0.85rem',
+                        outline: 'none',
+                        boxSizing: 'border-box',
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'flex-end',
+                  gap: '12px',
+                  paddingTop: '16px',
+                  borderTop: '1px solid rgba(255,255,255,0.08)',
+                  marginTop: '10px',
+                }}
+              >
+                <button
+                  type="button"
+                  disabled={isSubmittingCustomer}
+                  onClick={() => setIsAddCustomerOpen(false)}
+                  style={{
+                    padding: '10px 20px',
+                    borderRadius: '6px',
+                    fontSize: '0.84rem',
+                    cursor: isSubmittingCustomer ? 'not-allowed' : 'pointer',
+                    background: 'rgba(255,255,255,0.06)',
+                    border: '1px solid var(--glass-border)',
+                    color: 'var(--cream)',
+                    fontWeight: 600,
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmittingCustomer}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    padding: '10px 24px',
+                    borderRadius: '6px',
+                    fontSize: '0.84rem',
+                    cursor: isSubmittingCustomer ? 'not-allowed' : 'pointer',
+                    background: 'var(--gold)',
+                    border: 'none',
+                    color: '#0e0a06',
+                    fontWeight: 700,
+                    boxShadow: '0 2px 12px rgba(201,168,76,0.3)',
+                    opacity: isSubmittingCustomer ? 0.7 : 1,
+                  }}
+                >
+                  {isSubmittingCustomer ? (
+                    <>
+                      <Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} />
+                      Creating Customer...
+                    </>
+                  ) : (
+                    <>
+                      <UserPlus size={16} />
+                      Create Customer
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

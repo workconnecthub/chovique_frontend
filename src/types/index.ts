@@ -2,7 +2,7 @@
 // CORE DOMAIN TYPES
 // =============================================================================
 
-export type UserRole = 'guest' | 'customer' | 'admin' | 'superadmin';
+export type UserRole = 'guest' | 'customer' | 'admin' | 'superadmin' | 'delivery_boy';
 
 export interface UserProfile {
   name: string;
@@ -42,6 +42,10 @@ export interface Review {
   date: string;
   avatar?: string;
   status?: string;
+  title?: string;
+  images?: string[];
+  videos?: string[];
+  is_verified_purchase?: boolean;
 }
 
 export interface ProductRatingSummary {
@@ -137,6 +141,7 @@ export interface Order {
   date: string;
   created_at?: string;
   shippingAddress: CustomerAddress;
+  shipping_address?: CustomerAddress;
   deliveryOption: string;
   paymentMethod: string;
   payment_method?: string;
@@ -150,6 +155,62 @@ export interface Order {
   razorpay_payment_id?: string;
   customer_whatsapp_url?: string;
   owner_whatsapp_url?: string;
+
+  // Dual-Mode Logistics & Fulfillment
+  fulfillment_type?: 'LOCAL' | 'COURIER' | string;
+  fulfillmentType?: string;
+  shipping_provider?: string;
+  shippingProvider?: string;
+  fulfillment_status?: 'UNASSIGNED' | 'ASSIGNED' | 'PICKED_UP' | 'OUT_FOR_DELIVERY' | 'DELIVERED' | 'FAILED' | string;
+  fulfillmentStatus?: string;
+  delivery_boy_id?: string | null;
+  deliveryBoyId?: string | null;
+  delivery_boy_name?: string | null;
+  store_location_id?: string | null;
+  storeLocationId?: string | null;
+  store_name?: string | null;
+  storeName?: string | null;
+
+  // Delivery OTP workflow
+  delivery_otp?: string | null;
+  delivery_otp_expires_at?: string | null;
+  delivery_accepted_at?: string | null;
+  delivery_rejected_at?: string | null;
+  delivery_rejection_reason?: string | null;
+  delivery_picked_at?: string | null;
+  customer_name?: string | null;
+  customer_phone?: string | null;
+
+  // Authoritative immutable shipping snapshot
+  shipping_name?: string;
+  shipping_phone?: string;
+  shipping_house_number?: string;
+  shipping_street?: string;
+  shipping_area?: string;
+  shipping_landmark?: string;
+  shipping_city?: string;
+  shipping_district?: string;
+  shipping_state?: string;
+  shipping_pincode?: string;
+  shipping_latitude?: number | null;
+  shipping_longitude?: number | null;
+  shipping_formatted_address?: string | null;
+  shipping_location_source?: string;
+  shipping_location_verified?: boolean;
+  shipping_delivery_charge?: number | null;
+  shipping_confirmed_at?: string | null;
+}
+
+export interface DeliveryBoy {
+  id: string;
+  full_name: string;
+  email: string;
+  phone?: string | null;
+  is_active: boolean;
+  role: string;
+  avatar_url?: string | null;
+  created_at?: string | null;
+  active_orders?: number;
 }
 
 export interface Banner {
@@ -198,25 +259,37 @@ export interface OfflineSale {
   /** camelCase — matches backend OfflineSaleResponse */
   productName: string;
   quantity: number;
-  totalPrice: number;
+  customerName?: string;
+  customerPhone?: string;
+  customerEmail?: string;
+  total?: number;
+  totalPrice?: number;
   date: string;
   paymentMethod: string;
+  notes?: string;
+  receiptUrl?: string;
 }
 
 export interface SupportTicket {
   id: string;
-  customerId: string;
-  customerName: string;
-  category:
-    | 'Chocolate melted'
-    | 'Slow delivery'
-    | 'Return order was not accepting'
-    | 'Refund amount are not debited in mentioned days'
-    | 'Other';
-  description: string;
-  status: 'Pending' | 'Under Review' | 'In Progress' | 'Awaiting Customer Response' | 'Investigating' | 'Resolved' | 'Closed' | string;
-  orderId?: string;
+  ticket_number?: string;
   order_id?: string;
+  orderId?: string;
+  customerId?: string;
+  customer_id?: string;
+  customerName?: string;
+  subject: string;
+  category: string;
+  description?: string;
+  priority: 'low' | 'medium' | 'high';
+  status: 'Open' | 'In Progress' | 'Resolved' | 'Closed' | 'Pending' | string;
+  messages: Array<{
+    id: string;
+    sender: 'user' | 'support';
+    text: string;
+    timestamp: string;
+  }>;
+  statusChangeCount?: number;
   adminNotes?: string;
   customerResolutionFeedback?: 'Resolved' | 'Not Resolved';
   date: string;
@@ -226,13 +299,105 @@ export interface SupportTicket {
 export interface CustomerAddress {
   id: string;
   title: string;
+  type?: string;
   name: string;
+  house_number?: string | null;
+  houseNumber?: string | null;
   street: string;
+  area?: string | null;
+  landmark?: string | null;
   city: string;
+  district?: string | null;
   state: string;
   zip: string;
+  pincode?: string | null;
   phone: string;
+  latitude?: number | null;
+  longitude?: number | null;
+  formatted_address?: string | null;
+  formattedAddress?: string | null;
+  google_place_id?: string | null;
+  googlePlaceId?: string | null;
+  location_source?: 'GOOGLE_PLACE' | 'CURRENT_LOCATION' | 'MANUAL' | 'SAVED_ADDRESS' | string;
+  locationSource?: string;
+  location_verified?: boolean;
+  locationVerified?: boolean;
   isDefault: boolean;
+  created_at?: string;
+  updated_at?: string;
+}
+
+// =============================================================================
+// LOGISTICS & SHIPPING DOMAIN TYPES (VERSION 2)
+// =============================================================================
+
+export type FulfillmentMode = 'LOCAL' | 'COURIER';
+
+export interface StoreLocation {
+  id: string;
+  name: string;
+  house_number?: string | null;
+  street: string;
+  area?: string | null;
+  city: string;
+  district?: string | null;
+  state: string;
+  pincode: string;
+  latitude?: number | null;
+  longitude?: number | null;
+  formatted_address?: string | null;
+  google_place_id?: string | null;
+  phone?: string | null;
+  is_primary: boolean;
+  active: boolean;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface DeliveryServiceArea {
+  id: string;
+  store_location_id?: string | null;
+  pincode: string;
+  city: string;
+  district?: string | null;
+  state: string;
+  delivery_mode: 'LOCAL' | 'COURIER' | 'UNAVAILABLE' | string;
+  delivery_charge: number;
+  free_delivery_threshold?: number | null;
+  same_day_available: boolean;
+  estimated_delivery: string;
+  active: boolean;
+  created_at?: string;
+  updated_at?: string;
+  store_location?: StoreLocation | null;
+}
+
+export interface ShippingCalculateRequest {
+  pincode: string;
+  subtotal?: number;
+  cart_total?: number;
+  city?: string;
+  district?: string;
+  state?: string;
+  latitude?: number | null;
+  longitude?: number | null;
+}
+
+export interface ShippingCalculateResponse {
+  serviceable: boolean;
+  is_serviceable?: boolean;
+  fulfillment_type: 'LOCAL' | 'COURIER';
+  fulfillment_mode?: 'LOCAL' | 'COURIER';
+  shipping_provider: string;
+  delivery_charge: number;
+  free_delivery_applied: boolean;
+  is_free_delivery?: boolean;
+  service_area?: string | null;
+  estimated_delivery: string;
+  estimated_delivery_text?: string;
+  message: string;
+  origin_store?: string | null;
+  origin_store_id?: string | null;
 }
 
 export interface SupportNotification {
@@ -325,10 +490,15 @@ export interface ContactInfo {
 
 export interface InstagramReel {
   id: string;
-  video_url: string;
-  likes?: number;
-  comments?: number;
-  views?: number;
+  video_url?: string;
+  videoUrl?: string;
+  instagram_url?: string;
+  instagramUrl?: string;
+  account_name?: string;
+  accountName?: string;
+  likes?: number | string;
+  comments?: number | string;
+  views?: number | string;
   title?: string;
   is_active?: boolean;
 }

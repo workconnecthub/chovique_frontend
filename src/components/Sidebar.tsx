@@ -35,6 +35,9 @@ import {
   TrendingUp,
   IndianRupee,
   FileSpreadsheet,
+  Truck,
+  Bike,
+  Store,
 } from 'lucide-react';
 import { NotificationHeaderDropdown } from './NotificationHeaderDropdown';
 import { useApp } from '../app/providers';
@@ -96,6 +99,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, onReq
     { id: 'products', label: 'Products', icon: ShoppingBag },
     { id: 'categories', label: 'Categories', icon: FolderTree },
     { id: 'orders', label: 'Order Management', icon: ListOrdered },
+    { id: 'delivery-boys', label: 'Delivery Management', icon: Bike },
     { id: 'customers', label: 'Customer Directory', icon: Users },
     { id: 'offline-sales', label: 'Offline Sales', icon: Receipt },
     { id: 'coupons', label: 'Coupons & Discounts', icon: Tag },
@@ -114,6 +118,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, onReq
     { id: 'reports', label: 'Reports & Analytics', icon: FileSpreadsheet },
     { id: 'admin-mgmt', label: 'Admin Management', icon: Users },
     { id: 'customers', label: 'Customer Directory', icon: Users },
+    { id: 'delivery-boys', label: 'Delivery Management', icon: Bike },
+    { id: 'logistics', label: 'Logistics & Hubs', icon: Store },
     { id: 'audit-logs', label: 'Audit Logs', icon: FileClock },
     { id: 'theme-builder', label: 'Theme Builder', icon: Palette },
     { id: 'platform-settings', label: 'Platform Settings', icon: Settings },
@@ -150,6 +156,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, onReq
   const superadminRemainingItems = [
     { id: 'admin-mgmt', label: 'Admins Management', icon: Users },
     { id: 'customers', label: 'Customer Directory', icon: Users },
+    { id: 'delivery-boys', label: 'Delivery Management', icon: Bike },
+    { id: 'logistics', label: 'Logistics & Hubs', icon: Store },
     { id: 'audit-logs', label: 'Audit Logs', icon: FileClock },
     { id: 'theme-builder', label: 'Theme Builder', icon: Palette },
   ];
@@ -225,7 +233,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, onReq
               aria-label="My Profile"
             >
               {avatarUrl ? (
-                <img src={avatarUrl} alt={user?.name || 'Admin'} className="admin-mobile-avatar-img" />
+                <img src={avatarUrl} alt={user?.name || 'Admin'} referrerPolicy="no-referrer" className="admin-mobile-avatar-img" />
               ) : (
                 <span>{initial}</span>
               )}
@@ -259,7 +267,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, onReq
             <div className="admin-drawer-user-info">
               <div className="admin-drawer-avatar">
                 {avatarUrl ? (
-                  <img src={avatarUrl} alt={user?.name || 'Admin'} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  <img src={avatarUrl} alt={user?.name || 'Admin'} referrerPolicy="no-referrer" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                 ) : (
                   initial
                 )}

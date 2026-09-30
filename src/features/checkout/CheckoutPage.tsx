@@ -18,6 +18,9 @@ import {
   Phone,
   Send,
   ExternalLink,
+  MapPin,
+  Sparkles,
+  Zap,
 } from 'lucide-react';
 import { useQrPaymentPoller } from './useQrPaymentPoller';
 import { useApp } from '../../app/providers';
@@ -30,7 +33,9 @@ import { orderService } from '../../services/orderService';
 import { walletService } from '../../services/walletService';
 import { cartService } from '../../services/cartService';
 import { userService } from '../../services/userService';
-import type { Order, CheckoutInitiateResponse, VerifyPaymentPayload } from '../../types';
+import { shippingService } from '../../services/shippingService';
+import { DeliveryLocationPicker, AddressFormData } from './DeliveryLocationPicker';
+import type { Order, CheckoutInitiateResponse, VerifyPaymentPayload, ShippingCalculateResponse } from '../../types';
 import { RAZORPAY_CHOVIQUE_LOGO } from '../../assets/razorpayLogo';
 
 // Razorpay global type declaration
@@ -103,48 +108,126 @@ export const CheckoutPage: React.FC = () => {
   }, [checkoutItems, navigate, activeStep]);
 
   // Pre-fill shipping form from authenticated user's default address if available
-  const [shippingForm, setShippingForm] = useState({
+  const [shippingForm, setShippingForm] = useState<AddressFormData>({
     name: user?.profile?.name || user?.name || '',
-    street: '',
-    city: '',
-    state: '',
-    zip: '',
     phone: user?.profile?.phone || '',
+    house_number: '',
+    street: '',
+    area: '',
+    landmark: '',
+    city: 'Visakhapatnam',
+    district: 'Visakhapatnam',
+    state: 'Andhra Pradesh',
+    pincode: '',
+    latitude: null,
+    longitude: null,
+    formatted_address: null,
+    google_place_id: null,
+    location_source: 'MANUAL',
+    location_verified: false,
+    address_type: 'HOME',
+    save_to_book: true,
   });
 
-  // Fetch the user's addresses and populate the default one
+  const [shippingQuote, setShippingQuote] = useState<ShippingCalculateResponse | null>(null);
+  const [isCalculatingQuote, setIsCalculatingQuote] = useState(false);
+
+  // Fetch the user's addresses and populate the default or last used one (Amazon/Zepto instant address load)
   useEffect(() => {
-    if (user && user.role !== 'guest') {
-      userService.getAddresses().then((addrs) => {
-        if (addrs && addrs.length > 0) {
-          const defaultAddr = addrs.find(a => a.isDefault) || addrs[0];
-          setShippingForm(prev => ({
+    // 1. Instantly check localStorage cache so returning customers never wait or re-type
+    try {
+      const cached =
+        localStorage.getItem('chovique_default_address') ||
+        localStorage.getItem('chovique_last_saved_address');
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (parsed && (parsed.street || parsed.area || parsed.pincode)) {
+          setShippingForm((prev) => ({
             ...prev,
-            name: defaultAddr.name || prev.name,
-            street: defaultAddr.street,
-            city: defaultAddr.city,
-            state: defaultAddr.state,
-            zip: defaultAddr.zip,
-            phone: defaultAddr.phone || prev.phone,
+            ...parsed,
+            name: parsed.name || prev.name,
+            phone: parsed.phone || prev.phone,
+            pincode: (parsed.pincode || parsed.zip || '').replace(/\D/g, '').slice(0, 6),
           }));
         }
-      }).catch(console.error);
+      }
+    } catch {}
+
+    // 2. Fetch authenticated user's address book from backend and update if available
+    if (user && user.role !== 'guest') {
+      userService
+        .getAddresses()
+        .then((addrs) => {
+          if (addrs && addrs.length > 0) {
+            const defaultAddr = addrs.find((a) => a.isDefault) || addrs[0];
+            setShippingForm((prev) => ({
+              ...prev,
+              name: defaultAddr.name || prev.name,
+              phone: defaultAddr.phone || prev.phone,
+              house_number: defaultAddr.house_number || (defaultAddr as any).houseNumber || '',
+              street: defaultAddr.street || '',
+              area: defaultAddr.area || '',
+              landmark: defaultAddr.landmark || '',
+              city: defaultAddr.city || 'Visakhapatnam',
+              district: defaultAddr.district || 'Visakhapatnam',
+              state: defaultAddr.state || 'Andhra Pradesh',
+              pincode: (defaultAddr.pincode || defaultAddr.zip || '').replace(/\D/g, '').slice(0, 6),
+              latitude: defaultAddr.latitude ?? null,
+              longitude: defaultAddr.longitude ?? null,
+              formatted_address: defaultAddr.formatted_address || (defaultAddr as any).formattedAddress || null,
+              google_place_id: defaultAddr.google_place_id || (defaultAddr as any).googlePlaceId || null,
+              location_source: defaultAddr.location_source || (defaultAddr as any).locationSource || 'SAVED_ADDRESS',
+              location_verified: Boolean(defaultAddr.location_verified || (defaultAddr as any).locationVerified),
+            }));
+          }
+        })
+        .catch(console.error);
     }
   }, [user]);
+
+  // Pricing calculations (display-only; backend recalculates authoritatively)
+  const subtotal = checkoutItems.reduce((sum, item) => sum + item.product.price * item.quantity, 0);
+
+  // Recalculate shipping quote when 6-digit PIN code is typed or subtotal changes
+  const calculateShippingQuote = useCallback(async (
+    pincode: string,
+    lat?: number | null,
+    lng?: number | null
+  ) => {
+    if (!pincode || pincode.trim().length !== 6) return null;
+    setIsCalculatingQuote(true);
+    try {
+      const quote = await shippingService.calculateShipping({
+        pincode: pincode.trim(),
+        subtotal,
+        city: shippingForm.city,
+        district: shippingForm.district,
+        state: shippingForm.state,
+        latitude: lat ?? shippingForm.latitude,
+        longitude: lng ?? shippingForm.longitude,
+      });
+      setShippingQuote(quote);
+      return quote;
+    } catch (err: any) {
+      console.warn('Shipping calculation error:', err);
+      return null;
+    } finally {
+      setIsCalculatingQuote(false);
+    }
+  }, [subtotal, shippingForm.city, shippingForm.district, shippingForm.state, shippingForm.latitude, shippingForm.longitude]);
+
+  useEffect(() => {
+    if (shippingForm.pincode && shippingForm.pincode.length === 6) {
+      calculateShippingQuote(shippingForm.pincode, shippingForm.latitude, shippingForm.longitude);
+    }
+  }, [shippingForm.pincode, subtotal, calculateShippingQuote]);
 
   const [deliveryOption, setDeliveryOption] = useState('Standard Delivery');
   const [paymentMethod, setPaymentMethod] = useState('Credit Card');
   const [paymentError, setPaymentError] = useState('');
 
   // Shipping form validation errors
-  const [shippingErrors, setShippingErrors] = useState<{
-    name?: string;
-    street?: string;
-    city?: string;
-    state?: string;
-    zip?: string;
-    phone?: string;
-  }>({});
+  const [shippingErrors, setShippingErrors] = useState<Partial<Record<keyof AddressFormData, string>>>({});
 
   // Coupon state: read initial coupon from sessionStorage or allow applying/removing directly
   const [appliedCoupon, setAppliedCoupon] = useState<CheckoutCouponData | null>(() => {
@@ -181,8 +264,6 @@ export const CheckoutPage: React.FC = () => {
     }
   }, [user]);
 
-  // Pricing calculations (display-only; backend recalculates authoritatively)
-  const subtotal = checkoutItems.reduce((sum, item) => sum + item.product.price * item.quantity, 0);
   const discountAmount = appliedCoupon?.discount_amount ?? 0;
 
   // Re-validate applied coupon against backend whenever items or subtotal changes
@@ -243,10 +324,9 @@ export const CheckoutPage: React.FC = () => {
           : Math.round((coinsToUse / coinsPerRupee) * 100) / 100)
       : 0;
   
-  // Shipping
+  // Dynamic Shipping Fee (Calculated from delivery address and service areas)
   const freeShippingMin = storeConfig?.free_shipping_min_order ?? 500;
-  const standardShipping = storeConfig?.standard_shipping_charge ?? 50;
-  const shippingFee = (freeShippingMin > 0 && subtotal >= freeShippingMin) || subtotal === 0 ? 0 : standardShipping;
+  const shippingFee = shippingQuote ? shippingQuote.delivery_charge : (subtotal >= freeShippingMin || subtotal === 0 ? 0 : 50);
 
   // Tax
   const gstRate = storeConfig?.gst_rate ?? 0;
@@ -373,31 +453,35 @@ export const CheckoutPage: React.FC = () => {
     sessionStorage.removeItem('chovique_checkout_coupon');
   };
 
-  // Validate shipping form before proceeding from step 2
+  // Validate shipping form before proceeding from Step 1
   const validateShipping = (): boolean => {
-    const errors: typeof shippingErrors = {};
+    const errors: Partial<Record<keyof AddressFormData, string>> = {};
     const name = shippingForm.name.trim();
+    const phone = shippingForm.phone.trim();
+    const houseNumber = shippingForm.house_number.trim();
     const street = shippingForm.street.trim();
+    const area = shippingForm.area.trim();
     const city = shippingForm.city.trim();
     const state = shippingForm.state.trim();
-    const zip = shippingForm.zip.trim();
-    const phone = shippingForm.phone.trim();
+    const pincode = shippingForm.pincode.trim();
 
     if (!name) errors.name = 'Full name is required.';
-    if (!street) errors.street = 'Street address is required.';
-    if (!city) errors.city = 'City is required.';
-    if (!state) errors.state = 'State is required.';
-
-    if (!zip) {
-      errors.zip = 'ZIP code is required.';
-    } else if (!/^\d{6}$/.test(zip)) {
-      errors.zip = 'ZIP/PIN code must contain exactly 6 numeric digits.';
-    }
-
     if (!phone) {
       errors.phone = 'Phone number is required.';
     } else if (!/^\d{10}$/.test(phone)) {
       errors.phone = 'Phone number must contain exactly 10 numeric digits.';
+    }
+
+    if (!houseNumber) errors.house_number = 'Flat / House / Door number is required.';
+    if (!street) errors.street = 'Street address is required.';
+    if (!area) errors.area = 'Area / Locality is required.';
+    if (!city) errors.city = 'City is required.';
+    if (!state) errors.state = 'State is required.';
+
+    if (!pincode) {
+      errors.pincode = 'PIN code is required.';
+    } else if (!/^\d{6}$/.test(pincode)) {
+      errors.pincode = 'PIN code must contain exactly 6 numeric digits.';
     }
 
     setShippingErrors(errors);
@@ -405,18 +489,81 @@ export const CheckoutPage: React.FC = () => {
   };
 
   const nextStep = async () => {
-    if (activeStep === 2) {
+    // Step 1 -> Step 2
+    if (activeStep === 1) {
       if (!validateShipping()) return;
+
+      // Ensure shipping quote is verified
+      let quote = shippingQuote;
+      if (!quote || quote.serviceable === undefined) {
+        quote = await calculateShippingQuote(shippingForm.pincode, shippingForm.latitude, shippingForm.longitude);
+      }
+
+      if (quote && !quote.serviceable) {
+        setOrderError(quote.message || 'Delivery is currently unavailable to this PIN code.');
+        return;
+      }
+      setOrderError('');
+
+      // If user opted to save to address book and is authenticated
+      if (shippingForm.save_to_book && user && user.role !== 'guest') {
+        try {
+          userService.addAddress({
+            title: shippingForm.address_type || 'Delivery Address',
+            name: shippingForm.name,
+            phone: shippingForm.phone,
+            house_number: shippingForm.house_number,
+            street: shippingForm.street,
+            area: shippingForm.area,
+            landmark: shippingForm.landmark,
+            city: shippingForm.city,
+            district: shippingForm.district,
+            state: shippingForm.state,
+            pincode: shippingForm.pincode,
+            zip: shippingForm.pincode,
+            latitude: shippingForm.latitude,
+            longitude: shippingForm.longitude,
+            formatted_address: shippingForm.formatted_address,
+            google_place_id: shippingForm.google_place_id,
+            location_source: shippingForm.location_source,
+            location_verified: shippingForm.location_verified,
+            type: shippingForm.address_type || 'HOME',
+            isDefault: false,
+          }).catch(() => {});
+        } catch {}
+      }
+
+      // Save permanently into localStorage cache for Amazon/Zepto 1-click checkout
+      try {
+        localStorage.setItem('chovique_last_saved_address', JSON.stringify(shippingForm));
+        localStorage.setItem('chovique_default_address', JSON.stringify(shippingForm));
+      } catch {}
+
+      setActiveStep(2);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
     }
 
+    // Step 2 -> Step 3
+    if (activeStep === 2) {
+      setActiveStep(3);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+
+    // Step 3 -> Step 4
     if (activeStep === 3) {
       if (!paymentMethod) {
         setPaymentError('Please select a payment method before proceeding.');
         return;
       }
       setPaymentError('');
+      setActiveStep(4);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
     }
 
+    // Step 4: Final Place Order
     if (activeStep === 4) {
       setIsPlacingOrder(true);
       setOrderError('');
@@ -428,13 +575,27 @@ export const CheckoutPage: React.FC = () => {
         })),
         shipping_address: {
           name: shippingForm.name,
-          street: shippingForm.street,
-          city: shippingForm.city,
-          state: shippingForm.state,
-          zip: shippingForm.zip,
           phone: shippingForm.phone,
+          house_number: shippingForm.house_number,
+          street: shippingForm.street,
+          area: shippingForm.area,
+          landmark: shippingForm.landmark,
+          city: shippingForm.city,
+          district: shippingForm.district,
+          state: shippingForm.state,
+          pincode: shippingForm.pincode,
+          zip: shippingForm.pincode,
+          latitude: shippingForm.latitude,
+          longitude: shippingForm.longitude,
+          formatted_address: shippingForm.formatted_address,
+          google_place_id: shippingForm.google_place_id,
+          location_source: shippingForm.location_source,
+          location_verified: shippingForm.location_verified,
         },
-        delivery_option: deliveryOption,
+        delivery_option:
+          shippingQuote?.fulfillment_type === 'LOCAL'
+            ? 'Local Fast Delivery'
+            : 'Standard Courier Delivery',
         payment_method: paymentMethod,
         ...(appliedCoupon ? { coupon_code: appliedCoupon.code } : {}),
         coins_to_use: coinsToUse > 0 ? coinsToUse : 0,
@@ -670,10 +831,10 @@ export const CheckoutPage: React.FC = () => {
   }, [isQrMode, qrCodeData, activeStep]);
 
   const stepsHeader = [
-    { num: 1, label: 'Cart Review' },
-    { num: 2, label: 'Shipping Address' },
+    { num: 1, label: 'Delivery Location' },
+    { num: 2, label: 'Order Review' },
     { num: 3, label: 'Payment Method' },
-    { num: 4, label: 'Order Summary' },
+    { num: 4, label: 'Confirm & Place' },
   ];
 
   return (
@@ -793,7 +954,7 @@ export const CheckoutPage: React.FC = () => {
         {/* Step Content panels */}
         <div className="checkout-panel">
           <AnimatePresence mode="wait">
-            {/* STEP 1: REVIEW ITEMS & DISCOUNTS */}
+            {/* STEP 1: DELIVERY LOCATION & SHIPPING ADDRESS */}
             {activeStep === 1 && (
               <motion.div
                 key="step1"
@@ -803,9 +964,162 @@ export const CheckoutPage: React.FC = () => {
                 exit="initial"
                 className="glass-panel checkout-panel-card"
               >
-                <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.6rem', color: 'var(--cream)', marginBottom: '20px' }}>
-                  1. Review Your Selections
+                <div style={{ marginBottom: '16px' }}>
+                  <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.6rem', color: 'var(--cream)', margin: '0 0 6px 0' }}>
+                    1. Delivery Destination & Location
+                  </h2>
+                  <p style={{ color: 'var(--beige)', fontSize: '0.85rem', margin: 0, lineHeight: 1.5 }}>
+                    Please confirm your delivery address. Chovique supports both <strong>Local Fast Delivery</strong> (within 3-5 hours in Visakhapatnam) and <strong>Standard Express Courier</strong> (Pan-India). Delivery charges and serviceability are determined by your location.
+                  </p>
+                </div>
+
+                {orderError && (
+                  <div
+                    role="alert"
+                    style={{
+                      background: 'rgba(231, 76, 60, 0.1)',
+                      border: '1px solid #e74c3c',
+                      color: '#e74c3c',
+                      borderRadius: '4px',
+                      padding: '12px 16px',
+                      fontSize: '0.88rem',
+                      marginBottom: '16px',
+                    }}
+                  >
+                    {orderError}
+                  </div>
+                )}
+
+                <DeliveryLocationPicker
+                  value={shippingForm}
+                  onChange={setShippingForm}
+                  shippingQuote={shippingQuote}
+                  isCalculatingQuote={isCalculatingQuote}
+                  errors={shippingErrors}
+                  onClearError={(f) => setShippingErrors((prev) => ({ ...prev, [f]: undefined }))}
+                  onProceedToReview={nextStep}
+                />
+
+                <div className="checkout-actions" style={{ marginTop: '24px' }}>
+                  <Button variant="secondary" onClick={() => navigate('/cart')}>
+                    Return to Cart
+                  </Button>
+                  <Button
+                    variant="gold"
+                    onClick={nextStep}
+                    glow
+                    disabled={isCalculatingQuote || Boolean(shippingQuote && !shippingQuote.serviceable)}
+                    style={{ minWidth: '220px' }}
+                  >
+                    {isCalculatingQuote ? (
+                      <>
+                        <Loader2 size={16} className="spin" />
+                        <span>Verifying Serviceability...</span>
+                      </>
+                    ) : (
+                      'Proceed to Order Review'
+                    )}
+                  </Button>
+                </div>
+              </motion.div>
+            )}
+
+            {/* STEP 2: ORDER REVIEW & PRICING BREAKDOWN */}
+            {activeStep === 2 && (
+              <motion.div
+                key="step2"
+                variants={scaleUp}
+                initial="initial"
+                animate="animate"
+                exit="initial"
+                className="glass-panel checkout-panel-card"
+              >
+                <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.6rem', color: 'var(--cream)', marginBottom: '16px' }}>
+                  2. Review Order & Pricing
                 </h2>
+
+                {/* Fulfillment Mode Banner */}
+                {shippingQuote && (
+                  <div
+                    style={{
+                      padding: '14px 16px',
+                      borderRadius: '8px',
+                      marginBottom: '20px',
+                      background:
+                        shippingQuote.fulfillment_type === 'LOCAL'
+                          ? 'linear-gradient(135deg, rgba(201, 168, 76, 0.18), rgba(44, 21, 3, 0.5))'
+                          : 'linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(26, 13, 0, 0.5))',
+                      border:
+                        shippingQuote.fulfillment_type === 'LOCAL'
+                          ? '1px solid rgba(201, 168, 76, 0.4)'
+                          : '1px solid rgba(59, 130, 246, 0.35)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '12px',
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: '36px',
+                        height: '36px',
+                        borderRadius: '50%',
+                        background: shippingQuote.fulfillment_type === 'LOCAL' ? 'var(--gold)' : '#3b82f6',
+                        color: shippingQuote.fulfillment_type === 'LOCAL' ? 'var(--dark-chocolate)' : '#fff',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontWeight: 700,
+                        fontSize: '1.1rem',
+                        flexShrink: 0,
+                      }}
+                    >
+                      {shippingQuote.fulfillment_type === 'LOCAL' ? '⚡' : <Truck size={18} />}
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontWeight: 700, color: 'var(--cream)', fontSize: '0.95rem' }}>
+                        {shippingQuote.fulfillment_type === 'LOCAL'
+                          ? '⚡ Local Express Delivery (Within 24 Hours)'
+                          : '📦 Premium Courier Delivery (iThink Logistics Express)'}
+                      </div>
+                      <div style={{ fontSize: '0.82rem', color: 'var(--beige)', marginTop: '2px' }}>
+                        {shippingQuote.message} · Est: <strong>{shippingQuote.estimated_delivery}</strong>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Delivery Destination Mini Card */}
+                <div
+                  style={{
+                    padding: '14px 16px',
+                    borderRadius: '8px',
+                    background: 'rgba(0,0,0,0.3)',
+                    border: '1px solid rgba(255,255,255,0.08)',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    marginBottom: '24px',
+                    flexWrap: 'wrap',
+                    gap: '10px',
+                  }}
+                >
+                  <div>
+                    <div style={{ fontSize: '0.72rem', color: 'var(--gold)', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 700, marginBottom: '4px' }}>
+                      Delivering To:
+                    </div>
+                    <div style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--cream)' }}>
+                      {shippingForm.name} ({shippingForm.phone})
+                    </div>
+                    <div style={{ fontSize: '0.82rem', color: 'var(--beige)', marginTop: '2px' }}>
+                      {shippingForm.house_number ? `${shippingForm.house_number}, ` : ''}{shippingForm.street}, {shippingForm.area}, {shippingForm.city} — {shippingForm.pincode}
+                    </div>
+                  </div>
+                  <Button variant="secondary" size="sm" onClick={() => setActiveStep(1)} style={{ fontSize: '0.78rem' }}>
+                    Change Address
+                  </Button>
+                </div>
+
+                {/* Cart Items List */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '15px', marginBottom: '30px' }}>
                   {checkoutItems.map((item) => (
                     <div
@@ -1134,7 +1448,7 @@ export const CheckoutPage: React.FC = () => {
                   </div>
                 )}
 
-                {/* Step 1 Pricing totals */}
+                {/* Step 2 Pricing totals */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', paddingBottom: '20px', borderBottom: '1px solid var(--glass-border)', marginBottom: '20px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--beige)', fontSize: '0.9rem' }}>
                     <span>Items Subtotal:</span>
@@ -1157,7 +1471,7 @@ export const CheckoutPage: React.FC = () => {
 
                   <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--beige)', fontSize: '0.9rem' }}>
                     <span>Delivery Charges:</span>
-                    <span>{shippingFee === 0 ? `Free (Order over ₹${freeShippingMin.toLocaleString()})` : `₹${shippingFee}`}</span>
+                    <span>{shippingFee === 0 ? `Free (Order over ₹${freeShippingMin.toLocaleString()})` : `₹${shippingFee.toFixed(2)}`}</span>
                   </div>
 
                   {taxAmount > 0 && (
@@ -1173,109 +1487,11 @@ export const CheckoutPage: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="checkout-actions" style={{ justifyContent: 'flex-end' }}>
-                  <Button variant="gold" onClick={nextStep} glow>
-                    Proceed to Shipping
-                  </Button>
-                </div>
-              </motion.div>
-            )}
-
-            {/* STEP 2: SHIPPING FORM */}
-            {activeStep === 2 && (
-              <motion.div
-                key="step2"
-                variants={scaleUp}
-                initial="initial"
-                animate="animate"
-                exit="initial"
-                className="glass-panel checkout-panel-card"
-              >
-                <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.6rem', color: 'var(--cream)', marginBottom: '20px' }}>
-                  2. Shipping Destination
-                </h2>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', marginBottom: '30px' }}>
-                  <Input
-                    label="Full Name"
-                    value={shippingForm.name}
-                    onChange={(e) => {
-                      setShippingForm({ ...shippingForm, name: e.target.value });
-                      if (shippingErrors.name) setShippingErrors({ ...shippingErrors, name: undefined });
-                    }}
-                    error={shippingErrors.name}
-                    required
-                    autoComplete="name"
-                  />
-                  <Input
-                    label="Street Address"
-                    value={shippingForm.street}
-                    onChange={(e) => {
-                      setShippingForm({ ...shippingForm, street: e.target.value });
-                      if (shippingErrors.street) setShippingErrors({ ...shippingErrors, street: undefined });
-                    }}
-                    error={shippingErrors.street}
-                    required
-                    autoComplete="street-address"
-                  />
-                  <div className="checkout-grid-two">
-                    <Input
-                      label="City"
-                      value={shippingForm.city}
-                      onChange={(e) => {
-                        setShippingForm({ ...shippingForm, city: e.target.value });
-                        if (shippingErrors.city) setShippingErrors({ ...shippingErrors, city: undefined });
-                      }}
-                      error={shippingErrors.city}
-                      required
-                      autoComplete="address-level2"
-                    />
-                    <Input
-                      label="State"
-                      value={shippingForm.state}
-                      onChange={(e) => {
-                        setShippingForm({ ...shippingForm, state: e.target.value });
-                        if (shippingErrors.state) setShippingErrors({ ...shippingErrors, state: undefined });
-                      }}
-                      error={shippingErrors.state}
-                      required
-                      autoComplete="address-level1"
-                    />
-                  </div>
-                  <div className="checkout-grid-two">
-                    <Input
-                      label="ZIP Code"
-                      value={shippingForm.zip}
-                      onChange={(e) => {
-                        setShippingForm({ ...shippingForm, zip: e.target.value });
-                        if (shippingErrors.zip) setShippingErrors({ ...shippingErrors, zip: undefined });
-                      }}
-                      error={shippingErrors.zip}
-                      required
-                      autoComplete="postal-code"
-                    />
-                    <Input
-                      label="Phone Number"
-                      type="tel"
-                      value={shippingForm.phone}
-                      onChange={(e) => {
-                        setShippingForm({ ...shippingForm, phone: e.target.value });
-                        if (shippingErrors.phone) setShippingErrors({ ...shippingErrors, phone: undefined });
-                      }}
-                      error={shippingErrors.phone}
-                      required
-                      autoComplete="tel"
-                    />
-                  </div>
-                </div>
                 <div className="checkout-actions">
-                  <Button variant="secondary" onClick={prevStep}>
-                    Back
+                  <Button variant="secondary" onClick={() => setActiveStep(1)}>
+                    Back to Address
                   </Button>
-                  <Button
-                    variant="gold"
-                    onClick={nextStep}
-                    glow
-                  >
+                  <Button variant="gold" onClick={nextStep} glow>
                     Proceed to Payment
                   </Button>
                 </div>
@@ -1412,18 +1628,47 @@ export const CheckoutPage: React.FC = () => {
                       background: 'rgba(0,0,0,0.25)',
                       borderRadius: '6px',
                       border: '1px solid var(--glass-border)',
+                      position: 'relative',
                     }}
                   >
-                    <h4 style={{ color: 'var(--gold)', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '8px' }}>
-                      Deliver To:
-                    </h4>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                      <h4 style={{ color: 'var(--gold)', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '1px', margin: 0 }}>
+                        Deliver To:
+                      </h4>
+                      <button
+                        type="button"
+                        onClick={() => setActiveStep(1)}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          color: 'var(--gold)',
+                          fontSize: '0.75rem',
+                          cursor: 'pointer',
+                          textDecoration: 'underline',
+                          padding: 0,
+                        }}
+                      >
+                        Change
+                      </button>
+                    </div>
                     <p style={{ color: 'var(--cream)', fontSize: '0.9rem', margin: 0, lineHeight: 1.5 }}>
-                      <strong>{shippingForm.name}</strong>
+                      <strong>{shippingForm.name}</strong> {shippingForm.phone ? `(${shippingForm.phone})` : ''}
                       <br />
-                      {shippingForm.street}
+                      {shippingForm.house_number ? `${shippingForm.house_number}, ` : ''}{shippingForm.street}
+                      {shippingForm.area ? <><br />{shippingForm.area}</> : null}
+                      {shippingForm.landmark ? <><br /><span style={{ color: 'var(--beige)', fontSize: '0.82rem' }}>Landmark: {shippingForm.landmark}</span></> : null}
                       <br />
-                      {shippingForm.city}, {shippingForm.state} - {shippingForm.zip}
+                      {shippingForm.city}, {shippingForm.state} - {shippingForm.pincode}
                     </p>
+                    {shippingForm.latitude && shippingForm.longitude ? (
+                      <div style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', fontSize: '0.72rem', color: '#10b981', marginTop: '10px', background: 'rgba(16,185,129,0.1)', padding: '2px 8px', borderRadius: '4px', border: '1px solid rgba(16,185,129,0.3)' }}>
+                        <MapPin size={11} /> Pinpoint Location Verified ({shippingForm.location_source === 'BROWSER_GPS' ? 'GPS' : 'Map Pin'})
+                      </div>
+                    ) : (
+                      <div style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', fontSize: '0.72rem', color: 'var(--beige)', marginTop: '10px', opacity: 0.8 }}>
+                        <MapPin size={11} /> Standard Postal Address
+                      </div>
+                    )}
                   </div>
 
                   <div
@@ -1434,14 +1679,46 @@ export const CheckoutPage: React.FC = () => {
                       border: '1px solid var(--glass-border)',
                     }}
                   >
-                    <h4 style={{ color: 'var(--gold)', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '8px' }}>
-                      Payment & Delivery:
-                    </h4>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                      <h4 style={{ color: 'var(--gold)', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '1px', margin: 0 }}>
+                        Payment & Fulfillment:
+                      </h4>
+                      <button
+                        type="button"
+                        onClick={() => setActiveStep(3)}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          color: 'var(--gold)',
+                          fontSize: '0.75rem',
+                          cursor: 'pointer',
+                          textDecoration: 'underline',
+                          padding: 0,
+                        }}
+                      >
+                        Change
+                      </button>
+                    </div>
                     <p style={{ color: 'var(--cream)', fontSize: '0.9rem', margin: 0, lineHeight: 1.5 }}>
                       <strong>Payment Method:</strong> {paymentMethod}
-                      <br />
-                      <strong>Delivery Charge:</strong> {shippingFee === 0 ? 'Free Standard Delivery' : `Standard Delivery (₹${shippingFee})`}
                     </p>
+                    <div style={{ marginTop: '10px', paddingTop: '10px', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+                      {shippingQuote?.fulfillment_mode === 'LOCAL' ? (
+                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: '#38bdf8', fontSize: '0.82rem', fontWeight: 600, background: 'rgba(56,189,248,0.1)', padding: '3px 8px', borderRadius: '4px', border: '1px solid rgba(56,189,248,0.3)' }}>
+                          <Zap size={12} /> Local Fast Delivery
+                        </div>
+                      ) : (
+                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: '#c9a84c', fontSize: '0.82rem', fontWeight: 600, background: 'rgba(201,168,76,0.1)', padding: '3px 8px', borderRadius: '4px', border: '1px solid rgba(201,168,76,0.3)' }}>
+                          <Truck size={12} /> Standard Courier Delivery
+                        </div>
+                      )}
+                      <div style={{ fontSize: '0.78rem', color: 'var(--beige)', marginTop: '4px' }}>
+                        {shippingQuote?.estimated_delivery_text || (shippingQuote?.fulfillment_mode === 'LOCAL' ? 'Same-day within 3-5 hours' : '2-4 business days')}
+                      </div>
+                      <div style={{ fontSize: '0.85rem', color: 'var(--cream)', marginTop: '6px' }}>
+                        <strong>Delivery Charge:</strong> {shippingFee === 0 ? <span style={{ color: '#10b981', fontWeight: 600 }}>FREE</span> : `₹${shippingFee.toFixed(2)}`}
+                      </div>
+                    </div>
                   </div>
                 </div>
 

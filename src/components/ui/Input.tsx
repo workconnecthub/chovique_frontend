@@ -5,6 +5,7 @@ interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   label?: string;
   error?: string;
   fullWidth?: boolean;
+  containerStyle?: React.CSSProperties;
 }
 
 export const Input: React.FC<InputProps> = ({
@@ -15,6 +16,7 @@ export const Input: React.FC<InputProps> = ({
   id,
   type = 'text',
   style,
+  containerStyle,
   ...props
 }) => {
   const inputId = id || `input-${Math.random().toString(36).substr(2, 9)}`;
@@ -31,6 +33,7 @@ export const Input: React.FC<InputProps> = ({
         width: fullWidth ? '100%' : 'auto',
         marginBottom: '15px',
         fontFamily: 'var(--font-body)',
+        ...containerStyle,
       }}
     >
       {label && (() => {

@@ -69,12 +69,16 @@ export const productService = {
     star_breakdown: { [key: number]: number };
   }> => apiGet(`/products/${productId}/reviews`),
 
-  /** Post a review for a product (authenticated). */
+  /** Post a review for a product with optional photos and videos. */
   createProductReview: (
     productId: string,
-    payload: { author: string; rating: number; text: string }
-  ): Promise<any> =>
-    apiPost<any>(`/products/${productId}/reviews`, payload),
+    payload: FormData | { author?: string; rating: number; text: string; title?: string; images?: string[]; videos?: string[] }
+  ): Promise<any> => {
+    if (payload instanceof FormData) {
+      return apiPostFormData<any>(`/products/${productId}/reviews`, payload);
+    }
+    return apiPost<any>(`/products/${productId}/reviews`, payload);
+  },
 
   /** Fetch multiple products by ID (comma separated) */
   getBulkProducts: (ids: string): Promise<Product[]> =>

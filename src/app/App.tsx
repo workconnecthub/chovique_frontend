@@ -38,6 +38,7 @@ import { ForgotPasswordPage } from '../features/auth/ForgotPasswordPage';
 import { CustomerDashboard } from '../features/dashboard/CustomerDashboard';
 import { AdminDashboard } from '../features/admin/AdminDashboard';
 import { SuperadminDashboard } from '../features/superadmin/SuperadminDashboard';
+import { DeliveryDashboard } from '../features/delivery';
 import { NotFoundPage } from '../features/error/NotFoundPage';
 import { PrivacyPolicyPage, TermsPage, RefundPolicyPage } from '../features/legal';
 
@@ -50,6 +51,7 @@ import '../styles/products.css';
 import '../styles/forms.css';
 import '../styles/dashboards.css';
 import '../styles/admin.css';
+import '../styles/delivery.css';
 import '../styles/chatbot.css';
 
 // Scroll Restoration helper
@@ -383,7 +385,7 @@ const CustomerMobileNav: React.FC = () => {
         >
           {role === 'customer' && user?.profile?.avatarUrl ? (
             <div style={{ width: 22, height: 22, borderRadius: '50%', overflow: 'hidden', border: isAccount ? '2px solid #c9a84c' : '1px solid rgba(255,255,255,0.4)', marginBottom: 2 }}>
-              <img src={user.profile.avatarUrl} alt={user.name || 'Account'} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              <img src={user.profile.avatarUrl} alt={user.name || 'Account'} referrerPolicy="no-referrer" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
             </div>
           ) : (
             <User size={21} />
@@ -410,16 +412,17 @@ const AppContent: React.FC = () => {
   // Route conditionals
   const isAuthRoute = ['/login', '/register', '/set-password', '/forgot-password'].includes(location.pathname);
   const isAdminDashboard = ['/admin', '/superadmin'].includes(location.pathname);
+  const isDeliveryRoute = location.pathname.startsWith('/delivery');
   const isCustomerDashboard = location.pathname === '/dashboard';
 
   // Customer or guest on mobile → we use our own CustomerMobileNav, hide global Navbar
-  const isCustomerOrGuest = role !== 'admin' && role !== 'superadmin';
-  const isCustomerMobile = isCustomerOrGuest && isMobile && !isAuthRoute && !isAdminDashboard;
+  const isCustomerOrGuest = role !== 'admin' && role !== 'superadmin' && role !== 'delivery_boy';
+  const isCustomerMobile = isCustomerOrGuest && isMobile && !isAuthRoute && !isAdminDashboard && !isDeliveryRoute;
 
-  const showNavbar = !isAuthRoute && !isAdminDashboard && !isCustomerMobile;
+  const showNavbar = !isAuthRoute && !isAdminDashboard && !isDeliveryRoute && !isCustomerMobile;
 
-  // Footer: hidden on auth, admin, customer dashboard, AND all customer mobile pages
-  const showFooter = !isAuthRoute && !isAdminDashboard && !isCustomerDashboard && !isCustomerMobile;
+  // Footer: hidden on auth, admin, delivery, customer dashboard, AND all customer mobile pages
+  const showFooter = !isAuthRoute && !isAdminDashboard && !isDeliveryRoute && !isCustomerDashboard && !isCustomerMobile;
 
   // Add bottom-padding class to <body> for customer mobile so fixed bottom nav doesn't overlap content
   useEffect(() => {
@@ -518,6 +521,18 @@ const AppContent: React.FC = () => {
             }
           />
 
+          {/* Protected: Delivery Boy & Admin Delivery Panel */}
+          <Route
+            path="/delivery"
+            element={
+              <ProtectedRoute allowedRoles={['delivery_boy', 'admin', 'superadmin']}>
+                <ErrorBoundary>
+                  <DeliveryDashboard />
+                </ErrorBoundary>
+              </ProtectedRoute>
+            }
+          />
+
           <Route path="*" element={<NotFoundPage />} />
         </Routes>
 
@@ -525,8 +540,8 @@ const AppContent: React.FC = () => {
 
       {showFooter && <Footer />}
 
-      {/* Chovique AI Assistant — Coco (hidden on admin/auth routes) */}
-      <ChatbotWidget />
+      {/* Chovique AI Assistant — Coco (hidden on admin/delivery/auth routes) */}
+      {!isDeliveryRoute && !isAdminDashboard && <ChatbotWidget />}
     </div>
   );
 };

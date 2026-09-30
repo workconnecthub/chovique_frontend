@@ -1663,6 +1663,7 @@ export const CustomerDashboard: React.FC = () => {
                         <img
                           src={formattedAvatarUrl}
                           alt="Profile Preview"
+                          referrerPolicy="no-referrer"
                           onError={() => setImgLoadError(true)}
                           style={{
                             width: '120px',
@@ -2440,6 +2441,130 @@ export const CustomerDashboard: React.FC = () => {
                         );
                       })()}
                     </div>
+
+                    {/* Customer Delivery OTP Card when Out for Delivery */}
+                    {Boolean(selectedOrder.delivery_otp || selectedOrder.status === 'Out for Delivery' || selectedOrder.fulfillment_status === 'OUT_FOR_DELIVERY') && (
+                      <div
+                        className="customer-order-card"
+                        style={{
+                          background: 'linear-gradient(135deg, rgba(35, 27, 18, 0.95) 0%, rgba(20, 15, 11, 0.98) 100%)',
+                          border: '2px solid rgba(201, 168, 76, 0.5)',
+                          borderRadius: '16px',
+                          padding: '24px',
+                          marginBottom: '20px',
+                          boxShadow: '0 8px 30px rgba(0, 0, 0, 0.4)',
+                          position: 'relative',
+                          overflow: 'hidden',
+                        }}
+                      >
+                        <div
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            flexWrap: 'wrap',
+                            gap: '12px',
+                            borderBottom: '1px solid rgba(201, 168, 76, 0.2)',
+                            paddingBottom: '16px',
+                            marginBottom: '18px',
+                          }}
+                        >
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                            <div
+                              style={{
+                                width: '44px',
+                                height: '44px',
+                                borderRadius: '12px',
+                                background: 'rgba(201, 168, 76, 0.15)',
+                                border: '1px solid #c9a84c',
+                                color: '#c9a84c',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                              }}
+                            >
+                              <Truck size={24} />
+                            </div>
+                            <div>
+                              <div style={{ fontSize: '0.75rem', color: '#c9a84c', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.8px' }}>
+                                LIVE ORDER DELIVERY VERIFICATION
+                              </div>
+                              <h4 style={{ margin: '2px 0 0', color: '#f5efe6', fontSize: '1.15rem', fontWeight: 700 }}>
+                                Your Chocolates Are Out For Delivery!
+                              </h4>
+                            </div>
+                          </div>
+
+                          {selectedOrder.delivery_boy_name && (
+                            <div
+                              style={{
+                                background: 'rgba(46, 204, 113, 0.12)',
+                                border: '1px solid rgba(46, 204, 113, 0.35)',
+                                padding: '6px 14px',
+                                borderRadius: '20px',
+                                color: '#2ecc71',
+                                fontSize: '0.8rem',
+                                fontWeight: 700,
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '6px',
+                              }}
+                            >
+                              <span>Executive:</span>
+                              <strong style={{ color: '#fff' }}>{selectedOrder.delivery_boy_name}</strong>
+                            </div>
+                          )}
+                        </div>
+
+                        {selectedOrder.delivery_otp ? (
+                          <div style={{ textAlign: 'center', padding: '10px 0' }}>
+                            <div style={{ fontSize: '0.85rem', color: 'rgba(255, 255, 255, 0.75)', marginBottom: '10px' }}>
+                              Share this confidential 6-digit code with your delivery executive upon package handover:
+                            </div>
+                            <div
+                              style={{
+                                display: 'inline-flex',
+                                gap: '8px',
+                                padding: '12px 20px',
+                                background: 'rgba(12, 9, 7, 0.85)',
+                                borderRadius: '14px',
+                                border: '2px dashed #c9a84c',
+                                boxShadow: '0 4px 20px rgba(201, 168, 76, 0.25)',
+                              }}
+                            >
+                              {String(selectedOrder.delivery_otp).split('').map((char: string, i: number) => (
+                                <span
+                                  key={i}
+                                  style={{
+                                    width: '42px',
+                                    height: '50px',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    background: 'rgba(201, 168, 76, 0.15)',
+                                    color: '#f5efe6',
+                                    fontSize: '1.6rem',
+                                    fontWeight: 900,
+                                    borderRadius: '8px',
+                                    border: '1px solid rgba(201, 168, 76, 0.3)',
+                                    letterSpacing: '1px',
+                                  }}
+                                >
+                                  {char}
+                                </span>
+                              ))}
+                            </div>
+                            <div style={{ fontSize: '0.78rem', color: 'rgba(201, 168, 76, 0.8)', marginTop: '12px' }}>
+                              🔒 For security, only share this code when you receive your chilled Chovique packaging.
+                            </div>
+                          </div>
+                        ) : (
+                          <div style={{ textAlign: 'center', padding: '14px 0', color: 'rgba(255,255,255,0.7)', fontSize: '0.88rem' }}>
+                            Your delivery partner is en route to your doorstep. The 6-digit delivery OTP will generate automatically upon arrival.
+                          </div>
+                        )}
+                      </div>
+                    )}
 
                     {/* Order Items Card (Responsive Table on Desktop, Clean Cards on Mobile) */}
                     <div className="customer-order-card">
@@ -4133,11 +4258,17 @@ export const CustomerDashboard: React.FC = () => {
                         AVAILABLE REWARD BALANCE
                       </div>
                       <div style={{ fontSize: '2.5rem', fontWeight: 800, color: '#f5efe6', fontFamily: 'var(--font-display)', margin: '8px 0 4px 0' }}>
-                        {wallet?.coin_balance ?? 0} Coins
+                        {wallet?.available_coins !== undefined ? wallet.available_coins : (wallet?.coin_balance ?? 0)} Coins
                       </div>
                       <div style={{ fontSize: '1rem', fontWeight: 700, color: '#c9a84c' }}>
-                        Equivalent value: ₹{(wallet?.rupee_value !== undefined ? wallet.rupee_value : ((wallet?.coin_balance ?? 0) / (wallet?.settings?.coins_per_rupee || 10))).toFixed(2)}
+                        Equivalent value: ₹{(wallet?.rupee_value !== undefined ? wallet.rupee_value : (((wallet?.available_coins ?? wallet?.coin_balance ?? 0)) / (wallet?.settings?.coins_per_rupee || 10))).toFixed(2)}
                       </div>
+                      {Boolean(wallet?.pending_coins && wallet.pending_coins > 0) && (
+                        <div style={{ marginTop: '14px', display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '8px 14px', borderRadius: '8px', background: 'rgba(241, 196, 15, 0.12)', border: '1px solid rgba(241, 196, 15, 0.35)', color: '#f1c40f', fontSize: '0.85rem' }}>
+                          <span>⏳ <strong>{wallet?.pending_coins} Coins</strong> pending clearance</span>
+                          <span style={{ color: 'rgba(255, 255, 255, 0.65)', fontSize: '0.78rem' }}>• Will be credited automatically within {wallet?.settings?.credit_delay_hours || 24} hours of order delivery</span>
+                        </div>
+                      )}
                     </div>
 
                     {/* TRANSACTION LEDGER & AUDIT HISTORY */}
@@ -4326,7 +4457,7 @@ export const CustomerDashboard: React.FC = () => {
                         }
 
                         return (
-          <div
+                          <div
                             style={{
                               background: 'rgba(18, 14, 11, 0.95)',
                               border: '1px solid rgba(201, 168, 76, 0.25)',
@@ -4339,15 +4470,49 @@ export const CustomerDashboard: React.FC = () => {
                               /* MOBILE: Card layout */
                               <div style={{ display: 'flex', flexDirection: 'column', gap: '1px', background: 'rgba(255,255,255,0.04)' }}>
                                 {filteredTxs.map((tx) => {
-                                  const isEarn = tx.type === 'EARN';
-                                  const isRedeem = tx.type === 'REDEEM';
-                                  const typeLabel = isEarn ? 'EARN' : isRedeem ? 'REDEEM' : 'ADJUSTMENT';
-                                  const typeBadgeColor = isEarn ? '#2ecc71' : isRedeem ? '#e74c3c' : '#f1c40f';
-                                  const typeBadgeBg = isEarn ? 'rgba(46,204,113,0.15)' : isRedeem ? 'rgba(231,76,60,0.15)' : 'rgba(241,196,15,0.15)';
+                                  const tType = (tx.type || '').toUpperCase();
+                                  const desc = (tx.description || '').toLowerCase();
+                                  const isWelcome = tType.includes('WELCOME') || tType.includes('ACCOUNT') || desc.includes('welcome') || desc.includes('registration');
+                                  const isOrderReward = (tType.includes('ORDER') || (tType === 'EARN' && tx.order_id)) && !isWelcome;
+                                  const isRedeem = tType.includes('REDEEM');
+                                  const isEarn = !isRedeem && !isWelcome && !isOrderReward && (tType === 'EARN' || tx.coins > 0);
+
+                                  let typeLabel = 'ADJUSTMENT';
+                                  let typeBadgeColor = '#f1c40f';
+                                  let typeBadgeBg = 'rgba(241,196,15,0.15)';
+
+                                  if (isWelcome) {
+                                    typeLabel = 'WELCOME BONUS';
+                                    typeBadgeColor = '#c9a84c';
+                                    typeBadgeBg = 'rgba(201,168,76,0.18)';
+                                  } else if (isOrderReward) {
+                                    typeLabel = 'ORDER REWARD';
+                                    typeBadgeColor = '#3498db';
+                                    typeBadgeBg = 'rgba(52,152,219,0.15)';
+                                  } else if (isRedeem) {
+                                    typeLabel = 'REDEEM';
+                                    typeBadgeColor = '#e74c3c';
+                                    typeBadgeBg = 'rgba(231,76,60,0.15)';
+                                  } else if (isEarn) {
+                                    typeLabel = 'EARN';
+                                    typeBadgeColor = '#2ecc71';
+                                    typeBadgeBg = 'rgba(46,204,113,0.15)';
+                                  }
+
+                                  const isPending = (tx as any).is_pending || (tx as any).status === 'PENDING';
+                                  const delayHours = (tx as any).delay_hours || wallet?.settings?.credit_delay_hours || 24;
+                                  const statusBadge = isPending ? (
+                                    <span style={{ fontSize: '0.72rem', color: '#f1c40f', background: 'rgba(241,196,15,0.12)', border: '1px solid rgba(241,196,15,0.3)', padding: '2px 6px', borderRadius: '4px', fontWeight: 600 }}>⏳ Within {delayHours}h</span>
+                                  ) : isWelcome ? (
+                                    <span style={{ fontSize: '0.72rem', color: '#2ecc71', background: 'rgba(46,204,113,0.12)', border: '1px solid rgba(46,204,113,0.3)', padding: '2px 6px', borderRadius: '4px', fontWeight: 600 }}>✓ Added to Wallet</span>
+                                  ) : isOrderReward ? (
+                                    <span style={{ fontSize: '0.72rem', color: '#2ecc71', background: 'rgba(46,204,113,0.12)', border: '1px solid rgba(46,204,113,0.3)', padding: '2px 6px', borderRadius: '4px', fontWeight: 600 }}>✓ Available</span>
+                                  ) : null;
+
                                   const absCoins = Math.abs(tx.coins);
-                                  const isPositive = tx.coins > 0 || isEarn;
+                                  const isPositive = tx.coins > 0 || isEarn || isWelcome || isOrderReward;
                                   const formattedCoins = isPositive ? `+${absCoins} Coins` : `−${absCoins} Coins`;
-                                  const coinsColor = isEarn ? '#2ecc71' : isRedeem ? '#e74c3c' : '#c9a84c';
+                                  const coinsColor = isWelcome ? '#c9a84c' : isEarn || isOrderReward ? '#2ecc71' : isRedeem ? '#e74c3c' : '#c9a84c';
                                   let dateStr = 'Recently';
                                   if (tx.created_at) {
                                     try { dateStr = new Date(tx.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }); } catch { dateStr = tx.created_at; }
@@ -4355,10 +4520,13 @@ export const CustomerDashboard: React.FC = () => {
                                   return (
                                     <div key={tx.id} style={{ background: 'rgba(18,14,11,0.98)', padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
                                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                        <span style={{ fontSize: '0.72rem', fontWeight: 800, letterSpacing: '0.5px', padding: '3px 10px', borderRadius: '6px', background: typeBadgeBg, color: typeBadgeColor, border: `1px solid ${typeBadgeColor}`, textTransform: 'uppercase' }}>● {typeLabel}</span>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                                          <span style={{ fontSize: '0.72rem', fontWeight: 800, letterSpacing: '0.5px', padding: '3px 10px', borderRadius: '6px', background: typeBadgeBg, color: typeBadgeColor, border: `1px solid ${typeBadgeColor}`, textTransform: 'uppercase' }}>● {typeLabel}</span>
+                                          {statusBadge}
+                                        </div>
                                         <span style={{ fontWeight: 800, color: coinsColor, fontSize: '0.95rem' }}>{formattedCoins}</span>
                                       </div>
-                                      <div style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.7)', lineHeight: 1.4 }}>{tx.description || (isEarn ? 'Coins earned for purchase' : isRedeem ? 'Coins redeemed on order' : 'Reward adjustment')}</div>
+                                      <div style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.7)', lineHeight: 1.4 }}>{tx.description || (isWelcome ? 'Registration welcome gift' : isOrderReward ? 'Coins earned for purchase' : isRedeem ? 'Coins redeemed on order' : 'Reward adjustment')}</div>
                                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '6px' }}>
                                         <span style={{ fontSize: '0.76rem', color: 'rgba(255,255,255,0.45)' }}>{dateStr}</span>
                                         {tx.order_id ? (
@@ -4375,7 +4543,7 @@ export const CustomerDashboard: React.FC = () => {
                                 <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.85rem', tableLayout: 'fixed' }}>
                                   <colgroup>
                                     <col style={{ width: '110px' }} />
-                                    <col style={{ width: '130px' }} />
+                                    <col style={{ width: '145px' }} />
                                     <col style={{ width: '110px' }} />
                                     <col />
                                     <col style={{ width: '140px' }} />
@@ -4391,15 +4559,42 @@ export const CustomerDashboard: React.FC = () => {
                                   </thead>
                                   <tbody>
                                     {filteredTxs.map((tx) => {
-                                      const isEarn = tx.type === 'EARN';
-                                      const isRedeem = tx.type === 'REDEEM';
-                                      const typeLabel = isEarn ? 'EARN' : isRedeem ? 'REDEEM' : 'ADJUSTMENT';
-                                      const typeBadgeColor = isEarn ? '#2ecc71' : isRedeem ? '#e74c3c' : '#f1c40f';
-                                      const typeBadgeBg = isEarn ? 'rgba(46, 204, 113, 0.15)' : isRedeem ? 'rgba(231, 76, 60, 0.15)' : 'rgba(241, 196, 15, 0.15)';
+                                      const tType = (tx.type || '').toUpperCase();
+                                      const desc = (tx.description || '').toLowerCase();
+                                      const isWelcome = tType.includes('WELCOME') || tType.includes('ACCOUNT') || desc.includes('welcome') || desc.includes('registration');
+                                      const isOrderReward = (tType.includes('ORDER') || (tType === 'EARN' && tx.order_id)) && !isWelcome;
+                                      const isRedeem = tType.includes('REDEEM');
+                                      const isEarn = !isRedeem && !isWelcome && !isOrderReward && (tType === 'EARN' || tx.coins > 0);
+
+                                      let typeLabel = 'ADJUSTMENT';
+                                      let typeBadgeColor = '#f1c40f';
+                                      let typeBadgeBg = 'rgba(241, 196, 15, 0.15)';
+
+                                      if (isWelcome) {
+                                        typeLabel = 'WELCOME BONUS';
+                                        typeBadgeColor = '#c9a84c';
+                                        typeBadgeBg = 'rgba(201, 168, 76, 0.18)';
+                                      } else if (isOrderReward) {
+                                        typeLabel = 'ORDER REWARD';
+                                        typeBadgeColor = '#3498db';
+                                        typeBadgeBg = 'rgba(52, 152, 219, 0.15)';
+                                      } else if (isRedeem) {
+                                        typeLabel = 'REDEEM';
+                                        typeBadgeColor = '#e74c3c';
+                                        typeBadgeBg = 'rgba(231, 76, 60, 0.15)';
+                                      } else if (isEarn) {
+                                        typeLabel = 'EARN';
+                                        typeBadgeColor = '#2ecc71';
+                                        typeBadgeBg = 'rgba(46, 204, 113, 0.15)';
+                                      }
+
+                                      const isPending = (tx as any).is_pending || (tx as any).status === 'PENDING';
+                                      const delayHours = (tx as any).delay_hours || wallet?.settings?.credit_delay_hours || 24;
+
                                       const absCoins = Math.abs(tx.coins);
-                                      const isPositive = tx.coins > 0 || isEarn;
+                                      const isPositive = tx.coins > 0 || isEarn || isWelcome || isOrderReward;
                                       const formattedCoins = isPositive ? `+${absCoins} Coins` : `−${absCoins} Coins`;
-                                      const coinsColor = isEarn ? '#2ecc71' : isRedeem ? '#e74c3c' : '#c9a84c';
+                                      const coinsColor = isWelcome ? '#c9a84c' : isEarn || isOrderReward ? '#2ecc71' : isRedeem ? '#e74c3c' : '#c9a84c';
                                       let dateStr = 'Recently';
                                       if (tx.created_at) {
                                         try {
@@ -4413,7 +4608,14 @@ export const CustomerDashboard: React.FC = () => {
                                             <span style={{ fontSize: '0.7rem', fontWeight: 800, letterSpacing: '0.5px', padding: '3px 8px', borderRadius: '6px', background: typeBadgeBg, color: typeBadgeColor, border: `1px solid ${typeBadgeColor}`, textTransform: 'uppercase', whiteSpace: 'nowrap' }}>● {typeLabel}</span>
                                           </td>
                                           <td style={{ padding: '12px 14px', fontWeight: 800, color: coinsColor, fontSize: '0.9rem', whiteSpace: 'nowrap' }}>{formattedCoins}</td>
-                                          <td style={{ padding: '12px 14px', color: 'rgba(255, 255, 255, 0.7)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={tx.description || ''}>{tx.description || (isEarn ? 'Coins earned for purchase' : isRedeem ? 'Coins redeemed on order' : 'Reward adjustment')}</td>
+                                          <td style={{ padding: '12px 14px', color: 'rgba(255, 255, 255, 0.7)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={tx.description || ''}>
+                                            <span>{tx.description || (isWelcome ? 'Registration welcome bonus' : isOrderReward ? 'Coins earned for purchase' : isRedeem ? 'Coins redeemed on order' : 'Reward adjustment')}</span>
+                                            {isPending && (
+                                              <span style={{ marginLeft: '8px', fontSize: '0.72rem', color: '#f1c40f', background: 'rgba(241,196,15,0.12)', border: '1px solid rgba(241,196,15,0.3)', padding: '2px 6px', borderRadius: '4px', fontWeight: 600 }}>
+                                                ⏳ Added within {delayHours}h
+                                              </span>
+                                            )}
+                                          </td>
                                           <td style={{ padding: '12px 14px', textAlign: 'right', whiteSpace: 'nowrap' }}>
                                             {tx.order_id ? (
                                               <span onClick={() => setActiveTab('orders')} style={{ fontSize: '0.78rem', fontWeight: 700, color: '#c9a84c', background: 'rgba(201, 168, 76, 0.1)', border: '1px solid rgba(201, 168, 76, 0.3)', padding: '3px 8px', borderRadius: '6px', cursor: 'pointer', whiteSpace: 'nowrap' }}>#{tx.order_id.slice(-8)}</span>
@@ -6104,7 +6306,7 @@ export const CustomerDashboard: React.FC = () => {
                         const raw = avatarPreviewUrl || user?.profile?.avatarUrl || (user?.profile as any)?.avatar_url;
                         const url = raw && (raw.startsWith('data:') || raw.startsWith('blob:')) ? raw : raw ? getImageUrl(raw) : '';
                         return url && !imgLoadError ? (
-                          <img src={url} alt="Profile" onError={() => setImgLoadError(true)}
+                          <img src={url} alt="Profile" referrerPolicy="no-referrer" onError={() => setImgLoadError(true)}
                             style={{ width: '90px', height: '90px', borderRadius: '50%', objectFit: 'cover', border: '2px solid #c9a84c', boxShadow: '0 0 16px rgba(201,168,76,0.3)' }} />
                         ) : (
                           <div style={{ width: '90px', height: '90px', borderRadius: '50%', background: 'linear-gradient(135deg,rgba(201,168,76,0.25),rgba(18,14,11,0.95))', border: '2px solid #c9a84c', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2rem', color: '#c9a84c', fontWeight: 700 }}>

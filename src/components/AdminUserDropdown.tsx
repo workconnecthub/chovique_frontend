@@ -74,7 +74,7 @@ export const AdminUserDropdown: React.FC<AdminUserDropdownProps> = ({ onNavigate
           }}
         >
           {avatarUrl ? (
-            <img src={avatarUrl} alt={user?.name || 'Admin'} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            <img src={avatarUrl} alt={user?.name || 'Admin'} referrerPolicy="no-referrer" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
           ) : (
             initial
           )}

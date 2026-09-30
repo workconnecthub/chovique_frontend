@@ -87,17 +87,18 @@ export const CartPage: React.FC = () => {
   const discountAmount = couponData?.calculated_discount ?? 0;
   const discountPercent = couponData?.discount_percent ?? 0;
 
-  // Shipping
+  // Shipping: Free if subtotal meets threshold; otherwise dynamic at checkout based on delivery address
   const freeShippingMin = storeConfig?.free_shipping_min_order ?? 500;
+  const isFreeDelivery = subtotal >= freeShippingMin && subtotal > 0;
   const standardShipping = storeConfig?.standard_shipping_charge ?? 50;
-  const shippingAmount = (freeShippingMin > 0 && subtotal >= freeShippingMin) || subtotal === 0 ? 0 : standardShipping;
+  const shippingAmount = isFreeDelivery || subtotal === 0 ? 0 : standardShipping;
 
   // Tax
   const gstRate = storeConfig?.gst_rate ?? 0;
   const taxAmount = Math.round(subtotal * (gstRate / 100) * 100) / 100;
 
-  // Total
-  const totalAmount = Math.max(0, subtotal - discountAmount + shippingAmount + taxAmount);
+  // Total (before dynamic delivery fee is confirmed at checkout)
+  const totalAmount = Math.max(0, subtotal - discountAmount + (isFreeDelivery ? 0 : 0) + taxAmount);
 
   const handleApplyCoupon = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -413,11 +414,17 @@ export const CartPage: React.FC = () => {
               )}
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.95rem', color: 'var(--beige)' }}>
                 <span>Shipping</span>
-                <span>{shippingAmount === 0 ? 'Free' : `₹${shippingAmount.toLocaleString()}`}</span>
+                <span>
+                  {isFreeDelivery ? (
+                    <span style={{ color: '#4ade80', fontWeight: 600 }}>FREE (Order ₹500+)</span>
+                  ) : (
+                    <span style={{ color: 'var(--gold)', fontSize: '0.85rem' }}>Calculated at checkout</span>
+                  )}
+                </span>
               </div>
-              {shippingAmount > 0 && (
+              {!isFreeDelivery && (
                 <p style={{ fontSize: '0.75rem', color: 'var(--grey-light)', margin: '-8px 0 0 0' }}>
-                  Free shipping on orders above ₹{freeShippingMin.toLocaleString()}.
+                  Delivery charge calculated based on your address. Free on orders above ₹{freeShippingMin.toLocaleString()}.
                 </p>
               )}
               {taxAmount > 0 && (

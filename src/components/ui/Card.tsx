@@ -83,15 +83,17 @@ export const Card: React.FC<CardProps> = ({ product }) => {
       }}
     >
       {/* Product Image Container */}
-      <div style={{ position: 'relative', overflow: 'hidden', aspectRatio: '1.05/1', background: 'rgba(0,0,0,0.2)' }}>
+      <div style={{ position: 'relative', overflow: 'hidden', aspectRatio: '1.05/1', background: 'radial-gradient(circle at center, rgba(35, 20, 10, 0.45) 0%, rgba(10, 5, 2, 0.85) 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '10px', boxSizing: 'border-box' }}>
         <img
           src={imgSrc}
           alt={product.name}
           onError={handleMainImgError}
           style={{
-            width: '100%',
-            height: '100%',
-            objectFit: 'cover',
+            maxWidth: '100%',
+            maxHeight: '100%',
+            width: 'auto',
+            height: 'auto',
+            objectFit: 'contain',
             objectPosition: 'center center',
             transition: 'transform 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94), opacity 0.4s ease',
             opacity: isHovered && hasHover && !isOutOfStock ? 0 : 1,
@@ -111,7 +113,9 @@ export const Card: React.FC<CardProps> = ({ product }) => {
               left: 0,
               width: '100%',
               height: '100%',
-              objectFit: 'cover',
+              objectFit: 'contain',
+              padding: '10px',
+              boxSizing: 'border-box',
               transition: 'transform 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94), opacity 0.4s ease',
               opacity: isHovered ? 1 : 0,
               transform: isHovered ? 'scale(1.06)' : 'scale(1)',

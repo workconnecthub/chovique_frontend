@@ -66,6 +66,8 @@ export const LoginPage: React.FC = () => {
       navigate('/admin');
     } else if (result.role === 'superadmin') {
       navigate('/superadmin');
+    } else if (result.role === 'delivery_boy') {
+      navigate('/delivery');
     } else {
       navigate(from, { replace: true });
     }
@@ -215,6 +217,8 @@ export const LoginPage: React.FC = () => {
                             navigate('/admin');
                           } else if (result.role === 'superadmin') {
                             navigate('/superadmin');
+                          } else if (result.role === 'delivery_boy') {
+                            navigate('/delivery');
                           } else {
                             navigate(from, { replace: true });
                           }
@@ -230,7 +234,9 @@ export const LoginPage: React.FC = () => {
                     }
                   }}
                   onError={() => {
-                    console.warn(`[Chovique] Google Sign-In origin (${window.location.origin}) is not authorized in Google Cloud Console.`);
+                    const origin = window.location.origin;
+                    console.warn(`[Chovique] Google Sign-In failed: origin (${origin}) is not authorized in Google Cloud Console.`);
+                    setError(`Google Sign-In error (origin_mismatch): Please ensure "${origin}" is added to "Authorized JavaScript origins" in Google Cloud Console.`);
                   }}
                   theme="filled_black"
                   shape="rectangular"

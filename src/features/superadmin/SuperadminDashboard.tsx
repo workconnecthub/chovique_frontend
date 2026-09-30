@@ -77,6 +77,8 @@ import { AuditLogDetailModal } from '../../components/AuditLogDetailModal';
 import { AdminProfileView } from '../admin/AdminProfileView';
 import { ChangePasswordView } from '../admin/ChangePasswordView';
 import { CustomerDirectory } from '../admin/CustomerDirectory';
+import { DeliveryBoysView } from '../admin/DeliveryBoysView';
+import { LogisticsManagementView } from './LogisticsManagementView';
 import type { OnlineLedgerItem } from '../../services/adminService';
 
 const formatActionLabel = (action?: string | null): string => {
@@ -245,10 +247,15 @@ export const SuperadminDashboard: React.FC = () => {
         'admin-mgmt': 'admin-mgmt',
         'admins': 'admin-mgmt',
         'customers': 'customers',
+        'delivery-boys': 'delivery-boys',
+        'delivery': 'delivery-boys',
+        'fleet': 'delivery-boys',
         'audit-logs': 'audit-logs',
         'platform-settings': 'platform-settings',
         'settings': 'platform-settings',
-        'stores': 'enterprise',
+        'logistics': 'logistics',
+        'shipping': 'logistics',
+        'stores': 'logistics',
       };
       if (mapping[tabParam]) {
         setActiveTab(mapping[tabParam]);
@@ -3133,6 +3140,15 @@ export const SuperadminDashboard: React.FC = () => {
           <div>
             <CustomerDirectory
               addToast={addToast}
+            />
+          </div>
+        )}
+
+        {/* DELIVERY BOYS / FLEET TAB — accessible to Superadmin */}
+        {activeTab === 'delivery-boys' && (
+          <div>
+            <DeliveryBoysView
+              addToast={(msg, type) => addToast(type === 'error' ? 'error' : type === 'success' ? 'success' : 'info', msg)}
             />
           </div>
         )}
@@ -6818,6 +6834,13 @@ export const SuperadminDashboard: React.FC = () => {
 
 
 
+        {/* LOGISTICS & STORES TAB */}
+        {activeTab === 'logistics' && (
+          <div>
+            <LogisticsManagementView addToast={addToast} />
+          </div>
+        )}
+
         {/* PLATFORM SETTINGS TAB */}
         {activeTab === 'platform-settings' && (
           <div>
@@ -7552,7 +7575,7 @@ export const SuperadminDashboard: React.FC = () => {
         )}
 
         {/* AUDIT LOG TAB FALLBACK */}
-        {!['enterprise', 'revenue', 'sales-comparison', 'reports', 'admin-mgmt', 'customers', 'audit-logs', 'theme-builder', 'home-mgmt', 'platform-settings', 'notifications', 'profile', 'change-password'].includes(activeTab) && (
+        {!['enterprise', 'revenue', 'sales-comparison', 'reports', 'admin-mgmt', 'customers', 'delivery-boys', 'logistics', 'audit-logs', 'theme-builder', 'home-mgmt', 'platform-settings', 'notifications', 'profile', 'change-password'].includes(activeTab) && (
           <div
             className="glass-panel"
             style={{

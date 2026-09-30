@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Plus,
@@ -26,6 +26,8 @@ import {
   Calendar,
   ArrowUpRight,
   TrendingUp,
+  Save,
+  Zap,
   AlertTriangle as AlertIcon,
   RefreshCw,
   ChevronDown,
@@ -40,6 +42,13 @@ import {
   MapPin,
   Edit3,
   FileSpreadsheet,
+  Play,
+  Film,
+  Camera,
+  ArrowLeft,
+  ArrowRight,
+  XCircle,
+  ShieldCheck,
 } from 'lucide-react';
 import { exportToCSV } from '../../utils/exportCsv';
 import { useApp } from '../../app/providers';
@@ -65,6 +74,7 @@ import { orderService } from '../../services/orderService';
 import { OrderManagement, OrderDetailModal } from './OrderManagement';
 import { CustomerDirectory } from './CustomerDirectory';
 import { OfflineSalesView } from './OfflineSalesView';
+import { DeliveryBoysView } from './DeliveryBoysView';
 import { CreateCouponView } from './CreateCouponView';
 import { Product, OfflineSale, SystemUser, Banner } from '../../types';
 import { getImageUrl } from '../../utils/imageUrl';
@@ -121,6 +131,9 @@ export const AdminDashboard: React.FC = () => {
         'inventory': 'products',
         'products': 'products',
         'orders': 'orders',
+        'delivery-boys': 'delivery-boys',
+        'delivery': 'delivery-boys',
+        'fleet': 'delivery-boys',
         'customers': 'customers',
         'offline-sales': 'offline-sales',
         'offline': 'offline-sales',
@@ -461,6 +474,9 @@ export const AdminDashboard: React.FC = () => {
   const [editingReel, setEditingReel] = useState<any | null>(null);
   const [editingReelVideoFile, setEditingReelVideoFile] = useState<File | null>(null);
   const [isUpdatingReel, setIsUpdatingReel] = useState(false);
+  const [isFetchingEditReelMeta, setIsFetchingEditReelMeta] = useState(false);
+  const [editReelSuccessMsg, setEditReelSuccessMsg] = useState('');
+  const [editReelErrorMsg, setEditReelErrorMsg] = useState('');
 
   const imageInputRef = useRef<HTMLInputElement>(null);
 
@@ -496,6 +512,35 @@ export const AdminDashboard: React.FC = () => {
       imageFiles: [...prev.imageFiles, ...validSizeFiles], 
       imagePreviewUrls: [...prev.imagePreviewUrls, ...previewUrls] 
     }));
+  };
+
+  const handleSetMainCover = (index: number) => {
+    if (index === 0) return;
+    setNewProd(prev => {
+      const newFiles = [...prev.imageFiles];
+      const newPreviews = [...prev.imagePreviewUrls];
+      const [movedFile] = newFiles.splice(index, 1);
+      const [movedPreview] = newPreviews.splice(index, 1);
+      newFiles.unshift(movedFile);
+      newPreviews.unshift(movedPreview);
+      return { ...prev, imageFiles: newFiles, imagePreviewUrls: newPreviews };
+    });
+  };
+
+  const handleReorderImage = (index: number, direction: 'prev' | 'next') => {
+    const targetIdx = direction === 'prev' ? index - 1 : index + 1;
+    if (targetIdx < 0 || targetIdx >= newProd.imageFiles.length) return;
+    setNewProd(prev => {
+      const newFiles = [...prev.imageFiles];
+      const newPreviews = [...prev.imagePreviewUrls];
+      const tmpF = newFiles[index];
+      newFiles[index] = newFiles[targetIdx];
+      newFiles[targetIdx] = tmpF;
+      const tmpP = newPreviews[index];
+      newPreviews[index] = newPreviews[targetIdx];
+      newPreviews[targetIdx] = tmpP;
+      return { ...prev, imageFiles: newFiles, imagePreviewUrls: newPreviews };
+    });
   };
 
   const resetProductForm = () => {
@@ -707,7 +752,7 @@ export const AdminDashboard: React.FC = () => {
         formData.append('rating', String(item.rating !== undefined && item.rating !== null ? item.rating : 4.8));
         if (item.imageFiles.length > 0) {
           formData.append('image', item.imageFiles[0]);
-          item.imageFiles.forEach((file: File) => formData.append('gallery_images', file));
+          item.imageFiles.slice(1).forEach((file: File) => formData.append('gallery_images', file));
         }
         formData.append('nutrition_serving_size', item.servingSize);
         formData.append('nutrition_calories', item.calories);
@@ -839,6 +884,7 @@ export const AdminDashboard: React.FC = () => {
   const [storyVideoUrl, setStoryVideoUrl] = useState('');
   const [showAddTestimonialModal, setShowAddTestimonialModal] = useState(false);
   const [showUploadVideoModal, setShowUploadVideoModal] = useState(false);
+  const [showAboutVideoCard, setShowAboutVideoCard] = useState(false);
 
   // --- Coupons State ---
   const [couponsList, setCouponsList] = useState<any[]>([]);
@@ -1108,24 +1154,80 @@ export const AdminDashboard: React.FC = () => {
     }
   };
 
+  const handleAutoFetchEditReelMeta = async (url: string) => {
+    const trimmed = (url || '').trim();
+    if (!trimmed) return;
+    if (!trimmed.includes('instagram.com')) {
+      setEditReelErrorMsg('Please enter a valid Instagram URL (e.g. https://www.instagram.com/reel/...)');
+      return;
+    }
+    setIsFetchingEditReelMeta(true);
+    setEditReelSuccessMsg('');
+    setEditReelErrorMsg('');
+    try {
+      const meta = await adminService.fetchReelMeta(trimmed);
+      setEditingReel((prev: any) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          instagram_url: meta.instagram_url || trimmed,
+          account_name: meta.account_name || prev.account_name || prev.accountName || '@choviqueofficial',
+          video_url: meta.video_url || prev.video_url || prev.videoUrl,
+        };
+      });
+      setEditReelSuccessMsg(`✓ Successfully fetched reel video for ${meta.account_name || 'creator'}!`);
+      addToast('success', `Found reel video for ${meta.account_name}`, 'Reel Video Updated');
+    } catch (err: any) {
+      console.warn('Auto fetch edit reel meta error:', err);
+      const msg = err?.detail || err?.message || 'Could not auto-fetch from Instagram. You can upload custom video below.';
+      setEditReelErrorMsg(msg);
+      addToast('info', msg, 'Auto-Fetch Notice');
+    } finally {
+      setIsFetchingEditReelMeta(false);
+    }
+  };
+
   const handleEditReelSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingReel) return;
+    setEditReelErrorMsg('');
     setIsUpdatingReel(true);
     try {
       const fd = new FormData();
-      fd.append('title', editingReel.title || '');
-      fd.append('likes', editingReel.likes || '14.2K');
-      fd.append('comments', editingReel.comments || '348');
-      fd.append('views', editingReel.views || '124K views');
-      if (editingReel.video_url) fd.append('video_url', editingReel.video_url);
+      const igUrl = editingReel.instagram_url || editingReel.instagramUrl || '';
+      const accName = editingReel.account_name || editingReel.accountName || '@choviqueofficial';
+      const vidUrl = editingReel.video_url || editingReel.videoUrl || '';
+
+      fd.append('instagram_url', igUrl);
+      fd.append('account_name', accName);
+      if (vidUrl) {
+        fd.append('video_url', vidUrl);
+      }
+      fd.append('title', accName || 'Instagram Reel');
+      fd.append('likes', '0');
+      fd.append('comments', '0');
+      fd.append('views', '0 views');
       if (editingReelVideoFile) fd.append('video', editingReelVideoFile);
+
       const updated = await adminService.updateReel(editingReel.id, fd);
-      setCmsReels((prev: any[]) => prev.map((r) => (r.id === editingReel.id ? { ...r, ...updated } : r)));
+      setCmsReels((prev: any[]) => prev.map((r) => (
+        r.id === editingReel.id ? {
+          ...r,
+          ...updated,
+          videoUrl: updated.videoUrl || updated.video_url || vidUrl,
+          instagramUrl: updated.instagramUrl || updated.instagram_url || igUrl,
+          accountName: updated.accountName || updated.account_name || accName,
+        } : r
+      )));
       setEditingReel(null);
       setEditingReelVideoFile(null);
+      setEditReelSuccessMsg('');
+      setEditReelErrorMsg('');
+      addToast('success', 'Instagram reel updated successfully!', 'Reel Saved');
     } catch (err: any) {
-      alert(err?.message || 'Failed to update reel');
+      const msg = err?.detail || err?.message || 'Failed to update reel. Please check your network and try again.';
+      setEditReelErrorMsg(msg);
+      addToast('error', msg, 'Update Failed');
     } finally {
       setIsUpdatingReel(false);
     }
@@ -1392,9 +1494,13 @@ export const AdminDashboard: React.FC = () => {
   // --- Instagram Reels State & Handlers ---
   const [cmsReels, setCmsReels] = useState<any[]>([]);
   const [showAddReelModal, setShowAddReelModal] = useState(false);
-  const [newReelData, setNewReelData] = useState({ title: '', likes: '14.2K', comments: '348', views: '124K views', video_url: '' });
+  const [newReelData, setNewReelData] = useState({ instagram_url: '', account_name: '@choviqueofficial', video_url: '' });
   const [newReelVideoFile, setNewReelVideoFile] = useState<File | null>(null);
   const [isCreatingReel, setIsCreatingReel] = useState(false);
+  const [isFetchingReelMeta, setIsFetchingReelMeta] = useState(false);
+  const [fetchReelSuccessMsg, setFetchReelSuccessMsg] = useState('');
+  const [fetchReelErrorMsg, setFetchReelErrorMsg] = useState('');
+  const [createReelErrorMsg, setCreateReelErrorMsg] = useState('');
 
   const fetchCmsReels = () => {
     apiGet<any[]>('/home/reels')
@@ -1402,26 +1508,70 @@ export const AdminDashboard: React.FC = () => {
       .catch(() => {});
   };
 
+  const handleAutoFetchReelMeta = async (url: string) => {
+    const trimmed = (url || '').trim();
+    if (!trimmed) return;
+    if (!trimmed.includes('instagram.com')) {
+      setFetchReelErrorMsg('Please enter a valid Instagram URL (e.g. https://www.instagram.com/reel/...)');
+      return;
+    }
+    setIsFetchingReelMeta(true);
+    setFetchReelSuccessMsg('');
+    setFetchReelErrorMsg('');
+    try {
+      const meta = await adminService.fetchReelMeta(trimmed);
+      setNewReelData((prev) => ({
+        ...prev,
+        instagram_url: meta.instagram_url || trimmed,
+        account_name: meta.account_name || prev.account_name,
+        video_url: meta.video_url || prev.video_url,
+      }));
+      setFetchReelSuccessMsg(`✓ Successfully fetched details for ${meta.account_name || 'creator'}!`);
+      addToast('success', `Found reel video for ${meta.account_name}`, 'Instagram Details Fetched');
+    } catch (err: any) {
+      console.warn('Auto fetch reel meta warning:', err);
+      const msg = err?.detail || err?.message || 'Could not auto-fetch from Instagram. You can still publish or upload video manually.';
+      setFetchReelErrorMsg(msg);
+      addToast('info', msg, 'Auto-Fetch Notice');
+    } finally {
+      setIsFetchingReelMeta(false);
+    }
+  };
+
   const handleCreateReelSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newReelData.title) return;
+    setCreateReelErrorMsg('');
+    if (!newReelData.instagram_url && !newReelData.video_url && !newReelVideoFile) {
+      setCreateReelErrorMsg('Please enter an Instagram Reel URL or select a video file.');
+      return;
+    }
     setIsCreatingReel(true);
     const formData = new FormData();
-    formData.append('title', newReelData.title);
-    formData.append('likes', newReelData.likes || '14.2K');
-    formData.append('comments', newReelData.comments || '348');
-    formData.append('views', newReelData.views || '124K views');
-    formData.append('video_url', newReelData.video_url || '');
+    formData.append('instagram_url', newReelData.instagram_url || '');
+    formData.append('account_name', newReelData.account_name || '@choviqueofficial');
+    if (newReelData.video_url) {
+      formData.append('video_url', newReelData.video_url);
+    }
+    formData.append('title', newReelData.account_name || 'Instagram Reel');
+    formData.append('likes', '0');
+    formData.append('comments', '0');
+    formData.append('views', '0 views');
     if (newReelVideoFile) formData.append('video', newReelVideoFile);
 
     try {
       await adminService.createReel(formData);
       fetchCmsReels();
       setShowAddReelModal(false);
-      setNewReelData({ title: '', likes: '14.2K', comments: '348', views: '124K views', video_url: '' });
+      setNewReelData({ instagram_url: '', account_name: '@choviqueofficial', video_url: '' });
       setNewReelVideoFile(null);
+      setFetchReelSuccessMsg('');
+      setFetchReelErrorMsg('');
+      setCreateReelErrorMsg('');
+      addToast('success', 'Instagram Reel published successfully!', 'Reel Added');
     } catch (err: any) {
-      alert(err?.message || 'Failed to publish reel video');
+      const msg = err?.detail || err?.message || 'Failed to publish reel video. Please try again.';
+      setCreateReelErrorMsg(msg);
+      addToast('error', msg, 'Publishing Failed');
     } finally {
       setIsCreatingReel(false);
     }
@@ -1510,8 +1660,14 @@ export const AdminDashboard: React.FC = () => {
   };
 
   // Testimonial Moderation & Review State
+  const [reviewSubTab, setReviewSubTab] = useState<'product_reviews' | 'site_testimonials'>('product_reviews');
   const [testimonialStatusFilter, setTestimonialStatusFilter] = useState<string>('all');
+  const [productReviewStatusFilter, setProductReviewStatusFilter] = useState<string>('all');
+  const [productReviewsPage, setProductReviewsPage] = useState<number>(1);
   const [reviewsList, setReviewsList] = useState<any[]>([]);
+  const [reviewsLoading, setReviewsLoading] = useState<boolean>(false);
+  const [selectedReviewMediaModal, setSelectedReviewMediaModal] = useState<{ type: 'image' | 'video'; url: string; title?: string } | null>(null);
+  const [reviewActionInProgress, setReviewActionInProgress] = useState<string | null>(null);
 
   const fetchAdminTestimonials = (status?: string) => {
     adminService.adminGetTestimonials(status)
@@ -1520,9 +1676,77 @@ export const AdminDashboard: React.FC = () => {
   };
 
   const fetchAdminReviews = () => {
+    setReviewsLoading(true);
     adminService.adminGetReviews()
       .then(data => { if (Array.isArray(data)) setReviewsList(data); })
-      .catch((err) => { console.error('Failed to load admin reviews:', err); });
+      .catch((err) => { console.error('Failed to load admin reviews:', err); })
+      .finally(() => { setReviewsLoading(false); });
+  };
+
+  const handleApproveProductReview = async (id: string, featureOnHome: boolean = false) => {
+    setReviewActionInProgress(id);
+    try {
+      await adminService.adminUpdateReviewStatus(id, 'approved', featureOnHome);
+      addToast(
+        'success',
+        featureOnHome
+          ? 'Review approved & featured on Landing Page (+ Product Page)!'
+          : 'Review approved and published to Product Page only.',
+        'Review Approved'
+      );
+      fetchAdminReviews();
+    } catch (err: any) {
+      addToast('error', err?.detail || err?.message || 'Failed to approve review.', 'Error');
+    } finally {
+      setReviewActionInProgress(null);
+    }
+  };
+
+  const handleToggleFeaturedOnHome = async (id: string, currentFeatured: boolean) => {
+    setReviewActionInProgress(id);
+    const newFeatured = !currentFeatured;
+    try {
+      await adminService.adminUpdateReviewStatus(id, 'approved', newFeatured);
+      addToast(
+        'info',
+        newFeatured
+          ? 'Review is now featured on the Landing Page reviews section!'
+          : 'Review removed from Landing Page (remains visible on Product Page).',
+        newFeatured ? 'Featured on Landing Page' : 'Landing Page Updated'
+      );
+      fetchAdminReviews();
+    } catch (err: any) {
+      addToast('error', err?.detail || err?.message || 'Failed to update review destination.', 'Error');
+    } finally {
+      setReviewActionInProgress(null);
+    }
+  };
+
+  const handleRejectProductReview = async (id: string) => {
+    setReviewActionInProgress(id);
+    try {
+      await adminService.adminUpdateReviewStatus(id, 'rejected');
+      addToast('info', 'Customer review marked as rejected.', 'Review Rejected');
+      fetchAdminReviews();
+    } catch (err: any) {
+      addToast('error', err?.detail || err?.message || 'Failed to reject review.', 'Error');
+    } finally {
+      setReviewActionInProgress(null);
+    }
+  };
+
+  const handleDeleteProductReview = async (id: string) => {
+    if (!window.confirm('Are you sure you want to permanently delete this product review?')) return;
+    setReviewActionInProgress(id);
+    try {
+      await adminService.adminDeleteReview(id);
+      addToast('success', 'Customer review permanently deleted.', 'Review Deleted');
+      fetchAdminReviews();
+    } catch (err: any) {
+      addToast('error', err?.detail || err?.message || 'Failed to delete review.', 'Error');
+    } finally {
+      setReviewActionInProgress(null);
+    }
   };
 
   useEffect(() => {
@@ -1682,6 +1906,7 @@ export const AdminDashboard: React.FC = () => {
       addToast('success', 'Our Story process video updated successfully!', 'Video Updated');
       setStoryVideoFile(null);
       setShowUploadVideoModal(false);
+      setShowAboutVideoCard(false);
     } catch (err: any) {
       addToast('error', err?.message || 'Failed to upload video.', 'Upload Error');
     } finally {
@@ -3299,47 +3524,213 @@ export const AdminDashboard: React.FC = () => {
                         </div>
                       </div>
 
-                      {/* Image Preview Thumbnails */}
+                      {/* Multi-Image Gallery Organizer */}
                       {newProd.imagePreviewUrls.length > 0 && (
-                        <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginTop: '14px' }}>
-                          {newProd.imagePreviewUrls.map((url, idx) => (
-                            <div key={idx} style={{ position: 'relative' }}>
-                              <img
-                                src={url}
-                                alt={`Preview ${idx + 1}`}
-                                style={{ width: '64px', height: '64px', objectFit: 'cover', borderRadius: '6px', border: '1px solid var(--gold)' }}
-                              />
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setNewProd(prev => ({
-                                    ...prev,
-                                    imageFiles: prev.imageFiles.filter((_, i) => i !== idx),
-                                    imagePreviewUrls: prev.imagePreviewUrls.filter((_, i) => i !== idx),
-                                  }));
-                                }}
-                                style={{
-                                  position: 'absolute',
-                                  top: '-6px',
-                                  right: '-6px',
-                                  width: '18px',
-                                  height: '18px',
-                                  borderRadius: '50%',
-                                  background: 'var(--rose-gold)',
-                                  color: '#fff',
-                                  border: 'none',
-                                  cursor: 'pointer',
-                                  fontSize: '11px',
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
-                                }}
-                              >
-                                ✕
-                              </button>
+                        <div style={{ marginTop: '16px' }}>
+                          <div
+                            style={{
+                              padding: '10px 14px',
+                              background: 'rgba(212, 175, 55, 0.08)',
+                              border: '1px solid rgba(212, 175, 55, 0.25)',
+                              borderRadius: '8px',
+                              fontSize: '0.8rem',
+                              color: 'var(--cream)',
+                              marginBottom: '14px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                              flexWrap: 'wrap',
+                              gap: '8px',
+                            }}
+                          >
+                            <div>
+                              <strong style={{ color: 'var(--gold)' }}>Product Gallery:</strong> The <span style={{ color: 'var(--gold)', fontWeight: 700 }}>1st image</span> is the Main Cover photo displayed on boutique cards and search. Additional images appear sequentially in the product page's gallery.
                             </div>
-                          ))}
+                            <span style={{ fontSize: '0.74rem', color: 'var(--beige)', fontWeight: 600 }}>
+                              {newProd.imagePreviewUrls.length} / 10 images
+                            </span>
+                          </div>
+
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(170px, 1fr))', gap: '14px' }}>
+                            {newProd.imagePreviewUrls.map((url, idx) => {
+                              const isPrimary = idx === 0;
+                              return (
+                                <div
+                                  key={idx}
+                                  style={{
+                                    position: 'relative',
+                                    background: 'rgba(16, 12, 10, 0.95)',
+                                    border: isPrimary ? '2px solid var(--gold)' : '1px solid rgba(212, 175, 55, 0.25)',
+                                    borderRadius: '10px',
+                                    padding: '10px',
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    gap: '8px',
+                                    boxShadow: isPrimary ? '0 0 14px rgba(212, 175, 55, 0.25)' : 'none',
+                                    transition: 'all 0.2s ease',
+                                  }}
+                                >
+                                  {/* Header Badge & Remove Button */}
+                                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '4px' }}>
+                                    {isPrimary ? (
+                                      <span
+                                        style={{
+                                          background: 'linear-gradient(135deg, #d4af37 0%, #aa8010 100%)',
+                                          color: '#0a0806',
+                                          fontWeight: 800,
+                                          fontSize: '0.66rem',
+                                          letterSpacing: '0.04em',
+                                          padding: '3px 8px',
+                                          borderRadius: '4px',
+                                          textTransform: 'uppercase',
+                                        }}
+                                      >
+                                        ★ Main Cover
+                                      </span>
+                                    ) : (
+                                      <span
+                                        style={{
+                                          background: 'rgba(255, 255, 255, 0.08)',
+                                          color: 'var(--beige)',
+                                          fontWeight: 600,
+                                          fontSize: '0.66rem',
+                                          padding: '2px 7px',
+                                          borderRadius: '4px',
+                                        }}
+                                      >
+                                        Side View #{idx + 1}
+                                      </span>
+                                    )}
+
+                                    <button
+                                      type="button"
+                                      title="Remove Image"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setNewProd((prev) => ({
+                                          ...prev,
+                                          imageFiles: prev.imageFiles.filter((_, i) => i !== idx),
+                                          imagePreviewUrls: prev.imagePreviewUrls.filter((_, i) => i !== idx),
+                                        }));
+                                      }}
+                                      style={{
+                                        width: '22px',
+                                        height: '22px',
+                                        borderRadius: '50%',
+                                        background: 'rgba(231, 76, 60, 0.2)',
+                                        color: '#ff6b6b',
+                                        border: '1px solid rgba(231, 76, 60, 0.4)',
+                                        cursor: 'pointer',
+                                        fontSize: '11px',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        padding: 0,
+                                      }}
+                                    >
+                                      ✕
+                                    </button>
+                                  </div>
+
+                                  {/* Uncropped Contain Preview Container */}
+                                  <div
+                                    style={{
+                                      width: '100%',
+                                      height: '130px',
+                                      borderRadius: '6px',
+                                      overflow: 'hidden',
+                                      background: 'radial-gradient(circle, rgba(38, 24, 16, 0.9) 0%, rgba(12, 9, 7, 0.98) 100%)',
+                                      border: '1px solid rgba(255, 255, 255, 0.06)',
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'center',
+                                      padding: '6px',
+                                      boxSizing: 'border-box',
+                                    }}
+                                  >
+                                    <img
+                                      src={url}
+                                      alt={`Product View ${idx + 1}`}
+                                      style={{
+                                        maxWidth: '100%',
+                                        maxHeight: '100%',
+                                        objectFit: 'contain',
+                                        filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.5))',
+                                      }}
+                                    />
+                                  </div>
+
+                                  {/* Make Primary Cover Action */}
+                                  {!isPrimary && (
+                                    <button
+                                      type="button"
+                                      onClick={() => handleSetMainCover(idx)}
+                                      style={{
+                                        width: '100%',
+                                        padding: '5px 8px',
+                                        background: 'rgba(212, 175, 55, 0.12)',
+                                        border: '1px solid rgba(212, 175, 55, 0.4)',
+                                        borderRadius: '4px',
+                                        color: 'var(--gold)',
+                                        fontSize: '0.72rem',
+                                        fontWeight: 600,
+                                        cursor: 'pointer',
+                                        transition: 'all 0.15s ease',
+                                      }}
+                                    >
+                                      Set as Main Cover
+                                    </button>
+                                  )}
+
+                                  {/* Reorder Buttons (Move Left / Move Right) */}
+                                  <div style={{ display: 'flex', gap: '6px' }}>
+                                    <button
+                                      type="button"
+                                      disabled={idx === 0}
+                                      onClick={() => handleReorderImage(idx, 'prev')}
+                                      style={{
+                                        flex: 1,
+                                        padding: '4px 6px',
+                                        background: idx === 0 ? 'rgba(255, 255, 255, 0.02)' : 'rgba(255, 255, 255, 0.07)',
+                                        border: '1px solid var(--glass-border)',
+                                        borderRadius: '4px',
+                                        color: idx === 0 ? 'rgba(255, 255, 255, 0.2)' : 'var(--cream)',
+                                        fontSize: '0.7rem',
+                                        cursor: idx === 0 ? 'not-allowed' : 'pointer',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        gap: '2px',
+                                      }}
+                                    >
+                                      <ChevronLeft size={12} /> Left
+                                    </button>
+                                    <button
+                                      type="button"
+                                      disabled={idx === newProd.imagePreviewUrls.length - 1}
+                                      onClick={() => handleReorderImage(idx, 'next')}
+                                      style={{
+                                        flex: 1,
+                                        padding: '4px 6px',
+                                        background: idx === newProd.imagePreviewUrls.length - 1 ? 'rgba(255, 255, 255, 0.02)' : 'rgba(255, 255, 255, 0.07)',
+                                        border: '1px solid var(--glass-border)',
+                                        borderRadius: '4px',
+                                        color: idx === newProd.imagePreviewUrls.length - 1 ? 'rgba(255, 255, 255, 0.2)' : 'var(--cream)',
+                                        fontSize: '0.7rem',
+                                        cursor: idx === newProd.imagePreviewUrls.length - 1 ? 'not-allowed' : 'pointer',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        gap: '2px',
+                                      }}
+                                    >
+                                      Right <ChevronRight size={12} />
+                                    </button>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
                         </div>
                       )}
                     </div>
@@ -4663,6 +5054,15 @@ export const AdminDashboard: React.FC = () => {
         {/* REPORTS & ANALYTICS TAB */}
         {activeTab === 'reports' && <ReportsAnalyticsView />}
 
+        {/* DELIVERY FLEET TAB */}
+        {activeTab === 'delivery-boys' && (
+          <DeliveryBoysView
+            addToast={(msg: string, type?: 'success' | 'error' | 'info') =>
+              addToast(type === 'error' ? 'error' : type === 'success' ? 'success' : 'info', msg)
+            }
+          />
+        )}
+
         {/* OFFLINE SALES TAB */}
         {activeTab === 'offline-sales' && (
           <OfflineSalesView addToast={addToast} currentUserRole={role || user?.role} />
@@ -5118,7 +5518,7 @@ export const AdminDashboard: React.FC = () => {
                 <Input label="Customer Rating %" type="number" value={siteStats.customer_rating_percent} onChange={(e) => setSiteStats({ ...siteStats, customer_rating_percent: parseInt(e.target.value) || 0 })} />
                 <div style={{ gridColumn: isMobileGrid ? 'span 2' : 'span 4', display: 'flex', justifyContent: 'flex-end', marginTop: '10px' }}>
                   <Button variant="gold" type="submit" glow disabled={isSavingStats} style={{ height: '42px', width: isMobileGrid ? '100%' : 'auto', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px' }}>
-                    {isSavingStats ? <Loader2 size={18} className="animate-spin" /> : statsSavedSuccess ? <CheckCircle size={18} /> : <TrendingUp size={18} />}
+                    {isSavingStats ? <Loader2 size={18} className="animate-spin" /> : statsSavedSuccess ? <CheckCircle size={18} /> : <Save size={18} />}
                     {isSavingStats ? 'Saving Stats...' : statsSavedSuccess ? 'Counter Stats Saved!' : 'Save Counter Stats'}
                   </Button>
                 </div>
@@ -5143,54 +5543,377 @@ export const AdminDashboard: React.FC = () => {
               </div>
 
               {showAddReelModal && (
-                <form onSubmit={handleCreateReelSubmit} style={{ display: 'grid', gridTemplateColumns: isMobileGrid ? '1fr' : '1fr 1fr', gap: '12px', marginBottom: '20px', padding: '16px', background: 'rgba(0,0,0,0.3)', borderRadius: '8px', border: '1px solid var(--gold)' }}>
-                  <Input label="Caption / Title" required placeholder="Pouring our signature glaze... #chovique" value={newReelData.title} onChange={(e) => setNewReelData({ ...newReelData, title: e.target.value })} />
-                  <Input label="Likes Display" placeholder="14.2K" value={newReelData.likes} onChange={(e) => setNewReelData({ ...newReelData, likes: e.target.value })} />
-                  <Input label="Views Display" placeholder="124K views" value={newReelData.views} onChange={(e) => setNewReelData({ ...newReelData, views: e.target.value })} />
-                  <Input label="Video URL" placeholder="https://..." value={newReelData.video_url} onChange={(e) => setNewReelData({ ...newReelData, video_url: e.target.value })} />
-                  <div style={{ gridColumn: isMobileGrid ? 'span 1' : 'span 2' }}>
-                    <span style={{ fontSize: '0.8rem', color: 'var(--beige)' }}>Or Upload Video File:</span>
-                    <input type="file" accept="video/*" onChange={(e) => setNewReelVideoFile(e.target.files?.[0] || null)} style={{ marginTop: '4px', color: 'var(--cream)', fontSize: '0.8rem' }} />
+                <form
+                  onSubmit={handleCreateReelSubmit}
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '16px',
+                    marginBottom: '24px',
+                    padding: isMobileGrid ? '16px' : '22px',
+                    background: 'linear-gradient(135deg, rgba(20,15,10,0.85) 0%, rgba(30,20,15,0.7) 100%)',
+                    borderRadius: '14px',
+                    border: '1px solid rgba(201,168,76,0.35)',
+                    boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+                  }}
+                >
+                  {/* Form Header */}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: '10px', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <Video size={18} style={{ color: 'var(--gold)' }} />
+                      <span style={{ fontWeight: 600, color: 'var(--cream)', fontSize: '0.95rem' }}>Add New Instagram Video</span>
+                    </div>
+                    <span style={{ fontSize: '0.74rem', color: 'var(--gold)', background: 'rgba(201,168,76,0.12)', padding: '3px 10px', borderRadius: '12px', border: '1px solid rgba(201,168,76,0.25)', display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+                      <Zap size={12} /> Instant Reel Extraction
+                    </span>
                   </div>
-                  <div style={{ gridColumn: isMobileGrid ? 'span 1' : 'span 2', display: 'flex', gap: '10px', marginTop: '6px' }}>
-                    <Button variant="gold" type="submit" size="sm" glow disabled={isCreatingReel}>{isCreatingReel ? 'Publishing...' : 'Publish Reel'}</Button>
-                    <Button variant="secondary" type="button" size="sm" onClick={() => setShowAddReelModal(false)}>Cancel</Button>
+
+                  {/* Instagram URL Input + Auto-Fetch Button Row */}
+                  <div>
+                    <label
+                      htmlFor="new-reel-url"
+                      style={{
+                        display: 'block',
+                        fontSize: '0.8rem',
+                        color: 'var(--beige)',
+                        textTransform: 'uppercase',
+                        letterSpacing: '1px',
+                        fontWeight: 600,
+                        marginBottom: '8px',
+                      }}
+                    >
+                      Instagram Reel / Post URL <span style={{ color: '#e74c3c', marginLeft: '4px', fontWeight: 600 }}>*</span>
+                    </label>
+
+                    <div
+                      style={{
+                        display: 'flex',
+                        flexDirection: isMobileGrid ? 'column' : 'row',
+                        alignItems: isMobileGrid ? 'stretch' : 'center',
+                        gap: '10px',
+                        width: '100%',
+                      }}
+                    >
+                      <div style={{ flex: 1, minWidth: 0, width: isMobileGrid ? '100%' : 'auto' }}>
+                        <Input
+                          id="new-reel-url"
+                          required
+                          placeholder="https://www.instagram.com/reel/DdQYj55v0dr/ or post link"
+                          value={newReelData.instagram_url}
+                          containerStyle={{ marginBottom: 0 }}
+                          style={{ height: '46px', fontSize: '0.9rem' }}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            let extractedAccount = newReelData.account_name;
+                            const match = val.match(/instagram\.com\/([a-zA-Z0-9._]+)\/(?:reel|p)\//i);
+                            if (match && match[1] && !['reel', 'p', 'tv'].includes(match[1].toLowerCase())) {
+                              extractedAccount = `@${match[1]}`;
+                            }
+                            setNewReelData({ ...newReelData, instagram_url: val, account_name: extractedAccount });
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              handleAutoFetchReelMeta(newReelData.instagram_url);
+                            }
+                          }}
+                        />
+                      </div>
+
+                      <Button
+                        variant="gold"
+                        type="button"
+                        size="sm"
+                        glow
+                        disabled={isFetchingReelMeta || !newReelData.instagram_url.trim()}
+                        onClick={() => handleAutoFetchReelMeta(newReelData.instagram_url)}
+                        style={{
+                          height: '46px',
+                          width: isMobileGrid ? '100%' : 'auto',
+                          minWidth: isMobileGrid ? '100%' : '200px',
+                          flexShrink: 0,
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '8px',
+                          fontWeight: 600,
+                          fontSize: '0.88rem',
+                          letterSpacing: '0.5px',
+                          borderRadius: '4px',
+                          boxShadow: isFetchingReelMeta ? 'none' : '0 2px 12px rgba(201, 168, 76, 0.3)',
+                        }}
+                      >
+                        {isFetchingReelMeta ? (
+                          <>
+                            <Loader2 size={16} className="animate-spin" />
+                            <span>Fetching Details...</span>
+                          </>
+                        ) : (
+                          <>
+                            <Zap size={16} />
+                            <span>Auto-Fetch Details</span>
+                          </>
+                        )}
+                      </Button>
+                    </div>
+
+                    {/* Status notifications */}
+                    {isFetchingReelMeta && (
+                      <div
+                        style={{
+                          marginTop: '10px',
+                          padding: '10px 14px',
+                          borderRadius: '8px',
+                          background: 'rgba(201,168,76,0.12)',
+                          border: '1px solid rgba(201,168,76,0.3)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '10px',
+                          fontSize: '0.82rem',
+                          color: 'var(--gold)',
+                        }}
+                      >
+                        <Loader2 size={16} className="animate-spin" style={{ flexShrink: 0 }} />
+                        <span>Connecting to Instagram... Resolving direct video MP4 and account handle.</span>
+                      </div>
+                    )}
+
+                    {fetchReelSuccessMsg && (
+                      <div
+                        style={{
+                          marginTop: '10px',
+                          padding: '10px 14px',
+                          borderRadius: '8px',
+                          background: 'rgba(46, 204, 113, 0.12)',
+                          border: '1px solid rgba(46, 204, 113, 0.35)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          fontSize: '0.84rem',
+                          color: '#2ecc71',
+                          fontWeight: 600,
+                        }}
+                      >
+                        <span>✓</span>
+                        <span>{fetchReelSuccessMsg}</span>
+                      </div>
+                    )}
+
+                    {fetchReelErrorMsg && (
+                      <div
+                        style={{
+                          marginTop: '10px',
+                          padding: '10px 14px',
+                          borderRadius: '8px',
+                          background: 'rgba(231, 76, 60, 0.12)',
+                          border: '1px solid rgba(231, 76, 60, 0.35)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          fontSize: '0.82rem',
+                          color: '#e74c3c',
+                        }}
+                      >
+                        <span>⚠️</span>
+                        <span>{fetchReelErrorMsg}</span>
+                      </div>
+                    )}
+
+                    <p style={{ fontSize: '0.75rem', color: 'var(--beige)', opacity: 0.8, margin: '8px 0 0 0' }}>
+                      Paste any public Instagram reel or post link. Clicking <strong>Auto-Fetch Details</strong> automatically extracts the creator account and high-speed playable video.
+                    </p>
+                  </div>
+
+                  {/* Account Name Field */}
+                  <div>
+                    <Input
+                      label="Account Holder Account Name / Handle *"
+                      required
+                      placeholder="@choviqueofficial"
+                      value={newReelData.account_name}
+                      containerStyle={{ marginBottom: 0 }}
+                      style={{ height: '46px', fontSize: '0.9rem' }}
+                      onChange={(e) => setNewReelData({ ...newReelData, account_name: e.target.value })}
+                    />
+                  </div>
+
+                  {/* Video Live Preview if fetched */}
+                  {newReelData.video_url && (newReelData.video_url.endsWith('.mp4') || newReelData.video_url.includes('cloudinary') || newReelData.video_url.includes('mixkit') || newReelData.video_url.includes('fbcdn')) && (
+                    <div
+                      style={{
+                        padding: '14px',
+                        background: 'rgba(0,0,0,0.5)',
+                        borderRadius: '10px',
+                        border: '1px solid rgba(201,168,76,0.3)',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '10px',
+                      }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontSize: '0.82rem', color: 'var(--gold)', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          🎬 Video Stream Preview Verified
+                        </span>
+                        <span style={{ fontSize: '0.74rem', color: '#2ecc71', fontWeight: 600 }}>Ready to Publish</span>
+                      </div>
+                      <video
+                        src={newReelData.video_url}
+                        controls
+                        muted
+                        playsInline
+                        style={{ width: '100%', maxHeight: '220px', borderRadius: '8px', background: '#000', objectFit: 'contain' }}
+                      />
+                    </div>
+                  )}
+
+                  {/* Optional Custom File Upload */}
+                  <div style={{ paddingTop: '8px', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+                    <span style={{ fontSize: '0.78rem', color: 'var(--beige)', display: 'block', marginBottom: '6px', fontWeight: 500 }}>
+                      Or Upload Custom Video File (Optional fallback):
+                    </span>
+                    <input
+                      type="file"
+                      accept="video/*"
+                      onChange={(e) => setNewReelVideoFile(e.target.files?.[0] || null)}
+                      style={{
+                        color: 'var(--cream)',
+                        fontSize: '0.82rem',
+                        padding: '8px 12px',
+                        background: 'rgba(255,255,255,0.05)',
+                        borderRadius: '6px',
+                        border: '1px dashed rgba(201,168,76,0.25)',
+                        width: '100%',
+                        boxSizing: 'border-box',
+                      }}
+                    />
+                  </div>
+
+                  {/* Publish Error Message Banner */}
+                  {createReelErrorMsg && (
+                    <div
+                      style={{
+                        padding: '12px 16px',
+                        borderRadius: '8px',
+                        background: 'rgba(231, 76, 60, 0.15)',
+                        border: '1px solid #e74c3c',
+                        color: '#e74c3c',
+                        fontSize: '0.85rem',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                      }}
+                    >
+                      <span>⚠️</span>
+                      <span>{createReelErrorMsg}</span>
+                    </div>
+                  )}
+
+                  {/* Action Buttons */}
+                  <div style={{ display: 'flex', gap: '12px', marginTop: '4px', flexWrap: isMobileGrid ? 'wrap' : 'nowrap' }}>
+                    <Button
+                      variant="gold"
+                      type="submit"
+                      size="sm"
+                      glow
+                      disabled={isCreatingReel || isFetchingReelMeta}
+                      style={{
+                        height: '44px',
+                        minWidth: '150px',
+                        width: isMobileGrid ? '100%' : 'auto',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '8px',
+                        fontWeight: 600,
+                      }}
+                    >
+                      {isCreatingReel ? (
+                        <>
+                          <Loader2 size={16} className="animate-spin" />
+                          <span>Publishing Reel...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Video size={16} />
+                          <span>Publish Reel</span>
+                        </>
+                      )}
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      type="button"
+                      size="sm"
+                      onClick={() => {
+                        setShowAddReelModal(false);
+                        setFetchReelSuccessMsg('');
+                        setFetchReelErrorMsg('');
+                        setCreateReelErrorMsg('');
+                      }}
+                      style={{
+                        height: '44px',
+                        width: isMobileGrid ? '100%' : 'auto',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      Cancel
+                    </Button>
                   </div>
                 </form>
               )}
 
-              {/* Reels Grid — 1 column on mobile for clarity, 2-3 col on desktop */}
-              <div style={{ display: 'grid', gridTemplateColumns: isMobileGrid ? '1fr' : 'repeat(auto-fill, minmax(220px, 1fr))', gap: '12px' }}>
-                {cmsReels.map((reel) => (
-                  <div key={reel.id} style={{ padding: '14px 16px', background: 'rgba(255,255,255,0.04)', borderRadius: '10px', border: '1px solid var(--glass-border)', display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0 }}>
-                    {/* Video icon */}
-                    <div style={{ flexShrink: 0, width: '38px', height: '38px', borderRadius: '8px', background: 'rgba(201,168,76,0.1)', border: '1px solid rgba(201,168,76,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <Video size={16} style={{ color: 'var(--gold)' }} />
+              {/* Reels Grid — Clean cards showing Account Name and Instagram Redirect */}
+              <div style={{ display: 'grid', gridTemplateColumns: isMobileGrid ? '1fr' : 'repeat(auto-fill, minmax(260px, 1fr))', gap: '12px' }}>
+                {cmsReels.map((reel) => {
+                  const reelLink = reel.instagramUrl || reel.instagram_url || reel.videoUrl || reel.video_url || 'https://instagram.com';
+                  const account = reel.accountName || reel.account_name || '@chovique_chocolatier';
+
+                  return (
+                    <div key={reel.id} style={{ padding: '14px 16px', background: 'rgba(255,255,255,0.04)', borderRadius: '10px', border: '1px solid var(--glass-border)', display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0 }}>
+                      {/* Instagram gradient icon */}
+                      <div style={{ flexShrink: 0, width: '40px', height: '40px', borderRadius: '10px', background: 'linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <rect x="2" y="2" width="20" height="20" rx="5" ry="5" />
+                          <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
+                          <line x1="17.5" y1="6.5" x2="17.51" y2="6.5" />
+                        </svg>
+                      </div>
+                      {/* Account Name + Link */}
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <p style={{ fontWeight: 700, color: 'var(--cream)', fontSize: '0.88rem', margin: '0 0 4px 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {account}
+                        </p>
+                        <a
+                          href={reelLink}
+                          target="_blank"
+                          rel="noreferrer"
+                          style={{ fontSize: '0.75rem', color: 'var(--gold)', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                        >
+                          <span>Open on Instagram</span>
+                          <ExternalLink size={12} />
+                        </a>
+                      </div>
+                      {/* Action Buttons */}
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', flexShrink: 0 }}>
+                        <button
+                          onClick={() => { setEditingReel(reel); setEditingReelVideoFile(null); }}
+                          title="Edit reel"
+                          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '32px', height: '32px', borderRadius: '8px', background: 'rgba(201,168,76,0.12)', border: '1px solid rgba(201,168,76,0.3)', color: 'var(--gold)', cursor: 'pointer', transition: 'all 0.2s' }}
+                        >
+                          <Edit2 size={14} />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteReelSubmit(reel.id, account)}
+                          title="Delete reel"
+                          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '32px', height: '32px', borderRadius: '8px', background: 'rgba(231,76,60,0.1)', border: '1px solid rgba(231,76,60,0.3)', color: 'var(--rose-gold)', cursor: 'pointer', transition: 'all 0.2s' }}
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
                     </div>
-                    {/* Title + stats */}
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <p style={{ fontWeight: 600, color: 'var(--cream)', fontSize: '0.85rem', margin: '0 0 3px 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{reel.title}</p>
-                      <span style={{ fontSize: '0.72rem', color: 'var(--gold)' }}>♥ {reel.likes} &nbsp;·&nbsp; 👁 {reel.views}</span>
-                    </div>
-                    {/* Action Buttons */}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', flexShrink: 0 }}>
-                      <button
-                        onClick={() => { setEditingReel(reel); setEditingReelVideoFile(null); }}
-                        title="Edit reel"
-                        style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '32px', height: '32px', borderRadius: '8px', background: 'rgba(201,168,76,0.12)', border: '1px solid rgba(201,168,76,0.3)', color: 'var(--gold)', cursor: 'pointer', transition: 'all 0.2s' }}
-                      >
-                        <Edit2 size={14} />
-                      </button>
-                      <button
-                        onClick={() => handleDeleteReelSubmit(reel.id, reel.title || '')}
-                        title="Delete reel"
-                        style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '32px', height: '32px', borderRadius: '8px', background: 'rgba(231,76,60,0.1)', border: '1px solid rgba(231,76,60,0.3)', color: 'var(--rose-gold)', cursor: 'pointer', transition: 'all 0.2s' }}
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           </div>
@@ -5498,254 +6221,1027 @@ export const AdminDashboard: React.FC = () => {
           </div>
         )}
 
-        {/* REVIEWS TAB */}
+        {/* REVIEWS & SOCIAL PROOF TAB */}
         {activeTab === 'testimonials' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
-            {/* Header Section with Primary Action Buttons */}
-            <div style={{ marginBottom: '16px', boxSizing: 'border-box', width: '100%' }}>
-              <span className="section-label">Content Management</span>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+            {/* Header Section */}
+            <div style={{ boxSizing: 'border-box', width: '100%' }}>
+              <span className="section-label">Content &amp; Moderation</span>
               <h1 style={{ fontFamily: 'var(--font-display)', fontSize: isMobileGrid ? '1.6rem' : '2.2rem', color: 'var(--cream)', margin: '4px 0 6px 0', fontWeight: 700, lineHeight: 1.2 }}>
-                Reviews &amp; Story Video
+                Reviews &amp; Testimonials
               </h1>
               <p style={{ fontSize: '0.85rem', color: 'var(--beige)', margin: '0 0 16px 0', whiteSpace: 'normal', wordBreak: 'break-word', maxWidth: '100%', boxSizing: 'border-box' }}>
-                Manage customer reviews, moderation, and the Our Story crafting video.
+                Manage verified customer product reviews and homepage testimonials.
               </p>
-              {/* Action buttons — stack on mobile, side by side on desktop without hover overlaps */}
-              <div style={{ display: 'flex', flexDirection: isMobileGrid ? 'column' : 'row', gap: '12px', width: '100%', boxSizing: 'border-box', flexWrap: 'wrap' }}>
-                <Button
-                  variant="gold"
-                  glow
-                  onClick={() => setShowAddTestimonialModal(true)}
-                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '10px 20px', fontWeight: 600, fontSize: '0.85rem', boxSizing: 'border-box', flex: isMobileGrid ? '1 1 100%' : '0 0 auto' }}
-                >
-                  <Plus size={16} />
-                  Add Review
-                </Button>
 
+              {/* Sub-tab Navigation + About Page Video Trigger Button */}
+              <div style={{ display: 'flex', gap: '10px', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: '14px' }}>
+                <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                  <button
+                    type="button"
+                    onClick={() => setReviewSubTab('product_reviews')}
+                    style={{
+                      padding: '9px 18px',
+                      borderRadius: '8px',
+                      fontSize: '0.85rem',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      background: reviewSubTab === 'product_reviews' ? 'var(--gold)' : 'rgba(255,255,255,0.04)',
+                      color: reviewSubTab === 'product_reviews' ? '#0a0806' : 'var(--cream)',
+                      border: reviewSubTab === 'product_reviews' ? '1px solid var(--gold)' : '1px solid var(--glass-border)',
+                      boxShadow: reviewSubTab === 'product_reviews' ? '0 0 14px rgba(212, 175, 55, 0.3)' : 'none',
+                      transition: 'all 0.2s ease',
+                    }}
+                  >
+                    <Star size={16} fill={reviewSubTab === 'product_reviews' ? '#0a0806' : 'none'} />
+                    Product Reviews ({reviewsList.length})
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setReviewSubTab('site_testimonials')}
+                    style={{
+                      padding: '9px 18px',
+                      borderRadius: '8px',
+                      fontSize: '0.85rem',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      background: reviewSubTab === 'site_testimonials' ? 'var(--gold)' : 'rgba(255,255,255,0.04)',
+                      color: reviewSubTab === 'site_testimonials' ? '#0a0806' : 'var(--cream)',
+                      border: reviewSubTab === 'site_testimonials' ? '1px solid var(--gold)' : '1px solid var(--glass-border)',
+                      boxShadow: reviewSubTab === 'site_testimonials' ? '0 0 14px rgba(212, 175, 55, 0.3)' : 'none',
+                      transition: 'all 0.2s ease',
+                    }}
+                  >
+                    <MessageSquare size={16} />
+                    Customer Testimonials ({testimonialsList.length})
+                  </button>
+                </div>
+
+                {/* About Page Video Trigger Button */}
                 <Button
-                  variant="glass"
-                  onClick={() => setShowUploadVideoModal(true)}
-                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '10px 20px', fontWeight: 600, fontSize: '0.85rem', border: '1px solid var(--gold)', color: 'var(--gold)', boxSizing: 'border-box', flex: isMobileGrid ? '1 1 100%' : '0 0 auto' }}
+                  variant={showAboutVideoCard ? 'gold' : 'glass'}
+                  glow={showAboutVideoCard}
+                  onClick={() => setShowAboutVideoCard((prev) => !prev)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    padding: '9px 18px',
+                    fontSize: '0.85rem',
+                    fontWeight: 600,
+                    borderRadius: '8px',
+                    border: '1px solid var(--gold)',
+                    color: showAboutVideoCard ? '#0a0806' : 'var(--gold)',
+                  }}
                 >
                   <Video size={16} />
-                  {storyVideoUrl ? 'Edit / Replace Video' : 'Add Story Video'}
+                  {showAboutVideoCard ? 'Close About Page Video' : 'About Page Video'}
                 </Button>
               </div>
             </div>
 
-            {/* Section 1: Customer Reviews List & Moderation (2 Cards per line, 6 per page) */}
-            <div className="glass-panel" style={{ padding: isMobileGrid ? '16px' : '24px', border: '1px solid var(--glass-border)', boxSizing: 'border-box', width: '100%' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', flexWrap: 'wrap', gap: '10px' }}>
-                <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1.2rem', color: 'var(--cream)', margin: 0 }}>
-                  Customer Reviews ({testimonialsList.length})
-                </h3>
-                <span style={{ fontSize: '0.78rem', color: 'var(--beige)' }}>
-                  Displaying 2 cards per line (6 per page)
-                </span>
-              </div>
+            {/* SEPARATE CARD: ABOUT PAGE VIDEO MANAGEMENT */}
+            {showAboutVideoCard && (
+              <div
+                className="glass-panel"
+                style={{
+                  padding: isMobileGrid ? '18px' : '24px',
+                  border: '1px solid var(--gold)',
+                  borderRadius: '12px',
+                  background: 'rgba(20, 13, 8, 0.95)',
+                  boxShadow: '0 8px 32px rgba(0,0,0,0.6)',
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px', gap: '12px', flexWrap: 'wrap' }}>
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <Video size={20} style={{ color: 'var(--gold)' }} />
+                      <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1.3rem', color: 'var(--gold)', margin: 0 }}>
+                        Our Story / About Page Craft Video
+                      </h3>
+                    </div>
+                    <p style={{ color: 'var(--beige)', fontSize: '0.82rem', margin: '6px 0 0 0', lineHeight: 1.4 }}>
+                      Upload or replace the crafting video displayed in the <strong style={{ color: 'var(--cream)' }}>Our Story</strong> page. The video uploaded here is automatically displayed on the About page.
+                    </p>
+                  </div>
 
-              {/* Status Filter Tabs — wrap cleanly on mobile */}
-              <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '18px' }}>
-                {['all', 'pending', 'approved', 'rejected'].map((st) => (
-                  <button
-                    key={st}
-                    onClick={() => handleStatusFilterChange(st)}
-                    style={{
-                      padding: '5px 12px',
-                      borderRadius: '20px',
-                      fontSize: '0.75rem',
-                      fontWeight: 600,
-                      textTransform: 'capitalize',
-                      whiteSpace: 'nowrap',
-                      background: testimonialStatusFilter === st ? 'var(--gold)' : 'rgba(255,255,255,0.05)',
-                      color: testimonialStatusFilter === st ? 'var(--dark-chocolate)' : 'var(--cream)',
-                      border: testimonialStatusFilter === st ? '1px solid var(--gold)' : '1px solid var(--glass-border)',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s',
-                    }}
-                  >
-                    {st === 'all' ? 'All' : st.charAt(0).toUpperCase() + st.slice(1)}
-                  </button>
-                ))}
-              </div>
+                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                    <Link
+                      to="/about"
+                      target="_blank"
+                      rel="noreferrer"
+                      style={{
+                        fontSize: '0.78rem',
+                        color: 'var(--gold)',
+                        textDecoration: 'none',
+                        padding: '6px 12px',
+                        borderRadius: '6px',
+                        border: '1px solid rgba(212, 175, 55, 0.4)',
+                        background: 'rgba(212, 175, 55, 0.08)',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                      }}
+                    >
+                      <ExternalLink size={12} /> View Live on About Page
+                    </Link>
+                    <button
+                      type="button"
+                      onClick={() => setShowAboutVideoCard(false)}
+                      style={{
+                        background: 'rgba(255,255,255,0.06)',
+                        border: '1px solid var(--glass-border)',
+                        borderRadius: '50%',
+                        width: '32px',
+                        height: '32px',
+                        color: 'var(--cream)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      <X size={16} />
+                    </button>
+                  </div>
+                </div>
 
-              {/* Testimonials / Reviews Items Grid (2 Columns, 3 Rows = 6 per page) */}
-              <div>
-                {testimonialsList.length === 0 ? (
-                  <p style={{ color: 'var(--beige)', fontStyle: 'italic', padding: '20px 0', margin: 0 }}>
-                    No reviews found in this category.
-                  </p>
-                ) : (
-                  <div
-                    style={{
-                      display: 'grid',
-                      gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
-                      gap: '16px',
-                      marginBottom: '20px',
-                    }}
-                  >
-                    {testimonialsList.slice((testimonialsPage - 1) * 6, testimonialsPage * 6).map((t, idx) => {
-                      const st = t.status || (t.is_active ? 'approved' : 'pending');
-                      return (
-                        <div
-                          key={t.id || idx}
-                          style={{
-                            padding: '18px',
-                            background: 'rgba(12, 10, 8, 0.75)',
-                            border: '1px solid rgba(201, 168, 76, 0.2)',
-                            borderRadius: '10px',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            justifyContent: 'space-between',
-                            gap: '12px',
-                            boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
-                          }}
-                        >
-                          <div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                              <div style={{ display: 'flex', gap: '4px', color: 'var(--gold)' }}>
-                                {Array.from({ length: t.rating || t.stars || 5 }).map((_, i) => (
-                                  <Star key={i} size={14} fill="currentColor" />
-                                ))}
-                              </div>
-                              <span
-                                style={{
-                                  fontSize: '0.7rem',
-                                  fontWeight: 700,
-                                  textTransform: 'uppercase',
-                                  padding: '2px 8px',
-                                  borderRadius: '10px',
-                                  background: st === 'approved' ? 'rgba(90,190,90,0.15)' : st === 'rejected' ? 'rgba(250,90,90,0.15)' : 'rgba(240,190,60,0.15)',
-                                  color: st === 'approved' ? '#6fbf6f' : st === 'rejected' ? '#f07070' : '#e0b040',
-                                  border: `1px solid ${st === 'approved' ? '#6fbf6f' : st === 'rejected' ? '#f07070' : '#e0b040'}`,
-                                }}
-                              >
-                                {st}
-                              </span>
-                            </div>
-                            <p style={{ color: 'var(--cream)', fontSize: '0.88rem', fontStyle: 'italic', margin: 0, lineHeight: 1.45 }}>
-                              "{t.text}"
-                            </p>
-                          </div>
-
-                          <div style={{ paddingTop: '10px', borderTop: '1px solid rgba(255,255,255,0.06)', display: 'flex', flexDirection: isMobileGrid ? 'column' : 'row', justifyContent: 'space-between', alignItems: isMobileGrid ? 'flex-start' : 'center', gap: '10px' }}>
-                            <span style={{ fontSize: '0.82rem', color: 'var(--gold)', fontWeight: 600, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                              {t.author}{t.title ? ` — ${t.title}` : ''}
-                            </span>
-                            <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
-                              {st !== 'approved' && t.id && (
-                                <button
-                                  onClick={() => handleApproveTestimonial(t.id)}
-                                  style={{ background: 'rgba(90,190,90,0.2)', border: '1px solid #6fbf6f', color: '#6fbf6f', borderRadius: '6px', padding: '5px 10px', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
-                                >
-                                  <CheckCircle size={13} /> Approve
-                                </button>
-                              )}
-                              {st !== 'rejected' && t.id && (
-                                <button
-                                  onClick={() => handleRejectTestimonial(t.id)}
-                                  style={{ background: 'rgba(240,160,60,0.12)', border: '1px solid #e09040', color: '#e09040', borderRadius: '6px', padding: '5px 10px', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer' }}
-                                >
-                                  Reject
-                                </button>
-                              )}
-                              {t.id && (
-                                <button
-                                  onClick={() => handleDeleteTestimonial(t.id)}
-                                  style={{ color: '#ff6b6b', background: 'rgba(231,76,60,0.12)', border: '1px solid rgba(231,76,60,0.3)', borderRadius: '6px', cursor: 'pointer', padding: '5px 8px', display: 'flex', alignItems: 'center' }}
-                                  title="Delete"
-                                >
-                                  <Trash2 size={14} />
-                                </button>
-                              )}
-                            </div>
-                          </div>
+                <div style={{ display: 'grid', gridTemplateColumns: isMobileGrid ? '1fr' : '1.1fr 1fr', gap: '20px', alignItems: 'start' }}>
+                  {/* Left: Video Player */}
+                  <div style={{ background: '#000', borderRadius: '10px', overflow: 'hidden', border: '1px solid rgba(212, 175, 55, 0.25)', padding: '12px' }}>
+                    {storyVideoUrl ? (
+                      <>
+                        <video
+                          src={storyVideoUrl}
+                          controls
+                          style={{ width: '100%', maxHeight: '240px', borderRadius: '6px', objectFit: 'contain', background: '#000' }}
+                        />
+                        <div style={{ marginTop: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+                          <span style={{ fontSize: '0.74rem', color: 'var(--beige)' }}>
+                            Live Source: <code style={{ color: 'var(--gold)' }}>{storyVideoUrl.slice(0, 38)}...</code>
+                          </span>
+                          <button
+                            type="button"
+                            onClick={handleDeleteStoryVideo}
+                            style={{
+                              background: 'rgba(231,76,60,0.15)',
+                              border: '1px solid rgba(231,76,60,0.4)',
+                              color: '#ff6b6b',
+                              borderRadius: '6px',
+                              padding: '5px 10px',
+                              fontSize: '0.74rem',
+                              cursor: 'pointer',
+                            }}
+                          >
+                            Reset to Default
+                          </button>
                         </div>
-                      );
-                    })}
+                      </>
+                    ) : (
+                      <div style={{ height: '200px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'var(--beige)', gap: '8px', textAlign: 'center', padding: '20px' }}>
+                        <Video size={36} style={{ color: 'var(--gold)', opacity: 0.5 }} />
+                        <span style={{ fontSize: '0.85rem' }}>Default Craft Video is currently active</span>
+                        <span style={{ fontSize: '0.75rem', opacity: 0.7 }}>Upload an MP4 or WebM video to display custom footage</span>
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
 
-              {testimonialsList.length > 6 && (
-                <div style={{ marginTop: '16px' }}>
-                  <Pagination
-                    currentPage={testimonialsPage}
-                    totalPages={Math.ceil(testimonialsList.length / 6)}
-                    totalItems={testimonialsList.length}
-                    itemsPerPage={6}
-                    onPageChange={(p) => setTestimonialsPage(p)}
-                  />
+                  {/* Right: Upload Form */}
+                  <form onSubmit={handleUploadStoryVideo} style={{ display: 'flex', flexDirection: 'column', gap: '14px', background: 'rgba(255,255,255,0.02)', padding: '18px', borderRadius: '10px', border: '1px solid var(--glass-border)' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.82rem', color: 'var(--cream)', fontWeight: 600, marginBottom: '6px' }}>
+                        {storyVideoUrl ? 'Upload New Video to Replace Current' : 'Select Video File'}
+                      </label>
+                      <p style={{ fontSize: '0.75rem', color: 'var(--beige)', margin: '0 0 10px 0' }}>
+                        Supported formats: MP4, WebM, MOV, OGG (Maximum 100MB)
+                      </p>
+                      <input
+                        type="file"
+                        accept="video/*"
+                        required
+                        onChange={(e) => setStoryVideoFile(e.target.files?.[0] || null)}
+                        style={{ color: 'var(--cream)', fontSize: '0.82rem', width: '100%' }}
+                      />
+                      {storyVideoFile && (
+                        <div style={{ marginTop: '8px', fontSize: '0.76rem', color: 'var(--gold)' }}>
+                          Selected: {storyVideoFile.name} ({(storyVideoFile.size / (1024 * 1024)).toFixed(1)} MB)
+                        </div>
+                      )}
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '10px', marginTop: '4px' }}>
+                      <Button
+                        variant="gold"
+                        type="submit"
+                        disabled={uploadingStoryVideo || !storyVideoFile}
+                        glow
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '9px 18px', fontSize: '0.84rem' }}
+                      >
+                        {uploadingStoryVideo ? (
+                          <>
+                            <Loader2 size={15} style={{ animation: 'spin 1s linear infinite' }} />
+                            Uploading &amp; Publishing...
+                          </>
+                        ) : (
+                          <>
+                            <UploadCloud size={15} />
+                            Upload to About Page
+                          </>
+                        )}
+                      </Button>
+
+                      <Button
+                        variant="glass"
+                        type="button"
+                        onClick={() => {
+                          setStoryVideoFile(null);
+                          setShowAboutVideoCard(false);
+                        }}
+                        style={{ fontSize: '0.84rem' }}
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  </form>
                 </div>
-              )}
-            </div>
-
-            {/* Section 2: Our Story Process Video Card */}
-            <div className="glass-panel" style={{ padding: isMobileGrid ? '16px' : '24px', border: '1px solid var(--glass-border)', boxSizing: 'border-box', width: '100%' }}>
-              <div style={{ marginBottom: '14px' }}>
-                <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1.2rem', color: 'var(--cream)', margin: '0 0 4px 0' }}>
-                  Our Story Process Video
-                </h3>
-                <p style={{ color: 'var(--beige)', fontSize: '0.82rem', margin: 0, lineHeight: 1.4, whiteSpace: 'normal', wordBreak: 'break-word', maxWidth: '100%' }}>
-                  Upload or replace the crafting process video on the Our Story page.
-                </p>
               </div>
-              {/* Video action buttons — full width on mobile */}
-              <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginBottom: '16px', width: '100%', boxSizing: 'border-box' }}>
-                <Button
-                  variant="gold"
-                  glow
-                  onClick={() => setShowUploadVideoModal(true)}
-                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', flex: isMobileGrid ? '1 1 100%' : '1 1 140px', padding: '9px 16px', fontSize: '0.85rem', fontWeight: 600, boxSizing: 'border-box' }}
-                >
-                  <Video size={15} />
-                  {storyVideoUrl ? 'Edit / Replace Video' : 'Add Story Video'}
-                </Button>
+            )}
 
-                {storyVideoUrl && (
+            {/* SUBTAB 1: PRODUCT REVIEWS MODERATION */}
+            {reviewSubTab === 'product_reviews' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                {/* Metrics Summary Row */}
+                {(() => {
+                  const pendingCount = reviewsList.filter((r) => (r.status || 'approved').toLowerCase() === 'pending').length;
+                  const approvedCount = reviewsList.filter((r) => (r.status || 'approved').toLowerCase() === 'approved').length;
+                  const mediaCount = reviewsList.filter((r) => (r.images && r.images.length > 0) || (r.videos && r.videos.length > 0)).length;
+
+                  return (
+                    <div style={{ display: 'grid', gridTemplateColumns: isMobileGrid ? '1fr 1fr' : 'repeat(4, 1fr)', gap: '14px' }}>
+                      <div className="glass-panel" style={{ padding: '16px', border: '1px solid var(--glass-border)', borderRadius: '10px' }}>
+                        <div style={{ fontSize: '0.74rem', color: 'var(--beige)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '4px' }}>
+                          Total Reviews
+                        </div>
+                        <div style={{ fontSize: '1.6rem', fontWeight: 700, color: 'var(--cream)' }}>
+                          {reviewsList.length}
+                        </div>
+                      </div>
+
+                      <div className="glass-panel" style={{ padding: '16px', border: pendingCount > 0 ? '1px solid rgba(240, 190, 60, 0.5)' : '1px solid var(--glass-border)', borderRadius: '10px', background: pendingCount > 0 ? 'rgba(240, 190, 60, 0.05)' : undefined }}>
+                        <div style={{ fontSize: '0.74rem', color: pendingCount > 0 ? '#e0b040' : 'var(--beige)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          <Clock size={12} /> Pending Moderation
+                        </div>
+                        <div style={{ fontSize: '1.6rem', fontWeight: 700, color: pendingCount > 0 ? '#e0b040' : 'var(--cream)' }}>
+                          {pendingCount}
+                        </div>
+                      </div>
+
+                      <div className="glass-panel" style={{ padding: '16px', border: '1px solid var(--glass-border)', borderRadius: '10px' }}>
+                        <div style={{ fontSize: '0.74rem', color: '#6fbf6f', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          <CheckCircle size={12} /> Approved
+                        </div>
+                        <div style={{ fontSize: '1.6rem', fontWeight: 700, color: '#6fbf6f' }}>
+                          {approvedCount}
+                        </div>
+                      </div>
+
+                      <div className="glass-panel" style={{ padding: '16px', border: '1px solid var(--glass-border)', borderRadius: '10px' }}>
+                        <div style={{ fontSize: '0.74rem', color: 'var(--gold)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          <Camera size={12} /> Customer Media
+                        </div>
+                        <div style={{ fontSize: '1.6rem', fontWeight: 700, color: 'var(--gold)' }}>
+                          {mediaCount}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                {/* Filter & Controls Bar */}
+                <div className="glass-panel" style={{ padding: '16px 20px', border: '1px solid var(--glass-border)', borderRadius: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+                    <span style={{ fontSize: '0.78rem', color: 'var(--beige)', marginRight: '4px' }}>Filter:</span>
+                    {[
+                      { key: 'all', label: 'All', count: reviewsList.length },
+                      { key: 'pending', label: 'Pending', count: reviewsList.filter((r) => (r.status || 'approved').toLowerCase() === 'pending').length },
+                      { key: 'approved', label: 'Approved', count: reviewsList.filter((r) => (r.status || 'approved').toLowerCase() === 'approved').length },
+                      { key: 'featured', label: '★ Featured on Home', count: reviewsList.filter((r) => r.is_featured_on_home && (r.status || 'approved').toLowerCase() === 'approved').length },
+                      { key: 'rejected', label: 'Rejected', count: reviewsList.filter((r) => (r.status || 'approved').toLowerCase() === 'rejected').length },
+                    ].map((tab) => (
+                      <button
+                        key={tab.key}
+                        type="button"
+                        onClick={() => {
+                          setProductReviewStatusFilter(tab.key);
+                          setProductReviewsPage(1);
+                        }}
+                        style={{
+                          padding: '5px 12px',
+                          borderRadius: '20px',
+                          fontSize: '0.75rem',
+                          fontWeight: 600,
+                          whiteSpace: 'nowrap',
+                          background: productReviewStatusFilter === tab.key ? 'var(--gold)' : 'rgba(255,255,255,0.05)',
+                          color: productReviewStatusFilter === tab.key ? 'var(--dark-chocolate)' : 'var(--cream)',
+                          border: productReviewStatusFilter === tab.key ? '1px solid var(--gold)' : '1px solid var(--glass-border)',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s',
+                        }}
+                      >
+                        {tab.label} ({tab.count})
+                      </button>
+                    ))}
+                  </div>
+
                   <button
-                    onClick={handleDeleteStoryVideo}
-                    style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid var(--glass-border)', color: 'var(--beige)', borderRadius: '8px', padding: '9px 14px', fontSize: '0.82rem', cursor: 'pointer', flex: isMobileGrid ? '1 1 100%' : '0 0 auto', boxSizing: 'border-box' }}
+                    type="button"
+                    onClick={fetchAdminReviews}
+                    disabled={reviewsLoading}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      padding: '6px 14px',
+                      background: 'rgba(255,255,255,0.04)',
+                      border: '1px solid var(--glass-border)',
+                      borderRadius: '6px',
+                      color: 'var(--gold)',
+                      fontSize: '0.78rem',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                    }}
                   >
-                    Reset
+                    <RefreshCw size={13} className={reviewsLoading ? 'animate-spin' : ''} />
+                    {reviewsLoading ? 'Refreshing...' : 'Refresh Reviews'}
                   </button>
-                )}
-              </div>
-
-              {storyVideoUrl ? (
-                <div style={{ background: 'rgba(0,0,0,0.3)', padding: '16px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.08)', width: '100%', boxSizing: 'border-box' }}>
-                  <video
-                    src={storyVideoUrl}
-                    controls
-                    style={{ width: '100%', maxHeight: '280px', borderRadius: '6px', objectFit: 'cover' }}
-                  />
-                  <div style={{ fontSize: '0.78rem', color: 'var(--beige)', marginTop: '8px', display: 'flex', flexDirection: isMobileGrid ? 'column' : 'row', justifyContent: 'space-between', alignItems: isMobileGrid ? 'flex-start' : 'center', gap: '6px', width: '100%' }}>
-                    <span style={{ display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', width: '100%', maxWidth: '100%' }}>Source: <code style={{ color: 'var(--gold)', fontSize: '0.72rem' }}>{storyVideoUrl.slice(0, 50)}...</code></span>
-                    <span style={{ color: '#6fbf6f', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}>
-                      <CheckCircle size={13} /> Live on Story Page
-                    </span>
-                  </div>
                 </div>
-              ) : (
-                <div style={{ padding: '30px', textAlign: 'center', border: '1px dashed var(--glass-border)', borderRadius: '8px', color: 'var(--beige)' }}>
-                  <Video size={32} style={{ color: 'var(--gold)', marginBottom: '8px', margin: '0 auto 8px', display: 'block' }} />
-                  <p style={{ margin: '0 0 14px 0', fontSize: '0.9rem' }}>No custom process video uploaded yet.</p>
-                  <Button variant="gold" onClick={() => setShowUploadVideoModal(true)}>
-                    + ADD PROCESS VIDEO
+
+                {/* Product Reviews List */}
+                {(() => {
+                  const filtered = reviewsList.filter((r) => {
+                    if (productReviewStatusFilter === 'all') return true;
+                    if (productReviewStatusFilter === 'featured') {
+                      return Boolean(r.is_featured_on_home) && (r.status || 'approved').toLowerCase() === 'approved';
+                    }
+                    return (r.status || 'approved').toLowerCase() === productReviewStatusFilter.toLowerCase();
+                  });
+
+                  if (filtered.length === 0) {
+                    return (
+                      <div className="glass-panel" style={{ padding: '40px 20px', textAlign: 'center', border: '1px dashed var(--glass-border)', borderRadius: '10px' }}>
+                        <Star size={36} style={{ color: 'var(--gold)', margin: '0 auto 10px', opacity: 0.5, display: 'block' }} />
+                        <h4 style={{ color: 'var(--cream)', margin: '0 0 6px 0', fontSize: '1.05rem' }}>No Product Reviews Found</h4>
+                        <p style={{ color: 'var(--beige)', fontSize: '0.82rem', margin: 0 }}>
+                          {productReviewStatusFilter === 'all'
+                            ? 'No customer reviews have been submitted for chocolate products yet.'
+                            : `No reviews currently marked as "${productReviewStatusFilter}".`}
+                        </p>
+                      </div>
+                    );
+                  }
+
+                  const paginated = filtered.slice((productReviewsPage - 1) * 6, productReviewsPage * 6);
+
+                  return (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: isMobileGrid ? '1fr' : 'repeat(auto-fill, minmax(420px, 1fr))', gap: '16px' }}>
+                        {paginated.map((rev: any) => {
+                          const status = (rev.status || 'approved').toLowerCase();
+                          const productImg = rev.product?.image_url;
+                          const hasMedia = (rev.images && rev.images.length > 0) || (rev.videos && rev.videos.length > 0);
+
+                          return (
+                            <div
+                              key={rev.id}
+                              style={{
+                                background: 'rgba(14, 11, 9, 0.95)',
+                                border: status === 'pending'
+                                  ? '1px solid rgba(240, 190, 60, 0.4)'
+                                  : '1px solid rgba(212, 175, 55, 0.22)',
+                                borderRadius: '12px',
+                                padding: '18px',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                justifyContent: 'space-between',
+                                gap: '14px',
+                                boxShadow: '0 6px 20px rgba(0,0,0,0.4)',
+                              }}
+                            >
+                              <div>
+                                {/* Product Info & Moderation Status Header */}
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '10px', marginBottom: '12px', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '12px' }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                    <div
+                                      style={{
+                                        width: '52px',
+                                        height: '52px',
+                                        borderRadius: '8px',
+                                        overflow: 'hidden',
+                                        background: 'radial-gradient(circle, rgba(38, 24, 16, 0.9) 0%, rgba(12, 9, 7, 0.98) 100%)',
+                                        border: '1px solid rgba(212, 175, 55, 0.25)',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        padding: '4px',
+                                        flexShrink: 0,
+                                      }}
+                                    >
+                                      {productImg ? (
+                                        <img
+                                          src={getImageUrl(productImg)}
+                                          alt={rev.product?.name || 'Product'}
+                                          style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }}
+                                        />
+                                      ) : (
+                                        <ShoppingBag size={22} style={{ color: 'var(--gold)', opacity: 0.6 }} />
+                                      )}
+                                    </div>
+                                    <div>
+                                      <div style={{ color: 'var(--cream)', fontWeight: 700, fontSize: '0.92rem', lineHeight: 1.2 }}>
+                                        {rev.product?.name || 'Chocolate Item'}
+                                      </div>
+                                      <div style={{ fontSize: '0.74rem', color: 'var(--gold)', marginTop: '2px' }}>
+                                        {rev.product?.price ? `₹${rev.product.price}` : ''} {rev.product?.category ? `• ${rev.product.category}` : ''}
+                                      </div>
+                                    </div>
+                                  </div>
+
+                                  {/* Moderation Status & Destination Badges */}
+                                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '5px' }}>
+                                    <span
+                                      style={{
+                                        fontSize: '0.68rem',
+                                        fontWeight: 700,
+                                        textTransform: 'uppercase',
+                                        padding: '3px 8px',
+                                        borderRadius: '8px',
+                                        flexShrink: 0,
+                                        background:
+                                          status === 'approved'
+                                            ? 'rgba(90,190,90,0.15)'
+                                            : status === 'rejected'
+                                            ? 'rgba(250,90,90,0.15)'
+                                            : 'rgba(240,190,60,0.15)',
+                                        color:
+                                          status === 'approved'
+                                            ? '#6fbf6f'
+                                            : status === 'rejected'
+                                            ? '#f07070'
+                                            : '#e0b040',
+                                        border: `1px solid ${
+                                          status === 'approved'
+                                            ? '#6fbf6f'
+                                            : status === 'rejected'
+                                            ? '#f07070'
+                                            : '#e0b040'
+                                        }`,
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        gap: '4px',
+                                      }}
+                                    >
+                                      {status === 'approved' && <CheckCircle size={11} />}
+                                      {status === 'rejected' && <XCircle size={11} />}
+                                      {status === 'pending' && <Clock size={11} />}
+                                      {status}
+                                    </span>
+
+                                    {/* Destination Status Badge */}
+                                    {status === 'approved' && (
+                                      rev.is_featured_on_home ? (
+                                        <span
+                                          title="Live on Product Details Page AND Featured in Landing Page Customer Reviews"
+                                          style={{
+                                            fontSize: '0.66rem',
+                                            fontWeight: 700,
+                                            padding: '2px 8px',
+                                            borderRadius: '6px',
+                                            background: 'linear-gradient(135deg, rgba(212, 175, 55, 0.28) 0%, rgba(212, 175, 55, 0.12) 100%)',
+                                            color: 'var(--gold)',
+                                            border: '1px solid rgba(212, 175, 55, 0.55)',
+                                            display: 'inline-flex',
+                                            alignItems: 'center',
+                                            gap: '3px',
+                                            boxShadow: '0 0 10px rgba(212, 175, 55, 0.22)',
+                                          }}
+                                        >
+                                          <Star size={10} fill="var(--gold)" /> Landing Page + Product
+                                        </span>
+                                      ) : (
+                                        <span
+                                          title="Live only on this specific product's page"
+                                          style={{
+                                            fontSize: '0.66rem',
+                                            fontWeight: 600,
+                                            padding: '2px 7px',
+                                            borderRadius: '6px',
+                                            background: 'rgba(255, 255, 255, 0.05)',
+                                            color: 'var(--beige)',
+                                            border: '1px solid rgba(255, 255, 255, 0.12)',
+                                            display: 'inline-flex',
+                                            alignItems: 'center',
+                                            gap: '3px',
+                                          }}
+                                        >
+                                          Product Page Only
+                                        </span>
+                                      )
+                                    )}
+                                  </div>
+                                </div>
+
+                                {/* Review Details & Stars */}
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px', marginBottom: '8px' }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                    <div style={{ display: 'flex', gap: '2px', color: 'var(--gold)' }}>
+                                      {Array.from({ length: 5 }).map((_, i) => (
+                                        <Star
+                                          key={i}
+                                          size={13}
+                                          fill={i < (rev.rating || 5) ? 'currentColor' : 'none'}
+                                          stroke="currentColor"
+                                        />
+                                      ))}
+                                    </div>
+                                    <span style={{ fontSize: '0.78rem', color: 'var(--gold)', fontWeight: 700 }}>
+                                      {rev.rating}.0
+                                    </span>
+                                  </div>
+
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                    {rev.is_verified_purchase && (
+                                      <span
+                                        style={{
+                                          fontSize: '0.68rem',
+                                          fontWeight: 700,
+                                          color: '#6fbf6f',
+                                          background: 'rgba(90, 190, 90, 0.12)',
+                                          padding: '2px 6px',
+                                          borderRadius: '4px',
+                                          border: '1px solid rgba(90, 190, 90, 0.3)',
+                                          display: 'inline-flex',
+                                          alignItems: 'center',
+                                          gap: '3px',
+                                        }}
+                                      >
+                                        <Check size={10} strokeWidth={3} /> Verified Purchase
+                                      </span>
+                                    )}
+                                    <span style={{ fontSize: '0.74rem', color: 'var(--beige)' }}>
+                                      {rev.created_at ? new Date(rev.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Recent'}
+                                    </span>
+                                  </div>
+                                </div>
+
+                                {/* Reviewer Name */}
+                                <div style={{ fontSize: '0.8rem', color: 'var(--cream)', fontWeight: 600, marginBottom: '6px' }}>
+                                  By {rev.customer_name || 'Customer Chocolatier'}
+                                </div>
+
+                                {/* Review Headline */}
+                                {rev.title && (
+                                  <div style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--cream)', marginBottom: '4px' }}>
+                                    "{rev.title}"
+                                  </div>
+                                )}
+
+                                {/* Review Text */}
+                                <p style={{ fontSize: '0.84rem', color: 'var(--beige)', lineHeight: 1.45, margin: 0 }}>
+                                  {rev.comment}
+                                </p>
+
+                                {/* Customer Photos & Videos Reel */}
+                                {hasMedia && (
+                                  <div style={{ marginTop: '12px', paddingTop: '10px', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+                                    <div style={{ fontSize: '0.72rem', color: 'var(--gold)', fontWeight: 600, marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                                      Customer Media ({((rev.images || []).length + (rev.videos || []).length)} attachments)
+                                    </div>
+                                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                                      {/* Images */}
+                                      {(rev.images || []).map((imgUrl: string, mIdx: number) => (
+                                        <div
+                                          key={`img-${mIdx}`}
+                                          onClick={() => setSelectedReviewMediaModal({ type: 'image', url: imgUrl, title: rev.title || rev.customer_name })}
+                                          title="Click to view full photo"
+                                          style={{
+                                            width: '64px',
+                                            height: '64px',
+                                            borderRadius: '6px',
+                                            overflow: 'hidden',
+                                            border: '1px solid rgba(212, 175, 55, 0.35)',
+                                            position: 'relative',
+                                            cursor: 'pointer',
+                                            background: '#000',
+                                          }}
+                                        >
+                                          <img
+                                            src={imgUrl}
+                                            alt={`Customer photo ${mIdx + 1}`}
+                                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                          />
+                                          <div style={{ position: 'absolute', bottom: '2px', right: '2px', background: 'rgba(0,0,0,0.65)', borderRadius: '3px', padding: '1px 3px' }}>
+                                            <Camera size={10} color="var(--gold)" />
+                                          </div>
+                                        </div>
+                                      ))}
+
+                                      {/* Videos */}
+                                      {(rev.videos || []).map((vidUrl: string, vIdx: number) => (
+                                        <div
+                                          key={`vid-${vIdx}`}
+                                          onClick={() => setSelectedReviewMediaModal({ type: 'video', url: vidUrl, title: rev.title || rev.customer_name })}
+                                          title="Click to play video"
+                                          style={{
+                                            width: '64px',
+                                            height: '64px',
+                                            borderRadius: '6px',
+                                            overflow: 'hidden',
+                                            border: '1px solid rgba(212, 175, 55, 0.35)',
+                                            position: 'relative',
+                                            cursor: 'pointer',
+                                            background: '#000',
+                                          }}
+                                        >
+                                          <video
+                                            src={vidUrl}
+                                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                          />
+                                          <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.4)' }}>
+                                            <Play size={16} fill="var(--gold)" color="var(--gold)" />
+                                          </div>
+                                          <div style={{ position: 'absolute', bottom: '2px', right: '2px', background: 'rgba(0,0,0,0.65)', borderRadius: '3px', padding: '1px 3px' }}>
+                                            <Film size={10} color="var(--gold)" />
+                                          </div>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* Moderation Actions Footer */}
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px', paddingTop: '10px', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+                                <div style={{ fontSize: '0.72rem', color: 'var(--beige)' }}>
+                                  ID: <code style={{ color: 'var(--gold)', fontSize: '0.7rem' }}>{rev.id.slice(0, 8)}</code>
+                                </div>
+                                <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', justifyContent: 'flex-end', alignItems: 'center' }}>
+                                  {/* If review is NOT approved, provide TWO distinct approval options */}
+                                  {status !== 'approved' && (
+                                    <>
+                                      {/* Option 1: Approve for Product Page Only */}
+                                      <button
+                                        type="button"
+                                        disabled={reviewActionInProgress === rev.id}
+                                        onClick={() => handleApproveProductReview(rev.id, false)}
+                                        title="Approve for this specific product's page only"
+                                        style={{
+                                          background: 'rgba(90, 190, 90, 0.15)',
+                                          border: '1px solid #5abf5a',
+                                          color: '#70d070',
+                                          borderRadius: '6px',
+                                          padding: '5px 10px',
+                                          fontSize: '0.74rem',
+                                          fontWeight: 600,
+                                          cursor: 'pointer',
+                                          display: 'inline-flex',
+                                          alignItems: 'center',
+                                          gap: '4px',
+                                          transition: 'all 0.2s',
+                                        }}
+                                      >
+                                        <CheckCircle size={12} /> Approve (Product Only)
+                                      </button>
+
+                                      {/* Option 2: Approve & Feature on Landing Page */}
+                                      <button
+                                        type="button"
+                                        disabled={reviewActionInProgress === rev.id}
+                                        onClick={() => handleApproveProductReview(rev.id, true)}
+                                        title="Approve for product page AND feature in the Landing Page customer reviews section"
+                                        style={{
+                                          background: 'linear-gradient(135deg, rgba(212, 175, 55, 0.28) 0%, rgba(180, 130, 20, 0.38) 100%)',
+                                          border: '1px solid var(--gold)',
+                                          color: 'var(--gold)',
+                                          borderRadius: '6px',
+                                          padding: '5px 11px',
+                                          fontSize: '0.74rem',
+                                          fontWeight: 700,
+                                          cursor: 'pointer',
+                                          display: 'inline-flex',
+                                          alignItems: 'center',
+                                          gap: '5px',
+                                          boxShadow: '0 0 12px rgba(212, 175, 55, 0.25)',
+                                          transition: 'all 0.2s',
+                                        }}
+                                      >
+                                        <Star size={12} fill="var(--gold)" /> ★ Approve & Feature on Home
+                                      </button>
+                                    </>
+                                  )}
+
+                                  {/* If review IS APPROVED, allow toggling Landing Page feature */}
+                                  {status === 'approved' && (
+                                    rev.is_featured_on_home ? (
+                                      <button
+                                        type="button"
+                                        disabled={reviewActionInProgress === rev.id}
+                                        onClick={() => handleToggleFeaturedOnHome(rev.id, true)}
+                                        title="Remove from Landing Page (remains visible on Product Page)"
+                                        style={{
+                                          background: 'rgba(255, 255, 255, 0.06)',
+                                          border: '1px solid rgba(255, 255, 255, 0.2)',
+                                          color: 'var(--beige)',
+                                          borderRadius: '6px',
+                                          padding: '5px 10px',
+                                          fontSize: '0.74rem',
+                                          fontWeight: 600,
+                                          cursor: 'pointer',
+                                          display: 'inline-flex',
+                                          alignItems: 'center',
+                                          gap: '4px',
+                                          transition: 'all 0.2s',
+                                        }}
+                                      >
+                                        Remove from Home
+                                      </button>
+                                    ) : (
+                                      <button
+                                        type="button"
+                                        disabled={reviewActionInProgress === rev.id}
+                                        onClick={() => handleToggleFeaturedOnHome(rev.id, false)}
+                                        title="Feature on Landing Page Customer Reviews"
+                                        style={{
+                                          background: 'linear-gradient(135deg, rgba(212, 175, 55, 0.22) 0%, rgba(212, 175, 55, 0.1) 100%)',
+                                          border: '1px solid var(--gold)',
+                                          color: 'var(--gold)',
+                                          borderRadius: '6px',
+                                          padding: '5px 10px',
+                                          fontSize: '0.74rem',
+                                          fontWeight: 700,
+                                          cursor: 'pointer',
+                                          display: 'inline-flex',
+                                          alignItems: 'center',
+                                          gap: '4px',
+                                          boxShadow: '0 0 10px rgba(212, 175, 55, 0.18)',
+                                          transition: 'all 0.2s',
+                                        }}
+                                      >
+                                        <Star size={11} fill="var(--gold)" /> ★ Feature on Home
+                                      </button>
+                                    )
+                                  )}
+
+                                  {status !== 'rejected' && (
+                                    <button
+                                      type="button"
+                                      disabled={reviewActionInProgress === rev.id}
+                                      onClick={() => handleRejectProductReview(rev.id)}
+                                      title="Reject review"
+                                      style={{
+                                        background: 'rgba(240, 160, 60, 0.14)',
+                                        border: '1px solid #e09040',
+                                        color: '#e09040',
+                                        borderRadius: '6px',
+                                        padding: '5px 10px',
+                                        fontSize: '0.74rem',
+                                        fontWeight: 600,
+                                        cursor: 'pointer',
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        gap: '4px',
+                                      }}
+                                    >
+                                      <XCircle size={12} /> Reject
+                                    </button>
+                                  )}
+                                  <button
+                                    type="button"
+                                    disabled={reviewActionInProgress === rev.id}
+                                    onClick={() => handleDeleteProductReview(rev.id)}
+                                    title="Delete permanently"
+                                    style={{
+                                      background: 'rgba(231, 76, 60, 0.15)',
+                                      border: '1px solid rgba(231, 76, 60, 0.35)',
+                                      color: '#ff6b6b',
+                                      borderRadius: '6px',
+                                      padding: '5px 8px',
+                                      fontSize: '0.74rem',
+                                      cursor: 'pointer',
+                                      display: 'inline-flex',
+                                      alignItems: 'center',
+                                    }}
+                                  >
+                                    <Trash2 size={13} />
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+
+                      {filtered.length > 6 && (
+                        <div style={{ marginTop: '10px' }}>
+                          <Pagination
+                            currentPage={productReviewsPage}
+                            totalPages={Math.ceil(filtered.length / 6)}
+                            totalItems={filtered.length}
+                            itemsPerPage={6}
+                            onPageChange={(p) => setProductReviewsPage(p)}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
+              </div>
+            )}
+
+            {/* SUBTAB 2: SITE TESTIMONIALS */}
+            {reviewSubTab === 'site_testimonials' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                {/* Action Button: Add Site Testimonial */}
+                <div style={{ display: 'flex', gap: '12px', width: '100%', boxSizing: 'border-box' }}>
+                  <Button
+                    variant="gold"
+                    glow
+                    onClick={() => setShowAddTestimonialModal(true)}
+                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '10px 20px', fontWeight: 600, fontSize: '0.85rem', boxSizing: 'border-box', flex: isMobileGrid ? '1 1 100%' : '0 0 auto' }}
+                  >
+                    <Plus size={16} />
+                    Add Site Testimonial
                   </Button>
                 </div>
-              )}
-            </div>
 
-            {/* MODAL 1: ADD CUSTOMER REVIEW MODAL */}
+                {/* Section 1: Customer Testimonials List & Moderation */}
+                <div className="glass-panel" style={{ padding: isMobileGrid ? '16px' : '24px', border: '1px solid var(--glass-border)', boxSizing: 'border-box', width: '100%' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', flexWrap: 'wrap', gap: '10px' }}>
+                    <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1.2rem', color: 'var(--cream)', margin: 0 }}>
+                      Site Testimonials ({testimonialsList.length})
+                    </h3>
+                    <span style={{ fontSize: '0.78rem', color: 'var(--beige)' }}>
+                      Displaying 2 cards per line (6 per page)
+                    </span>
+                  </div>
+
+                  {/* Status Filter Tabs */}
+                  <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '18px' }}>
+                    {['all', 'pending', 'approved', 'rejected'].map((st) => (
+                      <button
+                        key={st}
+                        onClick={() => handleStatusFilterChange(st)}
+                        style={{
+                          padding: '5px 12px',
+                          borderRadius: '20px',
+                          fontSize: '0.75rem',
+                          fontWeight: 600,
+                          textTransform: 'capitalize',
+                          whiteSpace: 'nowrap',
+                          background: testimonialStatusFilter === st ? 'var(--gold)' : 'rgba(255,255,255,0.05)',
+                          color: testimonialStatusFilter === st ? 'var(--dark-chocolate)' : 'var(--cream)',
+                          border: testimonialStatusFilter === st ? '1px solid var(--gold)' : '1px solid var(--glass-border)',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s',
+                        }}
+                      >
+                        {st === 'all' ? 'All' : st.charAt(0).toUpperCase() + st.slice(1)}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Testimonials Items Grid */}
+                  <div>
+                    {testimonialsList.length === 0 ? (
+                      <p style={{ color: 'var(--beige)', fontStyle: 'italic', padding: '20px 0', margin: 0 }}>
+                        No testimonials found in this category.
+                      </p>
+                    ) : (
+                      <div
+                        style={{
+                          display: 'grid',
+                          gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
+                          gap: '16px',
+                          marginBottom: '20px',
+                        }}
+                      >
+                        {testimonialsList.slice((testimonialsPage - 1) * 6, testimonialsPage * 6).map((t, idx) => {
+                          const st = t.status || (t.is_active ? 'approved' : 'pending');
+                          return (
+                            <div
+                              key={t.id || idx}
+                              style={{
+                                padding: '18px',
+                                background: 'rgba(12, 10, 8, 0.75)',
+                                border: '1px solid rgba(201, 168, 76, 0.2)',
+                                borderRadius: '10px',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                justifyContent: 'space-between',
+                                gap: '12px',
+                                boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+                              }}
+                            >
+                              <div>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                                  <div style={{ display: 'flex', gap: '4px', color: 'var(--gold)' }}>
+                                    {Array.from({ length: t.rating || t.stars || 5 }).map((_, i) => (
+                                      <Star key={i} size={14} fill="currentColor" />
+                                    ))}
+                                  </div>
+                                  <span
+                                    style={{
+                                      fontSize: '0.7rem',
+                                      fontWeight: 700,
+                                      textTransform: 'uppercase',
+                                      padding: '2px 8px',
+                                      borderRadius: '10px',
+                                      background: st === 'approved' ? 'rgba(90,190,90,0.15)' : st === 'rejected' ? 'rgba(250,90,90,0.15)' : 'rgba(240,190,60,0.15)',
+                                      color: st === 'approved' ? '#6fbf6f' : st === 'rejected' ? '#f07070' : '#e0b040',
+                                      border: `1px solid ${st === 'approved' ? '#6fbf6f' : st === 'rejected' ? '#f07070' : '#e0b040'}`,
+                                    }}
+                                  >
+                                    {st}
+                                  </span>
+                                </div>
+                                <p style={{ color: 'var(--cream)', fontSize: '0.88rem', fontStyle: 'italic', margin: 0, lineHeight: 1.45 }}>
+                                  "{t.text}"
+                                </p>
+                              </div>
+
+                              <div style={{ paddingTop: '10px', borderTop: '1px solid rgba(255,255,255,0.06)', display: 'flex', flexDirection: isMobileGrid ? 'column' : 'row', justifyContent: 'space-between', alignItems: isMobileGrid ? 'flex-start' : 'center', gap: '10px' }}>
+                                <span style={{ fontSize: '0.82rem', color: 'var(--gold)', fontWeight: 600, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                  {t.author}{t.title ? ` — ${t.title}` : ''}
+                                </span>
+                                <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
+                                  {st !== 'approved' && t.id && (
+                                    <button
+                                      type="button"
+                                      onClick={() => handleApproveTestimonial(t.id)}
+                                      style={{ background: 'rgba(90,190,90,0.2)', border: '1px solid #6fbf6f', color: '#6fbf6f', borderRadius: '6px', padding: '5px 10px', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                                    >
+                                      <CheckCircle size={13} /> Approve
+                                    </button>
+                                  )}
+                                  {st !== 'rejected' && t.id && (
+                                    <button
+                                      type="button"
+                                      onClick={() => handleRejectTestimonial(t.id)}
+                                      style={{ background: 'rgba(240,160,60,0.12)', border: '1px solid #e09040', color: '#e09040', borderRadius: '6px', padding: '5px 10px', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer' }}
+                                    >
+                                      Reject
+                                    </button>
+                                  )}
+                                  {t.id && (
+                                    <button
+                                      type="button"
+                                      onClick={() => handleDeleteTestimonial(t.id)}
+                                      style={{ color: '#ff6b6b', background: 'rgba(231,76,60,0.12)', border: '1px solid rgba(231,76,60,0.3)', borderRadius: '6px', cursor: 'pointer', padding: '5px 8px', display: 'flex', alignItems: 'center' }}
+                                      title="Delete"
+                                    >
+                                      <Trash2 size={14} />
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+
+                  {testimonialsList.length > 6 && (
+                    <div style={{ marginTop: '16px' }}>
+                      <Pagination
+                        currentPage={testimonialsPage}
+                        totalPages={Math.ceil(testimonialsList.length / 6)}
+                        totalItems={testimonialsList.length}
+                        itemsPerPage={6}
+                        onPageChange={(p) => setTestimonialsPage(p)}
+                      />
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* MODAL 1: ADD CUSTOMER TESTIMONIAL MODAL */}
             {showAddTestimonialModal && (
               <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
                 <div className="glass-panel" style={{ width: '100%', maxWidth: '520px', padding: '30px', border: '1px solid var(--gold)', background: 'rgba(20,10,0,0.95)' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
                     <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1.4rem', color: 'var(--gold)', margin: 0 }}>
-                      + Add Customer Review
+                      + Add Site Testimonial
                     </h3>
                     <button
+                      type="button"
                       onClick={() => setShowAddTestimonialModal(false)}
                       style={{ background: 'none', border: 'none', color: 'var(--cream)', cursor: 'pointer', fontSize: '1.2rem' }}
                     >
@@ -5767,52 +7263,50 @@ export const AdminDashboard: React.FC = () => {
                       value={newTestimonial.title}
                       onChange={(e) => setNewTestimonial({ ...newTestimonial, title: e.target.value })}
                     />
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                      <label style={{ fontSize: '0.8rem', color: 'var(--beige)', textTransform: 'uppercase', letterSpacing: '1px' }}>
-                        Rating (Stars)
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.8rem', color: 'var(--beige)', marginBottom: '6px' }}>
+                        Rating (1 to 5)
                       </label>
-                      <select
-                        value={newTestimonial.rating}
-                        onChange={(e) => setNewTestimonial({ ...newTestimonial, rating: parseInt(e.target.value) || 5 })}
-                        style={{
-                          padding: '10px 12px',
-                          background: 'rgba(0,0,0,0.4)',
-                          border: '1px solid var(--glass-border)',
-                          color: 'var(--cream)',
-                          borderRadius: '4px',
-                          outline: 'none',
-                        }}
-                      >
-                        <option value={5}>5 Stars ★★★★★</option>
-                        <option value={4}>4 Stars ★★★★☆</option>
-                        <option value={3}>3 Stars ★★★☆☆</option>
-                      </select>
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        {[1, 2, 3, 4, 5].map((star) => (
+                          <button
+                            key={star}
+                            type="button"
+                            onClick={() => setNewTestimonial({ ...newTestimonial, rating: star })}
+                            style={{ background: 'none', border: 'none', cursor: 'pointer', color: star <= newTestimonial.rating ? 'var(--gold)' : 'var(--grey-mid)', padding: 0 }}
+                          >
+                            <Star size={24} fill={star <= newTestimonial.rating ? 'currentColor' : 'none'} />
+                          </button>
+                        ))}
+                      </div>
                     </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                      <label style={{ fontSize: '0.8rem', color: 'var(--beige)', textTransform: 'uppercase', letterSpacing: '1px' }}>
-                        Review Quote Text *
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.8rem', color: 'var(--beige)', marginBottom: '6px' }}>
+                        Testimonial Quote *
                       </label>
                       <textarea
+                        rows={3}
                         required
-                        rows={4}
-                        placeholder="Write the customer review text..."
+                        placeholder="What the customer said about Chovique..."
                         value={newTestimonial.text}
                         onChange={(e) => setNewTestimonial({ ...newTestimonial, text: e.target.value })}
-                        style={{
-                          padding: '12px',
-                          background: 'rgba(0,0,0,0.4)',
-                          border: '1px solid var(--glass-border)',
-                          color: 'var(--cream)',
-                          borderRadius: '4px',
-                          outline: 'none',
-                          resize: 'none',
-                        }}
+                        style={{ width: '100%', padding: '10px', background: 'rgba(0,0,0,0.3)', border: '1px solid var(--glass-border)', color: 'var(--cream)', borderRadius: '4px', resize: 'none', boxSizing: 'border-box' }}
                       />
                     </div>
-
-                    <div style={{ display: 'flex', gap: '12px', marginTop: '10px' }}>
-                      <Button variant="gold" fullWidth type="submit" disabled={uploadingTestimonial} glow>
-                        {uploadingTestimonial ? 'Creating Review...' : 'Create Review'}
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.8rem', color: 'var(--beige)', marginBottom: '6px' }}>
+                        Customer Photo / Avatar (Optional)
+                      </label>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => setTestimonialAvatarFile(e.target.files?.[0] || null)}
+                        style={{ color: 'var(--beige)', fontSize: '0.82rem' }}
+                      />
+                    </div>
+                    <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '10px' }}>
+                      <Button variant="gold" type="submit" disabled={uploadingTestimonial}>
+                        {uploadingTestimonial ? 'Adding...' : 'Save Testimonial'}
                       </Button>
                       <Button variant="glass" type="button" onClick={() => setShowAddTestimonialModal(false)}>
                         Cancel
@@ -5823,7 +7317,7 @@ export const AdminDashboard: React.FC = () => {
               </div>
             )}
 
-            {/* MODAL 2: ADD / EDIT PROCESS VIDEO MODAL (INCLUDES CURRENT LIVE VIDEO PREVIEW) */}
+            {/* MODAL 2: ADD / EDIT PROCESS VIDEO MODAL */}
             {showUploadVideoModal && (
               <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
                 <div className="glass-panel" style={{ width: '100%', maxWidth: '520px', padding: '26px', border: '1px solid var(--gold)', background: 'rgba(20,10,0,0.95)', maxHeight: '90vh', overflowY: 'auto' }}>
@@ -5832,6 +7326,7 @@ export const AdminDashboard: React.FC = () => {
                       {storyVideoUrl ? 'Edit & Replace Process Video' : '+ Add Our Story Process Video'}
                     </h3>
                     <button
+                      type="button"
                       onClick={() => setShowUploadVideoModal(false)}
                       style={{ background: 'none', border: 'none', color: 'var(--cream)', cursor: 'pointer', fontSize: '1.2rem' }}
                     >
@@ -5839,7 +7334,6 @@ export const AdminDashboard: React.FC = () => {
                     </button>
                   </div>
 
-                  {/* Existing Live Video Preview Card inside Modal */}
                   {storyVideoUrl && (
                     <div style={{ marginBottom: '18px', padding: '14px', background: 'rgba(0,0,0,0.45)', borderRadius: '8px', border: '1px solid rgba(201,168,76,0.3)' }}>
                       <span style={{ fontSize: '0.8rem', color: 'var(--gold)', fontWeight: 700, display: 'block', marginBottom: '8px' }}>
@@ -5856,28 +7350,22 @@ export const AdminDashboard: React.FC = () => {
                     </div>
                   )}
 
-                  <p style={{ color: 'var(--beige)', fontSize: '0.83rem', marginBottom: '16px', lineHeight: 1.4 }}>
-                    {storyVideoUrl
-                      ? 'Upload a new video file to replace the existing Our Story process video. Max size: 100MB.'
-                      : 'Select a video file to display in the Our Story section on the customer homepage. Max size: 100MB.'}
-                  </p>
-
-                  <form onSubmit={handleUploadStoryVideo} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                    <div style={{ padding: '16px', border: '1px dashed var(--gold)', borderRadius: '6px', background: 'rgba(0,0,0,0.3)', textAlign: 'center' }}>
+                  <form onSubmit={handleUploadStoryVideo} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.82rem', color: 'var(--beige)', marginBottom: '8px' }}>
+                        Select Video File (MP4, WebM, MOV, max 100MB)
+                      </label>
                       <input
                         type="file"
-                        accept="video/mp4,video/webm,video/ogg,video/quicktime"
+                        accept="video/*"
+                        required
                         onChange={(e) => setStoryVideoFile(e.target.files?.[0] || null)}
-                        style={{ width: '100%', color: 'var(--cream)', fontSize: '0.85rem' }}
+                        style={{ color: 'var(--cream)', fontSize: '0.85rem' }}
                       />
-                      <span style={{ fontSize: '0.75rem', color: 'var(--beige)', marginTop: '8px', display: 'block' }}>
-                        Supported formats: MP4, WEBM, OGG, MOV (Max 100MB)
-                      </span>
                     </div>
-
-                    <div style={{ display: 'flex', gap: '12px', marginTop: '10px' }}>
-                      <Button variant="gold" fullWidth type="submit" disabled={uploadingStoryVideo || !storyVideoFile} glow>
-                        {uploadingStoryVideo ? 'Uploading Video...' : storyVideoUrl ? 'Replace Video' : 'Upload Video'}
+                    <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '12px' }}>
+                      <Button variant="gold" type="submit" disabled={uploadingStoryVideo}>
+                        {uploadingStoryVideo ? 'Uploading...' : 'Save Video'}
                       </Button>
                       <Button variant="glass" type="button" onClick={() => setShowUploadVideoModal(false)}>
                         Cancel
@@ -5888,51 +7376,96 @@ export const AdminDashboard: React.FC = () => {
               </div>
             )}
 
-            {/* Site-wide Product Reviews Moderation */}
-            <div className="glass-panel" style={{ padding: '24px', border: '1px solid var(--glass-border)', marginTop: '30px' }}>
-              <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1.3rem', color: 'var(--cream)', marginBottom: '20px' }}>
-                Site-Wide Product Reviews Moderation ({reviewsList.length})
-              </h3>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', maxHeight: '400px', overflowY: 'auto' }}>
-                {reviewsList.length === 0 ? (
-                  <p style={{ color: 'var(--beige)', fontStyle: 'italic' }}>No product reviews submitted yet.</p>
-                ) : (
-                  reviewsList.map((rev) => (
-                    <div
-                      key={rev.id}
-                      style={{
-                        padding: '14px',
-                        background: 'rgba(255,255,255,0.02)',
-                        border: '1px solid var(--glass-border)',
-                        borderRadius: '6px',
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                        gap: '16px',
-                      }}
-                    >
-                      <div style={{ flex: 1 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                          <span style={{ color: 'var(--gold)', fontWeight: 600, fontSize: '0.85rem' }}>★ {rev.rating}</span>
-                          <span style={{ color: 'var(--cream)', fontWeight: 600, fontSize: '0.9rem' }}>{rev.author}</span>
-                          <span style={{ fontSize: '0.75rem', color: 'var(--grey-light)' }}>• {rev.date || 'Recent'}</span>
-                        </div>
-                        <p style={{ color: 'var(--beige)', fontSize: '0.85rem', margin: 0, fontStyle: 'italic' }}>
-                          "{rev.text}"
-                        </p>
-                      </div>
-                      <button
-                        onClick={() => handleDeleteReview(rev.id)}
-                        style={{ color: 'var(--rose-gold)', background: 'none', border: 'none', cursor: 'pointer', padding: '6px' }}
-                        title="Delete Review & Recalculate Rating"
-                      >
-                        <Trash2 size={16} />
-                      </button>
+            {/* MODAL 3: CUSTOMER REVIEW PHOTO / VIDEO LIGHTBOX */}
+            {selectedReviewMediaModal && (
+              <div
+                style={{
+                  position: 'fixed',
+                  inset: 0,
+                  background: 'rgba(0, 0, 0, 0.9)',
+                  backdropFilter: 'blur(8px)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  zIndex: 99999,
+                  padding: '20px',
+                }}
+                onClick={() => setSelectedReviewMediaModal(null)}
+              >
+                <div
+                  style={{
+                    position: 'relative',
+                    maxWidth: '90vw',
+                    maxHeight: '88vh',
+                    background: '#120d0a',
+                    border: '1px solid var(--gold)',
+                    borderRadius: '12px',
+                    padding: '16px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    boxShadow: '0 20px 60px rgba(0,0,0,0.95)',
+                  }}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <button
+                    type="button"
+                    onClick={() => setSelectedReviewMediaModal(null)}
+                    style={{
+                      position: 'absolute',
+                      top: '12px',
+                      right: '12px',
+                      background: 'rgba(255,255,255,0.1)',
+                      border: '1px solid var(--glass-border)',
+                      color: 'var(--cream)',
+                      borderRadius: '50%',
+                      width: '32px',
+                      height: '32px',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '14px',
+                      zIndex: 2,
+                    }}
+                  >
+                    ✕
+                  </button>
+
+                  {selectedReviewMediaModal.title && (
+                    <div style={{ color: 'var(--gold)', fontWeight: 600, fontSize: '0.92rem', marginBottom: '12px', maxWidth: '80%', textAlign: 'center' }}>
+                      "{selectedReviewMediaModal.title}"
                     </div>
-                  ))
-                )}
+                  )}
+
+                  {selectedReviewMediaModal.type === 'video' ? (
+                    <video
+                      src={selectedReviewMediaModal.url}
+                      controls
+                      autoPlay
+                      style={{
+                        maxWidth: '85vw',
+                        maxHeight: '75vh',
+                        borderRadius: '8px',
+                        outline: 'none',
+                        background: '#000',
+                      }}
+                    />
+                  ) : (
+                    <img
+                      src={selectedReviewMediaModal.url}
+                      alt="Customer review attachment"
+                      style={{
+                        maxWidth: '85vw',
+                        maxHeight: '75vh',
+                        objectFit: 'contain',
+                        borderRadius: '8px',
+                      }}
+                    />
+                  )}
+                </div>
               </div>
-            </div>
+            )}
           </div>
         )}
 
@@ -6459,62 +7992,455 @@ export const AdminDashboard: React.FC = () => {
         )}
 
         {/* EDIT REEL MODAL */}
-        {editingReel && (
-          <div className="modal-overlay" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.85)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000, backdropFilter: 'blur(8px)', padding: '16px', boxSizing: 'border-box' }}>
-            <div className="glass-panel" style={{ padding: '24px', width: '100%', maxWidth: '480px', maxHeight: '90vh', overflowY: 'auto', overflowX: 'hidden', borderRadius: '14px', border: '1px solid var(--gold)', boxSizing: 'border-box' }}>
-              {/* Header */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                <h3 style={{ fontFamily: 'var(--font-display)', color: 'var(--cream)', margin: 0, fontSize: '1.2rem' }}>🎬 Edit Reel</h3>
-                <button onClick={() => { setEditingReel(null); setEditingReelVideoFile(null); }} style={{ background: 'rgba(231,76,60,0.1)', border: '1px solid rgba(231,76,60,0.3)', borderRadius: '8px', color: 'var(--rose-gold)', cursor: 'pointer', padding: '6px' }}>
-                  <X size={18} />
-                </button>
-              </div>
+        {editingReel && (() => {
+          const currentVideoUrl = editingReel.video_url || editingReel.videoUrl || (
+            (editingReel.instagram_url || editingReel.instagramUrl || '').includes('DdQYj55v0dr')
+              ? 'https://res.cloudinary.com/aiqm7f7b/video/upload/v1790396266/chocolate-world/reels/ig_DdQYj55v0dr.mp4'
+              : ''
+          );
+          const currentIgUrl = editingReel.instagram_url || editingReel.instagramUrl || '';
+          const currentAccount = editingReel.account_name || editingReel.accountName || '@choviqueofficial';
 
-              {/* Form — all items full width, no overflow */}
-              <form onSubmit={handleEditReelSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '12px', width: '100%', boxSizing: 'border-box' }}>
-                <Input label="Caption / Title" required value={editingReel.title || ''} onChange={e => setEditingReel({ ...editingReel, title: e.target.value })} />
-                <Input label="Likes Display" value={editingReel.likes || ''} onChange={e => setEditingReel({ ...editingReel, likes: e.target.value })} />
-                <Input label="Views Display" value={editingReel.views || ''} onChange={e => setEditingReel({ ...editingReel, views: e.target.value })} />
-                <Input label="Comments Display" value={editingReel.comments || ''} onChange={e => setEditingReel({ ...editingReel, comments: e.target.value })} />
-                <Input label="Video URL (optional)" value={editingReel.video_url || editingReel.videoUrl || ''} onChange={e => setEditingReel({ ...editingReel, video_url: e.target.value })} />
-
-                {/* Replace video file section */}
-                <div style={{ width: '100%', boxSizing: 'border-box' }}>
-                  <span style={{ fontSize: '0.8rem', color: 'var(--beige)', display: 'block', marginBottom: '8px' }}>Replace Video File (optional)</span>
-
-                  {/* Current video URL chip — wraps instead of overflowing */}
-                  {(editingReel.video_url || editingReel.videoUrl) && (
-                    <div style={{ padding: '8px 10px', borderRadius: '6px', background: 'rgba(201,168,76,0.06)', border: '1px solid rgba(201,168,76,0.2)', color: 'var(--beige)', fontSize: '0.7rem', marginBottom: '10px', wordBreak: 'break-all', lineHeight: 1.4 }}>
-                      📎 {editingReel.video_url || editingReel.videoUrl}
+          return (
+            <div
+              className="modal-overlay"
+              style={{
+                position: 'fixed',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                background: 'rgba(0,0,0,0.85)',
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                zIndex: 1000,
+                backdropFilter: 'blur(8px)',
+                padding: '16px',
+                boxSizing: 'border-box',
+              }}
+            >
+              <div
+                className="glass-panel"
+                style={{
+                  padding: isMobileGrid ? '18px' : '26px',
+                  width: '100%',
+                  maxWidth: '520px',
+                  maxHeight: '92vh',
+                  overflowY: 'auto',
+                  overflowX: 'hidden',
+                  borderRadius: '16px',
+                  border: '1px solid var(--gold)',
+                  boxShadow: '0 12px 40px rgba(0,0,0,0.6)',
+                  boxSizing: 'border-box',
+                  background: 'linear-gradient(135deg, rgba(20,15,10,0.96) 0%, rgba(30,20,15,0.94) 100%)',
+                }}
+              >
+                {/* Header */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px', paddingBottom: '12px', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <div style={{ width: '34px', height: '34px', borderRadius: '8px', background: 'rgba(201,168,76,0.15)', border: '1px solid rgba(201,168,76,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--gold)' }}>
+                      <Video size={18} />
                     </div>
-                  )}
+                    <div>
+                      <h3 style={{ fontFamily: 'var(--font-display)', color: 'var(--cream)', margin: 0, fontSize: '1.25rem', lineHeight: 1.2 }}>
+                        Edit Instagram Reel
+                      </h3>
+                      <span style={{ fontSize: '0.75rem', color: 'var(--beige)', opacity: 0.8 }}>
+                        Live Video Preview & Metadata Editor
+                      </span>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditingReel(null);
+                      setEditingReelVideoFile(null);
+                      setEditReelSuccessMsg('');
+                      setEditReelErrorMsg('');
+                    }}
+                    style={{
+                      background: 'rgba(231,76,60,0.1)',
+                      border: '1px solid rgba(231,76,60,0.3)',
+                      borderRadius: '8px',
+                      color: 'var(--rose-gold)',
+                      cursor: 'pointer',
+                      padding: '8px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      transition: 'all 0.2s ease',
+                    }}
+                  >
+                    <X size={18} />
+                  </button>
+                </div>
 
-                  {/* Styled file picker button */}
-                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(255,255,255,0.04)', border: '1px dashed var(--glass-border)', borderRadius: '8px', color: 'var(--beige)', padding: '10px 14px', cursor: 'pointer', fontSize: '0.82rem', width: '100%', boxSizing: 'border-box' }}>
-                    <Video size={15} style={{ flexShrink: 0, color: 'var(--gold)' }} />
-                    <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {editingReelVideoFile ? `✓ ${editingReelVideoFile.name}` : 'Choose new video file...'}
-                    </span>
-                    <input
-                      type="file"
-                      accept="video/*"
-                      onChange={(e) => setEditingReelVideoFile(e.target.files?.[0] || null)}
-                      style={{ display: 'none' }}
+                {/* Form */}
+                <form onSubmit={handleEditReelSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px', width: '100%', boxSizing: 'border-box' }}>
+
+                  {/* 1. REAL LIVE PLAYING VIDEO REEL CARD */}
+                  <div style={{ width: '100%', boxSizing: 'border-box' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                      <span style={{ fontSize: '0.8rem', color: 'var(--beige)', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 600 }}>
+                        Active Reel Video Preview
+                      </span>
+                      {currentVideoUrl && (
+                        <span style={{ fontSize: '0.72rem', color: '#2ecc71', background: 'rgba(46,204,113,0.15)', padding: '2px 8px', borderRadius: '10px', border: '1px solid rgba(46,204,113,0.3)', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+                          <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#2ecc71', display: 'inline-block' }} />
+                          Playing Live
+                        </span>
+                      )}
+                    </div>
+
+                    {currentVideoUrl ? (
+                      <div
+                        style={{
+                          position: 'relative',
+                          width: '100%',
+                          borderRadius: '12px',
+                          overflow: 'hidden',
+                          background: '#000',
+                          border: '1px solid rgba(201,168,76,0.35)',
+                          boxShadow: '0 4px 20px rgba(0,0,0,0.5)',
+                        }}
+                      >
+                        {/* Overlay creator handle badge */}
+                        <div
+                          style={{
+                            position: 'absolute',
+                            top: '10px',
+                            left: '10px',
+                            zIndex: 2,
+                            background: 'rgba(0,0,0,0.7)',
+                            backdropFilter: 'blur(6px)',
+                            color: 'var(--cream)',
+                            padding: '3px 10px',
+                            borderRadius: '10px',
+                            fontSize: '0.74rem',
+                            fontWeight: 600,
+                            border: '1px solid rgba(255,255,255,0.15)',
+                            pointerEvents: 'none',
+                          }}
+                        >
+                          {currentAccount}
+                        </div>
+
+                        {/* Live video player that automatically plays the current or newly fetched reel */}
+                        <video
+                          key={currentVideoUrl}
+                          src={currentVideoUrl}
+                          autoPlay
+                          loop
+                          muted
+                          playsInline
+                          controls
+                          style={{
+                            width: '100%',
+                            maxHeight: '250px',
+                            objectFit: 'contain',
+                            background: '#000',
+                            display: 'block',
+                          }}
+                        />
+                      </div>
+                    ) : (
+                      <div
+                        style={{
+                          padding: '24px 16px',
+                          borderRadius: '12px',
+                          background: 'rgba(255,255,255,0.03)',
+                          border: '1px dashed rgba(201,168,76,0.3)',
+                          textAlign: 'center',
+                          color: 'var(--beige)',
+                          fontSize: '0.85rem',
+                        }}
+                      >
+                        <Video size={28} style={{ color: 'var(--gold)', margin: '0 auto 8px auto', display: 'block', opacity: 0.7 }} />
+                        <span>Paste an Instagram Reel URL below and tap <strong>Auto-Fetch</strong> to play the video.</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* 2. INSTAGRAM URL INPUT & AUTO-FETCH BUTTON */}
+                  <div>
+                    <label
+                      htmlFor="edit-modal-reel-url"
+                      style={{
+                        display: 'block',
+                        fontSize: '0.8rem',
+                        color: 'var(--beige)',
+                        textTransform: 'uppercase',
+                        letterSpacing: '1px',
+                        fontWeight: 600,
+                        marginBottom: '8px',
+                      }}
+                    >
+                      Instagram Reel / Post URL <span style={{ color: '#e74c3c', marginLeft: '4px', fontWeight: 600 }}>*</span>
+                    </label>
+
+                    <div
+                      style={{
+                        display: 'flex',
+                        flexDirection: isMobileGrid ? 'column' : 'row',
+                        alignItems: isMobileGrid ? 'stretch' : 'center',
+                        gap: '10px',
+                        width: '100%',
+                      }}
+                    >
+                      <div style={{ flex: 1, minWidth: 0, width: isMobileGrid ? '100%' : 'auto' }}>
+                        <Input
+                          id="edit-modal-reel-url"
+                          required
+                          placeholder="https://www.instagram.com/reel/C.../ or post link"
+                          value={currentIgUrl}
+                          containerStyle={{ marginBottom: 0 }}
+                          style={{ height: '46px', fontSize: '0.9rem' }}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            let extractedAccount = currentAccount;
+                            const match = val.match(/instagram\.com\/([a-zA-Z0-9._]+)\/(?:reel|p)\//i);
+                            if (match && match[1] && !['reel', 'p', 'tv'].includes(match[1].toLowerCase())) {
+                              extractedAccount = `@${match[1]}`;
+                            }
+                            setEditingReel({
+                              ...editingReel,
+                              instagram_url: val,
+                              account_name: extractedAccount,
+                            });
+                          }}
+                          onBlur={() => {
+                            const url = (editingReel.instagram_url || editingReel.instagramUrl || '').trim();
+                            if (url && url.includes('instagram.com')) {
+                              handleAutoFetchEditReelMeta(url);
+                            }
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              handleAutoFetchEditReelMeta(editingReel.instagram_url || editingReel.instagramUrl || '');
+                            }
+                          }}
+                        />
+                      </div>
+
+                      <Button
+                        variant="gold"
+                        type="button"
+                        size="sm"
+                        glow
+                        disabled={isFetchingEditReelMeta || !currentIgUrl.trim()}
+                        onClick={() => handleAutoFetchEditReelMeta(currentIgUrl)}
+                        style={{
+                          height: '46px',
+                          width: isMobileGrid ? '100%' : 'auto',
+                          minWidth: isMobileGrid ? '100%' : '160px',
+                          flexShrink: 0,
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '8px',
+                          fontWeight: 600,
+                          fontSize: '0.88rem',
+                          borderRadius: '4px',
+                        }}
+                      >
+                        {isFetchingEditReelMeta ? (
+                          <>
+                            <Loader2 size={16} className="animate-spin" />
+                            <span>Fetching...</span>
+                          </>
+                        ) : (
+                          <>
+                            <Zap size={16} />
+                            <span>Auto-Fetch</span>
+                          </>
+                        )}
+                      </Button>
+                    </div>
+
+                    {/* Feedback states */}
+                    {isFetchingEditReelMeta && (
+                      <div
+                        style={{
+                          marginTop: '8px',
+                          padding: '8px 12px',
+                          borderRadius: '6px',
+                          background: 'rgba(201,168,76,0.12)',
+                          border: '1px solid rgba(201,168,76,0.3)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          fontSize: '0.8rem',
+                          color: 'var(--gold)',
+                        }}
+                      >
+                        <Loader2 size={14} className="animate-spin" />
+                        <span>Resolving new video from Instagram to play automatically...</span>
+                      </div>
+                    )}
+
+                    {editReelSuccessMsg && (
+                      <div
+                        style={{
+                          marginTop: '8px',
+                          padding: '8px 12px',
+                          borderRadius: '6px',
+                          background: 'rgba(46, 204, 113, 0.12)',
+                          border: '1px solid rgba(46, 204, 113, 0.35)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          fontSize: '0.82rem',
+                          color: '#2ecc71',
+                          fontWeight: 600,
+                        }}
+                      >
+                        <span>✓</span>
+                        <span>{editReelSuccessMsg}</span>
+                      </div>
+                    )}
+
+                    {editReelErrorMsg && (
+                      <div
+                        style={{
+                          marginTop: '8px',
+                          padding: '8px 12px',
+                          borderRadius: '6px',
+                          background: 'rgba(231, 76, 60, 0.12)',
+                          border: '1px solid rgba(231, 76, 60, 0.35)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          fontSize: '0.8rem',
+                          color: '#e74c3c',
+                        }}
+                      >
+                        <span>⚠️</span>
+                        <span>{editReelErrorMsg}</span>
+                      </div>
+                    )}
+
+                    <p style={{ fontSize: '0.74rem', color: 'var(--beige)', opacity: 0.8, margin: '6px 0 0 0' }}>
+                      Change the URL above to replace the reel. Clicking <strong>Auto-Fetch</strong> or moving away from the field instantly loads and plays the new video.
+                    </p>
+                  </div>
+
+                  {/* 3. ACCOUNT HOLDER NAME / HANDLE */}
+                  <div>
+                    <Input
+                      label="Account Holder Account Name / Handle *"
+                      required
+                      placeholder="@choviqueofficial"
+                      value={currentAccount}
+                      containerStyle={{ marginBottom: 0 }}
+                      style={{ height: '46px', fontSize: '0.9rem' }}
+                      onChange={(e) => setEditingReel({ ...editingReel, account_name: e.target.value })}
                     />
-                  </label>
-                </div>
+                  </div>
 
-                {/* Action buttons — stacked on mobile, side by side on wider screens */}
-                <div style={{ display: 'flex', gap: '10px', marginTop: '8px', flexWrap: 'wrap' }}>
-                  <Button variant="glass" type="button" onClick={() => { setEditingReel(null); setEditingReelVideoFile(null); }} style={{ flex: '1 1 100px', minWidth: '80px' }}>Cancel</Button>
-                  <Button variant="gold" type="submit" glow disabled={isUpdatingReel} style={{ flex: '2 1 140px', minWidth: '120px', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-                    {isUpdatingReel ? 'Saving...' : 'Save Changes'}
-                  </Button>
-                </div>
-              </form>
+                  {/* 4. OPTIONAL REPLACE VIDEO FILE */}
+                  <div style={{ paddingTop: '8px', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+                    <span style={{ fontSize: '0.78rem', color: 'var(--beige)', display: 'block', marginBottom: '6px', fontWeight: 500 }}>
+                      Replace With Custom Video File (Optional):
+                    </span>
+                    <label
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        background: 'rgba(255,255,255,0.04)',
+                        border: '1px dashed var(--glass-border)',
+                        borderRadius: '8px',
+                        color: 'var(--beige)',
+                        padding: '10px 14px',
+                        cursor: 'pointer',
+                        fontSize: '0.82rem',
+                        width: '100%',
+                        boxSizing: 'border-box',
+                      }}
+                    >
+                      <Video size={16} style={{ flexShrink: 0, color: 'var(--gold)' }} />
+                      <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {editingReelVideoFile ? `✓ ${editingReelVideoFile.name}` : 'Choose replacement video file...'}
+                      </span>
+                      <input
+                        type="file"
+                        accept="video/*"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0] || null;
+                          setEditingReelVideoFile(file);
+                          if (file) {
+                            const localBlob = URL.createObjectURL(file);
+                            setEditingReel((prev: any) => ({
+                              ...prev,
+                              video_url: localBlob,
+                            }));
+                          }
+                        }}
+                        style={{ display: 'none' }}
+                      />
+                    </label>
+                  </div>
+
+                  {/* 5. ACTION BUTTONS */}
+                  <div style={{ display: 'flex', gap: '12px', marginTop: '6px', flexWrap: isMobileGrid ? 'wrap' : 'nowrap' }}>
+                    <Button
+                      variant="gold"
+                      type="submit"
+                      glow
+                      disabled={isUpdatingReel || isFetchingEditReelMeta}
+                      style={{
+                        height: '46px',
+                        flex: isMobileGrid ? '1 1 100%' : '2 1 140px',
+                        minWidth: '130px',
+                        display: 'inline-flex',
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                        gap: '8px',
+                        fontWeight: 600,
+                      }}
+                    >
+                      {isUpdatingReel ? (
+                        <>
+                          <Loader2 size={16} className="animate-spin" />
+                          <span>Saving Changes...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Save size={16} />
+                          <span>Save Changes</span>
+                        </>
+                      )}
+                    </Button>
+
+                    <Button
+                      variant="secondary"
+                      type="button"
+                      onClick={() => {
+                        setEditingReel(null);
+                        setEditingReelVideoFile(null);
+                        setEditReelSuccessMsg('');
+                        setEditReelErrorMsg('');
+                      }}
+                      style={{
+                        height: '46px',
+                        flex: isMobileGrid ? '1 1 100%' : '1 1 100px',
+                        minWidth: '90px',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+
+                </form>
+              </div>
             </div>
-          </div>
-        )}
+          );
+        })()}
 
         {/* CUSTOM DATE RANGE MODAL */}
         {showCustomDateModal && (

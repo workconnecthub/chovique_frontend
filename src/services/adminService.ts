@@ -380,6 +380,25 @@ export const adminService = {
   updateCustomer: (userId: string, payload: any): Promise<CustomerDetailsResponse> =>
     apiPatch<CustomerDetailsResponse>(`/admin/customers/${userId}`, payload),
 
+  /** Create a new customer account directly (admin/superadmin action). */
+  createCustomer: (payload: {
+    full_name: string;
+    email: string;
+    phone?: string;
+    password?: string;
+    gender?: string;
+    house_number?: string;
+    street?: string;
+    area?: string;
+    landmark?: string;
+    city?: string;
+    district?: string;
+    state?: string;
+    zip?: string;
+    is_active?: boolean;
+  }): Promise<CustomerDetailsResponse> =>
+    apiPost<CustomerDetailsResponse>('/admin/customers', payload),
+
   /** Delete a customer account */
   deleteCustomer: (userId: string): Promise<void> =>
     apiDelete<void>(`/admin/customers/${userId}`),
@@ -405,10 +424,11 @@ export const adminService = {
   demoteAdmin: (userId: string): Promise<SystemUser> =>
     apiPost<SystemUser>(`/admin/users/${userId}/demote`, {}),
 
-  /** Fetch all orders site-wide (supports status, payment_status, search, date range, and pagination params). */
+  /** Fetch all orders site-wide (supports status, payment_status, fulfillment_type, search, date range, and pagination params). */
   getAllOrders: (params?: {
     status?: string;
     payment_status?: string;
+    fulfillment_type?: string;
     search?: string;
     date_from?: string;
     date_to?: string;
@@ -433,11 +453,15 @@ export const adminService = {
       failed_payment: number;
       refunded: number;
       total_revenue: number;
+      local_orders?: number;
+      courier_orders?: number;
+      unassigned_local?: number;
     };
   }> => {
     const query = new URLSearchParams();
     if (params?.status && params.status !== 'ALL') query.append('status', params.status);
     if (params?.payment_status && params.payment_status !== 'ALL') query.append('payment_status', params.payment_status);
+    if (params?.fulfillment_type && params.fulfillment_type !== 'ALL') query.append('fulfillment_type', params.fulfillment_type);
     if (params?.search && params.search.trim()) query.append('search', params.search.trim());
     if (params?.date_from) query.append('date_from', params.date_from);
     if (params?.date_to) query.append('date_to', params.date_to);
@@ -450,6 +474,18 @@ export const adminService = {
   /** Update an order's status. */
   updateOrderStatus: (orderId: string, payload: UpdateOrderStatusPayload): Promise<Order> =>
     apiPatch<Order>(`/admin/orders/${orderId}/status`, payload),
+
+  /** Push a courier order to iThink Logistics API */
+  pushOrderToIThink: (orderId: string): Promise<any> =>
+    apiPost<any>(`/admin/orders/${orderId}/push-ithink`, {}),
+
+  /** Get iThink Logistics credentials status */
+  getIThinkConfig: (): Promise<{ configured: boolean; api_key: string; provider: string; supported_couriers: string[] }> =>
+    apiGet<any>('/admin/shipping/ithink/config'),
+
+  /** Update iThink Logistics credentials */
+  updateIThinkConfig: (payload: { api_key: string; secret_key: string }): Promise<{ message: string; status: string; configured: boolean; api_key_masked: string }> =>
+    apiPost<any>('/admin/shipping/ithink/config', payload),
 
   /** Fetch all support tickets site-wide. */
   getAllTickets: (): Promise<SupportTicket[]> =>
@@ -514,6 +550,12 @@ export const adminService = {
     apiPostFormData<InstagramReel>('/admin/reels', formData),
 
   /**
+   * Auto-fetch Instagram reel video and account handle from an Instagram URL.
+   */
+  fetchReelMeta: (url: string): Promise<{ account_name: string; video_url: string | null; instagram_url: string; shortcode: string }> =>
+    apiPost<{ account_name: string; video_url: string | null; instagram_url: string; shortcode: string }>('/admin/reels/fetch-meta', { url }),
+
+  /**
    * Delete an Instagram reel entry.
    */
   deleteReel: (reelId: string): Promise<void> =>
@@ -546,8 +588,21 @@ export const adminService = {
   /**
    * Get all product reviews site-wide (admin moderation).
    */
-  adminGetReviews: (): Promise<Review[]> =>
-    apiGet<Review[]>('/admin/reviews'),
+  adminGetReviews: (): Promise<any[]> =>
+    apiGet<any[]>('/admin/reviews'),
+
+  /**
+   * Update status of a product review (approved, pending, rejected) and landing page feature status.
+   */
+  adminUpdateReviewStatus: (
+    reviewId: string,
+    status: string,
+    is_featured_on_home?: boolean
+  ): Promise<{ id: string; status: string; is_featured_on_home?: boolean }> =>
+    apiPatch<{ id: string; status: string; is_featured_on_home?: boolean }>(
+      `/admin/reviews/${reviewId}/status`,
+      { status, is_featured_on_home }
+    ),
 
   /**
    * Delete a product review and recalculate product rating.

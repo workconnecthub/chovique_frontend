@@ -233,6 +233,7 @@ export const Navbar: React.FC = () => {
                     <img
                       src={avatarSrc}
                       alt={user?.name || 'User'}
+                      referrerPolicy="no-referrer"
                       onError={() => setAvatarError(true)}
                       style={{
                         width: '28px',

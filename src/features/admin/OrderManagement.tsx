@@ -15,8 +15,19 @@ import {
   Mail,
   Truck,
   FileSpreadsheet,
+  ExternalLink,
+  Navigation,
+  UserCheck,
+  Check,
+  Crown,
+  Zap,
+  Send,
+  Key,
+  CheckCircle,
+  SlidersHorizontal,
 } from 'lucide-react';
 import { adminService } from '../../services/adminService';
+import { deliveryService } from '../../services/deliveryService';
 import { Pagination } from '../../components/ui/Pagination';
 import { exportToCSV } from '../../utils/exportCsv';
 
@@ -131,20 +142,60 @@ export const OrderDetailModal: React.FC<{
   const [confirmMsg, setConfirmMsg] = useState('');
   const [isUpdating, setIsUpdating] = useState(false);
 
+  // Keyboard shortcut: Escape to close modal or cancel confirm dialog
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        if (confirmPayload) {
+          setConfirmPayload(null);
+        } else {
+          onClose();
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [confirmPayload, onClose]);
+
+  // Lock body scrolling while the modal is open
+  useEffect(() => {
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = originalOverflow;
+    };
+  }, []);
+
   const isCod = order.paymentMethod === 'Cash on Delivery' || order.paymentMethod === 'COD' || order.payment_method === 'Cash on Delivery' || order.payment_method === 'COD';
   const currentSt = order.status || 'Processing';
   const currentPs = order.payment_status || order.paymentStatus || 'PENDING';
   const allowedNext = ALLOWED_TRANSITIONS[currentSt] || [];
 
   const shipAddr = order.shipping_address || order.shippingAddress || {};
-  const customerName = shipAddr.name || shipAddr.full_name || order.customer_name || order.user_name || order.name || 'Customer';
-  const customerPhone = shipAddr.phone || shipAddr.phoneNumber || order.customer_phone || order.phone || '';
+  const customerName = order.shipping_name || shipAddr.name || shipAddr.full_name || order.customer_name || order.user_name || order.name || 'Customer';
+  const customerPhone = order.shipping_phone || shipAddr.phone || shipAddr.phoneNumber || order.customer_phone || order.phone || '';
   const customerEmail = shipAddr.email || order.user_email || order.customer_email || order.email || '';
 
-  const street = shipAddr.street || shipAddr.address || shipAddr.address_line1 || shipAddr.street_address || '';
-  const city = shipAddr.city || '';
-  const state = shipAddr.state || '';
-  const pincode = shipAddr.zip || shipAddr.pincode || shipAddr.postalCode || shipAddr.zip_code || '';
+  const houseNumber = order.shipping_house_number || shipAddr.house_number || '';
+  const street = order.shipping_street || shipAddr.street || shipAddr.address || shipAddr.address_line1 || shipAddr.street_address || '';
+  const area = order.shipping_area || shipAddr.area || '';
+  const landmark = order.shipping_landmark || shipAddr.landmark || '';
+  const city = order.shipping_city || shipAddr.city || '';
+  const district = order.shipping_district || shipAddr.district || '';
+  const state = order.shipping_state || shipAddr.state || '';
+  const pincode = order.shipping_pincode || shipAddr.pincode || shipAddr.zip || shipAddr.postalCode || shipAddr.zip_code || '';
+  const lat = order.shipping_latitude != null ? Number(order.shipping_latitude) : (shipAddr.latitude != null ? Number(shipAddr.latitude) : null);
+  const lng = order.shipping_longitude != null ? Number(order.shipping_longitude) : (shipAddr.longitude != null ? Number(shipAddr.longitude) : null);
+  const locationSource = order.shipping_location_source || shipAddr.location_source || (lat != null ? 'CURRENT_LOCATION' : 'MANUAL');
+  const fulfillmentType = order.fulfillment_type || (order.shipping_provider?.includes('Courier') ? 'COURIER' : 'LOCAL');
+  const shippingProvider = order.shipping_provider || (fulfillmentType === 'LOCAL' ? 'Chovique Local Express' : 'iThink Logistics Express');
+
+  const mapsUrl =
+    lat != null && lng != null
+      ? `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`
+      : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+          [houseNumber, street, area, city, state, pincode].filter(Boolean).join(', ')
+        )}`;
 
   const initiateStatusChange = (newSt: string) => {
     if (!allowedNext.includes(newSt)) {
@@ -182,215 +233,846 @@ export const OrderDetailModal: React.FC<{
     }
   };
 
+  // Delivery Executive Assignment State
+  const [deliveryBoysList, setDeliveryBoysList] = useState<any[]>([]);
+  const [selectedBoyId, setSelectedBoyId] = useState<string>('');
+  const [isAssigningBoy, setIsAssigningBoy] = useState<boolean>(false);
+
+  useEffect(() => {
+    deliveryService.getDeliveryBoys(true).then((data) => {
+      setDeliveryBoysList(data || []);
+    }).catch(() => {});
+  }, []);
+
+  const handleAssignBoy = async (boyId: string) => {
+    if (!boyId) return;
+    setIsAssigningBoy(true);
+    try {
+      await deliveryService.assignOrder(order.id, boyId);
+      addToast('success', 'Delivery executive successfully assigned!', 'Assigned');
+      onRefresh();
+      onClose();
+    } catch (err: any) {
+      addToast('error', err?.message || 'Failed to assign delivery executive.', 'Assignment Error');
+    } finally {
+      setIsAssigningBoy(false);
+    }
+  };
+
+  const handleUnassignBoy = async () => {
+    setIsAssigningBoy(true);
+    try {
+      await deliveryService.unassignOrder(order.id);
+      addToast('info', 'Delivery executive unassigned. Order returned to pool.', 'Unassigned');
+      onRefresh();
+      onClose();
+    } catch (err: any) {
+      addToast('error', err?.message || 'Failed to unassign.', 'Error');
+    } finally {
+      setIsAssigningBoy(false);
+    }
+  };
+
   return (
-    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.88)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px', overflowY: 'auto' }}>
-      <div className="glass-panel" style={{ width: '100%', maxWidth: '580px', borderRadius: '12px', border: '1px solid var(--gold)', background: 'rgba(18,10,5,0.97)', padding: '20px' }}>
-        {/* Header */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: '12px' }}>
-          <div>
-            <span style={{ fontSize: '0.68rem', color: 'var(--gold)', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 700 }}>Order Details</span>
-            <h2 style={{ fontFamily: 'monospace', fontSize: '1.1rem', color: 'var(--cream)', margin: '2px 0 0 0' }}>{order.id}</h2>
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="order-details-modal-title"
+      onClick={(e) => {
+        // Clicking backdrop closes modal
+        if (e.target === e.currentTarget) {
+          onClose();
+        }
+      }}
+      style={{
+        position: 'fixed',
+        inset: 0,
+        background: 'rgba(0, 0, 0, 0.88)',
+        backdropFilter: 'blur(8px)',
+        WebkitBackdropFilter: 'blur(8px)',
+        zIndex: 1000,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '12px',
+        overflowY: 'auto',
+      }}
+    >
+      <div
+        className="glass-panel"
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          width: '100%',
+          maxWidth: '620px',
+          maxHeight: 'min(92vh, 880px)',
+          display: 'flex',
+          flexDirection: 'column',
+          borderRadius: '14px',
+          border: '1px solid var(--gold)',
+          background: 'rgba(18, 10, 5, 0.98)',
+          boxShadow: '0 25px 60px rgba(0,0,0,0.9), 0 0 35px rgba(201,168,76,0.12)',
+          margin: 'auto',
+          overflow: 'hidden',
+          position: 'relative',
+        }}
+      >
+        {/* Pinned Sticky Header */}
+        <div
+          style={{
+            flexShrink: 0,
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            padding: '14px 18px',
+            background: 'rgba(24, 13, 7, 0.98)',
+            borderBottom: '1px solid rgba(255,255,255,0.08)',
+            gap: '12px',
+          }}
+        >
+          <div style={{ minWidth: 0 }}>
+            <span
+              style={{
+                fontSize: '0.68rem',
+                color: 'var(--gold)',
+                textTransform: 'uppercase',
+                letterSpacing: '1px',
+                fontWeight: 700,
+                display: 'block',
+              }}
+            >
+              Order Details
+            </span>
+            <h2
+              id="order-details-modal-title"
+              style={{
+                fontFamily: 'monospace',
+                fontSize: '1.15rem',
+                color: 'var(--cream)',
+                margin: '2px 0 0 0',
+                wordBreak: 'break-all',
+              }}
+            >
+              {order.id}
+            </h2>
           </div>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--beige)', cursor: 'pointer' }}><X size={18} /></button>
+
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close order details"
+            title="Close modal (Esc)"
+            style={{
+              width: '36px',
+              height: '36px',
+              borderRadius: '50%',
+              border: '1px solid rgba(255,255,255,0.16)',
+              background: 'rgba(255,255,255,0.06)',
+              color: 'var(--cream)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              flexShrink: 0,
+              transition: 'all 0.2s ease',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = 'rgba(201,168,76,0.2)';
+              e.currentTarget.style.borderColor = 'var(--gold)';
+              e.currentTarget.style.color = 'var(--gold)';
+              e.currentTarget.style.transform = 'scale(1.08)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'rgba(255,255,255,0.06)';
+              e.currentTarget.style.borderColor = 'rgba(255,255,255,0.16)';
+              e.currentTarget.style.color = 'var(--cream)';
+              e.currentTarget.style.transform = 'scale(1)';
+            }}
+          >
+            <X size={18} />
+          </button>
         </div>
 
-        {/* Customer & Shipping Address Cards */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))', gap: '10px', marginBottom: '14px' }}>
-          {/* Customer Details */}
-          <div style={{ background: 'rgba(255,255,255,0.025)', padding: '12px 14px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.06)', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.66rem', color: 'var(--gold)', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 700 }}>
-              <User size={12} /> Customer Information
-            </div>
-            <div style={{ fontWeight: 700, color: 'var(--cream)', fontSize: '0.88rem' }}>{customerName}</div>
-            {customerPhone && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.78rem', color: 'var(--beige)' }}>
-                <Phone size={11} style={{ color: 'var(--gold)', flexShrink: 0 }} />
-                <a href={`tel:${customerPhone}`} style={{ color: 'var(--beige)', textDecoration: 'none' }}>{customerPhone}</a>
+        {/* Scrollable Content Body */}
+        <div
+          style={{
+            flex: 1,
+            overflowY: 'auto',
+            padding: '16px 18px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '14px',
+          }}
+        >
+          {/* Customer & Shipping Address Cards */}
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+              gap: '10px',
+            }}
+          >
+            {/* Customer Details */}
+            <div
+              style={{
+                background: 'rgba(255,255,255,0.025)',
+                padding: '12px 14px',
+                borderRadius: '8px',
+                border: '1px solid rgba(255,255,255,0.06)',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '6px',
+                minWidth: 0,
+              }}
+            >
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  fontSize: '0.66rem',
+                  color: 'var(--gold)',
+                  textTransform: 'uppercase',
+                  letterSpacing: '1px',
+                  fontWeight: 700,
+                }}
+              >
+                <User size={12} /> Customer Information
               </div>
-            )}
-            {customerEmail && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.74rem', color: 'var(--grey-light)', wordBreak: 'break-all' }}>
-                <Mail size={11} style={{ color: 'var(--gold)', flexShrink: 0 }} />
-                <span>{customerEmail}</span>
+              <div
+                style={{
+                  fontWeight: 700,
+                  color: 'var(--cream)',
+                  fontSize: '0.88rem',
+                  wordBreak: 'break-word',
+                }}
+              >
+                {customerName}
               </div>
-            )}
-          </div>
-
-          {/* Delivery & Shipping Address */}
-          <div style={{ background: 'rgba(255,255,255,0.025)', padding: '12px 14px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.06)', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.66rem', color: 'var(--gold)', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 700 }}>
-              <MapPin size={12} /> Shipping Destination
-            </div>
-            {street ? (
-              <div style={{ fontSize: '0.82rem', color: 'var(--cream)', fontWeight: 500, lineHeight: 1.45 }}>
-                {street}
-              </div>
-            ) : (
-              <div style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.4)', fontStyle: 'italic' }}>Address line not specified</div>
-            )}
-            
-            {(city || state || pincode) && (
-              <div style={{ fontSize: '0.78rem', color: 'var(--beige)', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', marginTop: '2px' }}>
-                <span>{[city, state].filter(Boolean).join(', ')}</span>
-                {pincode && (
-                  <span style={{ background: 'rgba(201,168,76,0.12)', color: 'var(--gold)', padding: '1px 6px', borderRadius: '4px', fontSize: '0.72rem', fontWeight: 700, border: '1px solid rgba(201,168,76,0.25)' }}>
-                    PIN: {pincode}
-                  </span>
-                )}
-              </div>
-            )}
-
-            {order.delivery_option && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.72rem', color: 'var(--grey-light)', marginTop: '2px', borderTop: '1px dashed rgba(255,255,255,0.06)', paddingTop: '6px' }}>
-                <Truck size={11} style={{ color: 'var(--gold)', flexShrink: 0 }} />
-                <span>Option: <strong style={{ color: 'var(--cream)' }}>{order.delivery_option}</strong></span>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Statuses row */}
-        <div style={{ display: 'flex', gap: '16px', alignItems: 'center', marginBottom: '14px', padding: '10px 12px', background: 'rgba(255,255,255,0.02)', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)' }}>
-          <div>
-            <div style={{ fontSize: '0.65rem', color: 'var(--grey-light)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '4px' }}>Order Status</div>
-            <StatusBadge status={currentSt} map={FULFILLMENT_COLORS} />
-          </div>
-          <div>
-            <div style={{ fontSize: '0.65rem', color: 'var(--grey-light)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '4px' }}>Payment</div>
-            <StatusBadge status={currentPs} map={PAYMENT_COLORS} />
-          </div>
-          <div style={{ marginLeft: 'auto', textAlign: 'right' }}>
-            <div style={{ fontSize: '0.65rem', color: 'var(--grey-light)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '4px' }}>Method</div>
-            <span style={{ fontSize: '0.78rem', color: 'var(--cream)', fontWeight: 600 }}>{order.paymentMethod || '—'}</span>
-          </div>
-        </div>
-
-        {/* Order Items */}
-        <div style={{ marginBottom: '14px' }}>
-          <div style={{ fontSize: '0.68rem', color: 'var(--gold)', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 700, marginBottom: '8px' }}>Items</div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-            {order.items?.map((it: any, idx: number) => (
-              <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', background: 'rgba(0,0,0,0.25)', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.04)' }}>
-                <div>
-                  <div style={{ fontSize: '0.82rem', color: 'var(--cream)', fontWeight: 600 }}>{it.product?.name || 'Product'}</div>
-                  <div style={{ fontSize: '0.7rem', color: 'var(--grey-light)' }}>Qty: {it.quantity} × ₹{it.price}</div>
+              {customerPhone && (
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    fontSize: '0.78rem',
+                    color: 'var(--beige)',
+                  }}
+                >
+                  <Phone size={11} style={{ color: 'var(--gold)', flexShrink: 0 }} />
+                  <a
+                    href={`tel:${customerPhone}`}
+                    style={{ color: 'var(--beige)', textDecoration: 'none', wordBreak: 'break-all' }}
+                  >
+                    {customerPhone}
+                  </a>
                 </div>
-                <div style={{ fontWeight: 700, color: 'var(--gold)', fontSize: '0.85rem' }}>₹{(it.quantity * it.price).toLocaleString()}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Summary */}
-        <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '8px', padding: '12px', marginBottom: '14px' }}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '0.82rem' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--cream)' }}>
-              <span>Subtotal</span><span style={{ fontWeight: 600 }}>₹{(order.subtotal || 0).toLocaleString()}</span>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--cream)' }}>
-              <span>Delivery</span><span style={{ fontWeight: 600 }}>{order.shipping > 0 ? `₹${order.shipping.toLocaleString()}` : 'Free'}</span>
-            </div>
-            {(order.tax || 0) > 0 && (
-              <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--cream)' }}>
-                <span>Tax (GST)</span><span style={{ fontWeight: 600 }}>₹{order.tax.toLocaleString()}</span>
-              </div>
-            )}
-            {(order.coupon_discount || order.discount || 0) > 0 && (
-              <div style={{ display: 'flex', justifyContent: 'space-between', color: '#2ecc71' }}>
-                <span>Coupon {order.coupon_code ? `(${order.coupon_code})` : ''}</span>
-                <span style={{ fontWeight: 600 }}>−₹{(order.coupon_discount || order.discount || 0).toLocaleString()}</span>
-              </div>
-            )}
-            {(order.coin_discount || 0) > 0 && (
-              <div style={{ display: 'flex', justifyContent: 'space-between', color: '#2ecc71' }}>
-                <span>Reward Coins ({order.coins_used})</span>
-                <span style={{ fontWeight: 600 }}>−₹{(order.coin_discount || 0).toLocaleString()}</span>
-              </div>
-            )}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px dashed rgba(255,255,255,0.1)', paddingTop: '8px', marginTop: '2px' }}>
-              <span style={{ color: 'var(--cream)', fontWeight: 700, fontSize: '0.88rem' }}>Total</span>
-              <span style={{ color: 'var(--gold)', fontWeight: 800, fontSize: '1.1rem', fontFamily: 'var(--font-display)' }}>₹{(order.total || 0).toLocaleString()}</span>
-            </div>
-          </div>
-        </div>
-
-        {(allowedNext.length > 0 || (isCod && currentPs === 'PENDING')) && (
-          <div style={{ paddingTop: '12px', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
-            <div style={{ fontSize: '0.68rem', color: 'var(--gold)', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 700, marginBottom: '8px' }}>
-              Update Status & Payment
-            </div>
-            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-              {allowedNext.map((st) => (
-                <button
-                  key={st}
-                  disabled={isUpdating}
-                  onClick={() => initiateStatusChange(st)}
+              )}
+              {customerEmail && (
+                <div
                   style={{
-                    flex: '1 1 0',
-                    minWidth: '85px',
-                    padding: '7px 8px',
-                    borderRadius: '6px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
                     fontSize: '0.74rem',
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                    whiteSpace: 'nowrap',
-                    textAlign: 'center',
-                    background: st === 'Cancelled' ? 'rgba(231,76,60,0.15)' : 'rgba(201,168,76,0.15)',
-                    color: st === 'Cancelled' ? '#e74c3c' : 'var(--gold)',
-                    border: st === 'Cancelled' ? '1px solid rgba(231,76,60,0.4)' : '1px solid var(--gold)',
-                    transition: 'all 0.2s ease',
+                    color: 'var(--grey-light)',
+                    wordBreak: 'break-all',
                   }}
                 >
-                  → {STATUS_LABELS[st] || st}
-                </button>
-              ))}
-              {isCod && currentPs === 'PENDING' && (
-                <button
-                  disabled={isUpdating}
-                  onClick={initiateCodPaid}
-                  style={{
-                    flex: '1 1 0',
-                    minWidth: '95px',
-                    padding: '7px 8px',
-                    borderRadius: '6px',
-                    fontSize: '0.74rem',
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                    whiteSpace: 'nowrap',
-                    textAlign: 'center',
-                    background: 'rgba(46,204,113,0.15)',
-                    color: '#2ecc71',
-                    border: '1px solid rgba(46,204,113,0.4)',
-                    transition: 'all 0.2s ease',
-                  }}
-                >
-                  Mark COD Paid
-                </button>
+                  <Mail size={11} style={{ color: 'var(--gold)', flexShrink: 0 }} />
+                  <span>{customerEmail}</span>
+                </div>
               )}
             </div>
-          </div>
-        )}
 
-        {confirmPayload && (
-          <div style={{ marginTop: '16px', padding: '14px', borderRadius: '8px', background: 'rgba(231,76,60,0.15)', border: '1px solid rgba(231,76,60,0.4)', color: '#f5e6d3' }}>
-            <p style={{ margin: '0 0 12px 0', fontSize: '0.85rem' }}>{confirmMsg}</p>
-            <div style={{ display: 'flex', gap: '10px' }}>
-              <button
-                disabled={isUpdating}
-                onClick={() => doUpdate(confirmPayload)}
-                style={{ padding: '6px 14px', background: '#e74c3c', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 600, fontSize: '0.8rem' }}
+            {/* Delivery & Shipping Address (V2 Logistics & Precision Location) */}
+            <div
+              style={{
+                background: 'rgba(255,255,255,0.025)',
+                padding: '12px 14px',
+                borderRadius: '8px',
+                border: '1px solid rgba(255,255,255,0.06)',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '6px',
+                minWidth: 0,
+              }}
+            >
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  flexWrap: 'wrap',
+                  gap: '4px',
+                }}
               >
-                Confirm
-              </button>
-              <button
-                onClick={() => setConfirmPayload(null)}
-                style={{ padding: '6px 14px', background: 'rgba(255,255,255,0.1)', color: 'var(--cream)', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '4px', cursor: 'pointer', fontSize: '0.8rem' }}
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    fontSize: '0.66rem',
+                    color: 'var(--gold)',
+                    textTransform: 'uppercase',
+                    letterSpacing: '1px',
+                    fontWeight: 700,
+                  }}
+                >
+                  <MapPin size={12} /> Shipping Destination
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                  <span
+                    style={{
+                      fontSize: '0.65rem',
+                      padding: '2px 7px',
+                      borderRadius: '4px',
+                      fontWeight: 700,
+                      background: fulfillmentType === 'LOCAL' ? 'rgba(201,168,76,0.18)' : 'rgba(59,130,246,0.18)',
+                      color: fulfillmentType === 'LOCAL' ? 'var(--gold)' : '#93c5fd',
+                      border: fulfillmentType === 'LOCAL' ? '1px solid rgba(201,168,76,0.3)' : '1px solid rgba(59,130,246,0.3)',
+                    }}
+                  >
+                    {fulfillmentType === 'LOCAL' ? '⚡ LOCAL EXPRESS' : '📦 iThink Logistics Express'}
+                  </span>
+                  {lat != null && lng != null && (
+                    <span
+                      style={{
+                        fontSize: '0.65rem',
+                        padding: '2px 6px',
+                        borderRadius: '4px',
+                        background: 'rgba(74,222,128,0.15)',
+                        color: '#4ade80',
+                        fontWeight: 700,
+                      }}
+                    >
+                      📍 GPS
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {street || houseNumber ? (
+                <div
+                  style={{
+                    fontSize: '0.82rem',
+                    color: 'var(--cream)',
+                    fontWeight: 500,
+                    lineHeight: 1.45,
+                    wordBreak: 'break-word',
+                  }}
+                >
+                  {houseNumber ? `${houseNumber}, ` : ''}{street}{area ? `, ${area}` : ''}
+                </div>
+              ) : (
+                <div style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.4)', fontStyle: 'italic' }}>
+                  Address line not specified
+                </div>
+              )}
+
+              {landmark && (
+                <div style={{ fontSize: '0.75rem', color: 'var(--gold-light)', wordBreak: 'break-word' }}>
+                  Landmark: {landmark}
+                </div>
+              )}
+
+              {(city || state || pincode) && (
+                <div
+                  style={{
+                    fontSize: '0.78rem',
+                    color: 'var(--beige)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    flexWrap: 'wrap',
+                    marginTop: '2px',
+                    wordBreak: 'break-word',
+                  }}
+                >
+                  <span>{[city, district, state].filter(Boolean).join(', ')}</span>
+                  {pincode && (
+                    <span
+                      style={{
+                        background: 'rgba(201,168,76,0.12)',
+                        color: 'var(--gold)',
+                        padding: '1px 6px',
+                        borderRadius: '4px',
+                        fontSize: '0.72rem',
+                        fontWeight: 700,
+                        border: '1px solid rgba(201,168,76,0.25)',
+                      }}
+                    >
+                      PIN: {pincode}
+                    </span>
+                  )}
+                </div>
+              )}
+
+              {/* Provider and Navigation Button */}
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  flexWrap: 'wrap',
+                  gap: '8px',
+                  marginTop: '4px',
+                  borderTop: '1px dashed rgba(255,255,255,0.06)',
+                  paddingTop: '6px',
+                }}
               >
-                Cancel
-              </button>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.72rem', color: 'var(--grey-light)' }}>
+                  <Truck size={11} style={{ color: 'var(--gold)', flexShrink: 0 }} />
+                  <span>Provider: <strong style={{ color: 'var(--cream)' }}>{shippingProvider}</strong></span>
+                </div>
+
+                {mapsUrl && (
+                  <a
+                    href={mapsUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      fontSize: '0.72rem',
+                      padding: '3px 8px',
+                      borderRadius: '4px',
+                      background: 'rgba(201,168,76,0.15)',
+                      color: 'var(--gold)',
+                      border: '1px solid rgba(201,168,76,0.3)',
+                      textDecoration: 'none',
+                      fontWeight: 600,
+                    }}
+                  >
+                    <ExternalLink size={11} /> Open in Google Maps
+                  </a>
+                )}
+              </div>
             </div>
           </div>
-        )}
+
+          {/* Fulfillment Action Box: Local Delivery Assignment vs iThink Logistics Courier Dispatch */}
+          {fulfillmentType === 'LOCAL' ? (
+            <div
+              style={{
+                padding: '12px 14px',
+                background: 'rgba(201,168,76,0.06)',
+                borderRadius: '8px',
+                border: '1px solid rgba(201,168,76,0.25)',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '10px',
+              }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: '0.72rem', color: 'var(--gold)', textTransform: 'uppercase', letterSpacing: '0.8px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <Truck size={13} /> Local Express Delivery Assignment
+                </span>
+                <span style={{ fontSize: '0.68rem', padding: '2px 8px', borderRadius: '10px', background: 'rgba(255,255,255,0.08)', color: '#f5efe6', fontWeight: 600 }}>
+                  Fulfillment: {order.fulfillment_status || 'UNASSIGNED'}
+                </span>
+              </div>
+
+              {order.delivery_boy_name ? (
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
+                  <div>
+                    <div style={{ color: '#f5efe6', fontWeight: 700, fontSize: '0.85rem' }}>
+                      Assigned: <strong style={{ color: 'var(--gold)' }}>{order.delivery_boy_name}</strong>
+                    </div>
+                    {order.delivery_otp && (
+                      <div style={{ fontSize: '0.74rem', color: '#2ecc71', fontWeight: 700, marginTop: '2px' }}>
+                        🔑 Customer Delivery OTP: <span style={{ background: 'rgba(46,204,113,0.15)', padding: '2px 6px', borderRadius: '4px', border: '1px solid rgba(46,204,113,0.4)' }}>{order.delivery_otp}</span>
+                      </div>
+                    )}
+                  </div>
+                  <button
+                    disabled={isAssigningBoy}
+                    onClick={handleUnassignBoy}
+                    style={{
+                      padding: '5px 12px',
+                      borderRadius: '6px',
+                      background: 'rgba(231,76,60,0.15)',
+                      border: '1px solid rgba(231,76,60,0.4)',
+                      color: '#e74c3c',
+                      fontSize: '0.74rem',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    {isAssigningBoy ? 'Unassigning...' : 'Unassign / Change'}
+                  </button>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+                  <select
+                    value={selectedBoyId}
+                    onChange={(e) => setSelectedBoyId(e.target.value)}
+                    style={{
+                      flex: '1 1 180px',
+                      padding: '8px 10px',
+                      borderRadius: '6px',
+                      background: 'rgba(15,12,10,0.9)',
+                      border: '1px solid rgba(201,168,76,0.3)',
+                      color: '#f5efe6',
+                      fontSize: '0.78rem',
+                      outline: 'none',
+                    }}
+                  >
+                    <option value="">Select Delivery Executive...</option>
+                    {deliveryBoysList.map((boy) => (
+                      <option key={boy.id} value={boy.id}>
+                        {boy.full_name} ({boy.active_orders || 0} active orders)
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    disabled={!selectedBoyId || isAssigningBoy}
+                    onClick={() => handleAssignBoy(selectedBoyId)}
+                    style={{
+                      padding: '8px 16px',
+                      borderRadius: '6px',
+                      background: !selectedBoyId ? 'rgba(255,255,255,0.1)' : 'var(--gold)',
+                      border: 'none',
+                      color: '#0f0c0a',
+                      fontWeight: 800,
+                      fontSize: '0.78rem',
+                      cursor: !selectedBoyId ? 'not-allowed' : 'pointer',
+                    }}
+                  >
+                    {isAssigningBoy ? 'Assigning...' : 'Assign to Order'}
+                  </button>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div
+              style={{
+                padding: '14px 16px',
+                background: 'rgba(59,130,246,0.06)',
+                borderRadius: '8px',
+                border: '1px solid rgba(59,130,246,0.3)',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '10px',
+              }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: '0.74rem', color: '#93c5fd', textTransform: 'uppercase', letterSpacing: '0.8px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <Send size={13} color="#60a5fa" /> iThink Logistics Courier Fulfillment
+                </span>
+                <span style={{ fontSize: '0.68rem', padding: '2px 8px', borderRadius: '10px', background: 'rgba(59,130,246,0.15)', color: '#93c5fd', fontWeight: 600 }}>
+                  Carrier Network: BlueDart, Delhivery, DTDC, XpressBees
+                </span>
+              </div>
+
+              {order.tracking_number ? (
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
+                  <div>
+                    <div style={{ color: '#f5efe6', fontWeight: 700, fontSize: '0.85rem' }}>
+                      AWB Tracking Number: <strong style={{ color: '#93c5fd', fontFamily: 'monospace' }}>{order.tracking_number}</strong>
+                    </div>
+                    <div style={{ fontSize: '0.74rem', color: 'var(--beige)', marginTop: '2px' }}>
+                      Provider: {order.shipping_provider || 'iThink Logistics Express'}
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <a
+                      href={order.tracking_url || `https://ithinklogistics.com/track?awb=${order.tracking_number}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{
+                        padding: '6px 14px',
+                        borderRadius: '6px',
+                        background: 'linear-gradient(135deg, rgba(59,130,246,0.3) 0%, rgba(26,18,11,0.9) 100%)',
+                        border: '1px solid rgba(59,130,246,0.5)',
+                        color: '#93c5fd',
+                        fontSize: '0.76rem',
+                        fontWeight: 700,
+                        textDecoration: 'none',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                      }}
+                    >
+                      <ExternalLink size={12} /> Live Tracking
+                    </a>
+                  </div>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
+                  <div style={{ fontSize: '0.8rem', color: 'var(--cream)' }}>
+                    Ready for instant booking with third-party logistics (iThink Multi-Carrier).
+                  </div>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      try {
+                        const res = await adminService.pushOrderToIThink(order.id);
+                        addToast('success', res.message || 'Order booked with iThink Logistics!', 'Courier Dispatched');
+                        onUpdateStatus(order.id, {});
+                      } catch (err: any) {
+                        addToast('error', err?.detail || err?.message || 'Failed to dispatch order.', 'Dispatch Error');
+                      }
+                    }}
+                    style={{
+                      padding: '8px 16px',
+                      borderRadius: '6px',
+                      background: 'linear-gradient(135deg, rgba(59,130,246,0.35) 0%, rgba(30,58,138,0.7) 100%)',
+                      border: '1px solid rgba(59,130,246,0.6)',
+                      color: '#93c5fd',
+                      fontWeight: 800,
+                      fontSize: '0.78rem',
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                    }}
+                  >
+                    <Send size={13} />
+                    Book &amp; Push to iThink Logistics
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Statuses row */}
+          <div
+            style={{
+              display: 'flex',
+              gap: '10px 14px',
+              flexWrap: 'wrap',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: '10px 14px',
+              background: 'rgba(255,255,255,0.02)',
+              borderRadius: '8px',
+              border: '1px solid rgba(255,255,255,0.05)',
+            }}
+          >
+            <div>
+              <div style={{ fontSize: '0.65rem', color: 'var(--grey-light)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '4px' }}>
+                Order Status
+              </div>
+              <StatusBadge status={currentSt} map={FULFILLMENT_COLORS} />
+            </div>
+            <div>
+              <div style={{ fontSize: '0.65rem', color: 'var(--grey-light)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '4px' }}>
+                Payment
+              </div>
+              <StatusBadge status={currentPs} map={PAYMENT_COLORS} />
+            </div>
+            <div style={{ textAlign: 'right' }}>
+              <div style={{ fontSize: '0.65rem', color: 'var(--grey-light)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '4px' }}>
+                Method
+              </div>
+              <span style={{ fontSize: '0.78rem', color: 'var(--cream)', fontWeight: 600 }}>{order.paymentMethod || '—'}</span>
+            </div>
+          </div>
+
+          {/* Order Items */}
+          <div>
+            <div style={{ fontSize: '0.68rem', color: 'var(--gold)', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 700, marginBottom: '8px' }}>
+              Items
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              {order.items?.map((it: any, idx: number) => (
+                <div
+                  key={idx}
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    padding: '8px 12px',
+                    background: 'rgba(0,0,0,0.25)',
+                    borderRadius: '6px',
+                    border: '1px solid rgba(255,255,255,0.04)',
+                    gap: '10px',
+                  }}
+                >
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ fontSize: '0.82rem', color: 'var(--cream)', fontWeight: 600, wordBreak: 'break-word' }}>
+                      {it.product?.name || 'Product'}
+                    </div>
+                    <div style={{ fontSize: '0.7rem', color: 'var(--grey-light)' }}>
+                      Qty: {it.quantity} × ₹{it.price}
+                    </div>
+                  </div>
+                  <div style={{ fontWeight: 700, color: 'var(--gold)', fontSize: '0.85rem', flexShrink: 0 }}>
+                    ₹{(it.quantity * it.price).toLocaleString()}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Summary */}
+          <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '8px', padding: '12px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '0.82rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--cream)' }}>
+                <span>Subtotal</span>
+                <span style={{ fontWeight: 600 }}>₹{(order.subtotal || 0).toLocaleString()}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--cream)' }}>
+                <span>Delivery</span>
+                <span style={{ fontWeight: 600 }}>{order.shipping > 0 ? `₹${order.shipping.toLocaleString()}` : 'Free'}</span>
+              </div>
+              {(order.tax || 0) > 0 && (
+                <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--cream)' }}>
+                  <span>Tax (GST)</span>
+                  <span style={{ fontWeight: 600 }}>₹{order.tax.toLocaleString()}</span>
+                </div>
+              )}
+              {(order.coupon_discount || order.discount || 0) > 0 && (
+                <div style={{ display: 'flex', justifyContent: 'space-between', color: '#2ecc71' }}>
+                  <span>Coupon {order.coupon_code ? `(${order.coupon_code})` : ''}</span>
+                  <span style={{ fontWeight: 600 }}>−₹{(order.coupon_discount || order.discount || 0).toLocaleString()}</span>
+                </div>
+              )}
+              {(order.coin_discount || 0) > 0 && (
+                <div style={{ display: 'flex', justifyContent: 'space-between', color: '#2ecc71' }}>
+                  <span>Reward Coins ({order.coins_used})</span>
+                  <span style={{ fontWeight: 600 }}>−₹{(order.coin_discount || 0).toLocaleString()}</span>
+                </div>
+              )}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px dashed rgba(255,255,255,0.1)', paddingTop: '8px', marginTop: '2px' }}>
+                <span style={{ color: 'var(--cream)', fontWeight: 700, fontSize: '0.88rem' }}>Total</span>
+                <span style={{ color: 'var(--gold)', fontWeight: 800, fontSize: '1.1rem', fontFamily: 'var(--font-display)' }}>
+                  ₹{(order.total || 0).toLocaleString()}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {(allowedNext.length > 0 || (isCod && currentPs === 'PENDING')) && (
+            <div style={{ paddingTop: '8px', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+              <div style={{ fontSize: '0.68rem', color: 'var(--gold)', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 700, marginBottom: '8px' }}>
+                Update Status & Payment
+              </div>
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                {allowedNext.map((st) => (
+                  <button
+                    key={st}
+                    disabled={isUpdating}
+                    onClick={() => initiateStatusChange(st)}
+                    style={{
+                      flex: '1 1 110px',
+                      minHeight: '36px',
+                      padding: '7px 12px',
+                      borderRadius: '6px',
+                      fontSize: '0.74rem',
+                      fontWeight: 600,
+                      cursor: isUpdating ? 'not-allowed' : 'pointer',
+                      whiteSpace: 'nowrap',
+                      textAlign: 'center',
+                      background: st === 'Cancelled' ? 'rgba(231,76,60,0.15)' : 'rgba(201,168,76,0.15)',
+                      color: st === 'Cancelled' ? '#e74c3c' : 'var(--gold)',
+                      border: st === 'Cancelled' ? '1px solid rgba(231,76,60,0.4)' : '1px solid var(--gold)',
+                      opacity: isUpdating ? 0.6 : 1,
+                      transition: 'all 0.2s ease',
+                    }}
+                  >
+                    → {STATUS_LABELS[st] || st}
+                  </button>
+                ))}
+                {isCod && currentPs === 'PENDING' && (
+                  <button
+                    disabled={isUpdating}
+                    onClick={initiateCodPaid}
+                    style={{
+                      flex: '1 1 110px',
+                      minHeight: '36px',
+                      padding: '7px 12px',
+                      borderRadius: '6px',
+                      fontSize: '0.74rem',
+                      fontWeight: 600,
+                      cursor: isUpdating ? 'not-allowed' : 'pointer',
+                      whiteSpace: 'nowrap',
+                      textAlign: 'center',
+                      background: 'rgba(46,204,113,0.15)',
+                      color: '#2ecc71',
+                      border: '1px solid rgba(46,204,113,0.4)',
+                      opacity: isUpdating ? 0.6 : 1,
+                      transition: 'all 0.2s ease',
+                    }}
+                  >
+                    Mark COD Paid
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+
+          {confirmPayload && (
+            <div style={{ padding: '14px', borderRadius: '8px', background: 'rgba(231,76,60,0.15)', border: '1px solid rgba(231,76,60,0.4)', color: '#f5e6d3' }}>
+              <p style={{ margin: '0 0 12px 0', fontSize: '0.85rem' }}>{confirmMsg}</p>
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <button
+                  disabled={isUpdating}
+                  onClick={() => doUpdate(confirmPayload)}
+                  style={{ padding: '7px 16px', background: '#e74c3c', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 600, fontSize: '0.8rem' }}
+                >
+                  {isUpdating ? 'Updating...' : 'Confirm'}
+                </button>
+                <button
+                  onClick={() => setConfirmPayload(null)}
+                  style={{ padding: '7px 16px', background: 'rgba(255,255,255,0.1)', color: 'var(--cream)', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '4px', cursor: 'pointer', fontSize: '0.8rem' }}
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Pinned Footer Action Bar */}
+        <div
+          style={{
+            flexShrink: 0,
+            padding: '12px 18px',
+            borderTop: '1px solid rgba(255,255,255,0.08)',
+            background: 'rgba(15, 8, 3, 0.98)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: '10px',
+          }}
+        >
+          <span style={{ fontSize: '0.72rem', color: 'var(--grey-light)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <span>Press <kbd style={{ padding: '1px 5px', borderRadius: '3px', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)', color: 'var(--cream)', fontSize: '0.68rem', fontFamily: 'monospace' }}>ESC</kbd> or click outside to close</span>
+          </span>
+
+          <button
+            type="button"
+            onClick={onClose}
+            style={{
+              padding: '7px 16px',
+              borderRadius: '6px',
+              background: 'rgba(255,255,255,0.06)',
+              border: '1px solid rgba(255,255,255,0.18)',
+              color: 'var(--cream)',
+              fontSize: '0.8rem',
+              fontWeight: 600,
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              transition: 'all 0.2s ease',
+              marginLeft: 'auto',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = 'rgba(255,255,255,0.14)';
+              e.currentTarget.style.borderColor = 'rgba(255,255,255,0.3)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'rgba(255,255,255,0.06)';
+              e.currentTarget.style.borderColor = 'rgba(255,255,255,0.18)';
+            }}
+          >
+            <X size={14} /> Close
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -404,35 +1086,341 @@ const QuickConfirmDialog: React.FC<{
   isUpdating?: boolean;
   onConfirm: () => void;
   onCancel: () => void;
-}> = ({ orderId, newStatus, isUpdating, onConfirm, onCancel }) => (
-  <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
-    <div className="glass-panel" style={{ width: '100%', maxWidth: '420px', padding: '24px', borderRadius: '12px', border: '1px solid var(--gold)', background: 'rgba(18,10,5,0.96)', textAlign: 'center' }}>
-      <AlertTriangle size={36} color="#e74c3c" style={{ margin: '0 auto 12px auto', display: 'block' }} />
-      <h3 style={{ fontFamily: 'var(--font-display)', color: 'var(--cream)', margin: '0 0 8px 0', fontSize: '1.2rem' }}>Confirm Status Change</h3>
-      <p style={{ fontSize: '0.85rem', color: 'var(--beige)', marginBottom: '20px' }}>
-        {newStatus === '_MARK_PAID'
-          ? `Are you sure you want to mark COD payment as PAID for order ${orderId}?`
-          : `Are you sure you want to change order ${orderId} status to "${STATUS_LABELS[newStatus] || newStatus}"?`}
-      </p>
-      <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
-        <button
-          disabled={isUpdating}
-          onClick={onCancel}
-          style={{ padding: '9px 20px', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.2)', color: 'var(--cream)', borderRadius: '6px', cursor: isUpdating ? 'not-allowed' : 'pointer', fontWeight: 600, opacity: isUpdating ? 0.6 : 1 }}
-        >
-          Cancel
-        </button>
-        <button
-          disabled={isUpdating}
-          onClick={onConfirm}
-          style={{ padding: '9px 20px', background: 'var(--gold)', border: 'none', color: '#000', borderRadius: '6px', cursor: isUpdating ? 'not-allowed' : 'pointer', fontWeight: 700, opacity: isUpdating ? 0.6 : 1 }}
-        >
-          {isUpdating ? 'Confirming...' : 'Confirm'}
-        </button>
+}> = ({ orderId, newStatus, isUpdating, onConfirm, onCancel }) => {
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && !isUpdating) {
+        onCancel();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isUpdating, onCancel]);
+
+  return (
+    <div
+      style={{
+        position: 'fixed',
+        inset: 0,
+        background: 'rgba(0,0,0,0.85)',
+        backdropFilter: 'blur(6px)',
+        WebkitBackdropFilter: 'blur(6px)',
+        zIndex: 1050,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '20px',
+        overflowY: 'auto',
+      }}
+      onClick={(e) => {
+        if (e.target === e.currentTarget && !isUpdating) {
+          onCancel();
+        }
+      }}
+    >
+      <div
+        className="glass-panel"
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          width: '100%',
+          maxWidth: '420px',
+          padding: '24px',
+          borderRadius: '12px',
+          border: '1px solid var(--gold)',
+          background: 'rgba(18,10,5,0.96)',
+          textAlign: 'center',
+          margin: 'auto',
+        }}
+      >
+        <AlertTriangle size={36} color="#e74c3c" style={{ margin: '0 auto 12px auto', display: 'block' }} />
+        <h3 style={{ fontFamily: 'var(--font-display)', color: 'var(--cream)', margin: '0 0 8px 0', fontSize: '1.2rem' }}>Confirm Status Change</h3>
+        <p style={{ fontSize: '0.85rem', color: 'var(--beige)', marginBottom: '20px' }}>
+          {newStatus === '_MARK_PAID'
+            ? `Are you sure you want to mark COD payment as PAID for order ${orderId}?`
+            : `Are you sure you want to change order ${orderId} status to "${STATUS_LABELS[newStatus] || newStatus}"?`}
+        </p>
+        <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
+          <button
+            disabled={isUpdating}
+            onClick={onCancel}
+            style={{ padding: '9px 20px', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.2)', color: 'var(--cream)', borderRadius: '6px', cursor: isUpdating ? 'not-allowed' : 'pointer', fontWeight: 600, opacity: isUpdating ? 0.6 : 1 }}
+          >
+            Cancel
+          </button>
+          <button
+            disabled={isUpdating}
+            onClick={onConfirm}
+            style={{ padding: '9px 20px', background: 'var(--gold)', border: 'none', color: '#000', borderRadius: '6px', cursor: isUpdating ? 'not-allowed' : 'pointer', fontWeight: 700, opacity: isUpdating ? 0.6 : 1 }}
+          >
+            {isUpdating ? 'Confirming...' : 'Confirm'}
+          </button>
+        </div>
       </div>
     </div>
-  </div>
-);
+  );
+};
+
+// ─── Assign Delivery Executive Modal ─────────────────────────────────────────
+
+export const AssignDeliveryModal: React.FC<{
+  order: any;
+  deliveryBoys: any[];
+  onClose: () => void;
+  onAssigned: () => void;
+  addToast: (type: 'success' | 'error' | 'info', msg: string, title?: string) => void;
+}> = ({ order, deliveryBoys, onClose, onAssigned, addToast }) => {
+  const [selectedBoyId, setSelectedBoyId] = useState<string>(order.delivery_boy_id || '');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const shipAddr = order.shipping_address || order.shippingAddress || {};
+  const customerName = order.shipping_name || shipAddr.name || order.customer_name || 'Customer';
+  const customerPhone = order.shipping_phone || shipAddr.phone || order.customer_phone || '';
+  const street = order.shipping_street || shipAddr.street || '';
+  const area = order.shipping_area || shipAddr.area || '';
+  const city = order.shipping_city || shipAddr.city || '';
+  const pincode = order.shipping_pincode || shipAddr.pincode || shipAddr.zip || '';
+
+  const handleAssign = async () => {
+    if (!selectedBoyId) {
+      addToast('error', 'Please select a delivery executive from the list.', 'Selection Required');
+      return;
+    }
+    setIsSubmitting(true);
+    try {
+      await deliveryService.assignOrder(order.id, selectedBoyId);
+      const boy = deliveryBoys.find((b) => b.id === selectedBoyId);
+      addToast('success', `Assigned order ${order.id} to ${boy?.full_name || 'delivery executive'}.`, 'Assigned Successfully');
+      onAssigned();
+      onClose();
+    } catch (err: any) {
+      addToast('error', err?.message || 'Failed to assign delivery executive.', 'Assignment Error');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleUnassign = async () => {
+    setIsSubmitting(true);
+    try {
+      await deliveryService.unassignOrder(order.id);
+      addToast('info', `Order ${order.id} unassigned. Order returned to unassigned queue.`, 'Executive Unassigned');
+      onAssigned();
+      onClose();
+    } catch (err: any) {
+      addToast('error', err?.message || 'Failed to unassign.', 'Error');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      onClick={(e) => {
+        if (e.target === e.currentTarget && !isSubmitting) onClose();
+      }}
+      style={{
+        position: 'fixed',
+        inset: 0,
+        background: 'rgba(0, 0, 0, 0.88)',
+        backdropFilter: 'blur(8px)',
+        WebkitBackdropFilter: 'blur(8px)',
+        zIndex: 1100,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '16px',
+      }}
+    >
+      <div
+        className="glass-panel"
+        style={{
+          width: '100%',
+          maxWidth: '520px',
+          background: 'linear-gradient(135deg, rgba(22, 17, 13, 0.98), rgba(14, 10, 8, 0.98))',
+          border: '1px solid var(--gold)',
+          borderRadius: '12px',
+          padding: '24px',
+          boxShadow: '0 16px 40px rgba(0,0,0,0.7)',
+        }}
+      >
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+          <div>
+            <span style={{ fontSize: '0.68rem', color: 'var(--gold)', textTransform: 'uppercase', letterSpacing: '1.2px', fontWeight: 800 }}>
+              Local Express Operations
+            </span>
+            <h3 style={{ fontFamily: 'var(--font-display)', color: 'var(--cream)', fontSize: '1.25rem', margin: '2px 0 0 0' }}>
+              Assign Delivery Executive
+            </h3>
+          </div>
+          <button
+            onClick={onClose}
+            disabled={isSubmitting}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: 'var(--grey-light)',
+              cursor: 'pointer',
+              padding: '4px',
+            }}
+          >
+            <X size={20} />
+          </button>
+        </div>
+
+        {/* Order Info Card */}
+        <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px', padding: '12px 14px', marginBottom: '18px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+            <span style={{ fontWeight: 700, color: 'var(--gold)', fontFamily: 'monospace', fontSize: '0.85rem' }}>
+              {order.id}
+            </span>
+            <span style={{ fontSize: '0.68rem', padding: '2px 8px', borderRadius: '4px', background: 'rgba(201,168,76,0.18)', color: 'var(--gold)', fontWeight: 800 }}>
+              ⚡ LOCAL EXPRESS ORDER
+            </span>
+          </div>
+          <div style={{ fontSize: '0.84rem', color: 'var(--cream)', fontWeight: 600 }}>
+            {customerName} {customerPhone ? `(${customerPhone})` : ''}
+          </div>
+          <div style={{ fontSize: '0.78rem', color: 'var(--beige)', marginTop: '2px' }}>
+            {[street, area, city].filter(Boolean).join(', ')} {pincode ? `• PIN: ${pincode}` : ''}
+          </div>
+          {order.delivery_boy_name && (
+            <div style={{ marginTop: '8px', fontSize: '0.75rem', color: '#2ecc71', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '5px' }}>
+              <span>Currently assigned to:</span>
+              <strong style={{ color: 'var(--gold)' }}>{order.delivery_boy_name}</strong>
+              <span style={{ fontSize: '0.68rem', padding: '1px 6px', borderRadius: '4px', background: 'rgba(46,204,113,0.15)', color: '#2ecc71' }}>
+                {order.fulfillment_status}
+              </span>
+            </div>
+          )}
+        </div>
+
+        {/* Executive Selection */}
+        <div style={{ marginBottom: '20px' }}>
+          <label style={{ display: 'block', fontSize: '0.72rem', color: 'var(--gold)', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 700, marginBottom: '8px' }}>
+            Select Active Delivery Executive
+          </label>
+          {deliveryBoys.length === 0 ? (
+            <div style={{ padding: '16px', background: 'rgba(231,76,60,0.08)', border: '1px solid rgba(231,76,60,0.25)', borderRadius: '8px', color: '#e74c3c', fontSize: '0.82rem' }}>
+              No active delivery executives found. Please create or activate one under <strong>Delivery Management</strong>.
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '200px', overflowY: 'auto' }}>
+              {deliveryBoys.map((boy) => {
+                const isSelected = selectedBoyId === boy.id;
+                return (
+                  <div
+                    key={boy.id}
+                    onClick={() => setSelectedBoyId(boy.id)}
+                    style={{
+                      padding: '10px 14px',
+                      borderRadius: '8px',
+                      background: isSelected ? 'rgba(201,168,76,0.18)' : 'rgba(255,255,255,0.03)',
+                      border: isSelected ? '1px solid var(--gold)' : '1px solid rgba(255,255,255,0.08)',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      transition: 'all 0.2s',
+                    }}
+                  >
+                    <div>
+                      <div style={{ color: isSelected ? 'var(--gold)' : 'var(--cream)', fontWeight: 700, fontSize: '0.85rem' }}>
+                        {boy.full_name}
+                      </div>
+                      <div style={{ fontSize: '0.72rem', color: 'var(--grey-light)', marginTop: '2px' }}>
+                        {boy.email} {boy.phone ? `• ${boy.phone}` : ''}
+                      </div>
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                      <span
+                        style={{
+                          fontSize: '0.7rem',
+                          padding: '2px 8px',
+                          borderRadius: '10px',
+                          background: (boy.active_orders || 0) === 0 ? 'rgba(46,204,113,0.15)' : 'rgba(230,126,34,0.15)',
+                          color: (boy.active_orders || 0) === 0 ? '#2ecc71' : '#e67e22',
+                          fontWeight: 700,
+                        }}
+                      >
+                        {boy.active_orders || 0} active
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* Action Buttons */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px' }}>
+          {order.delivery_boy_id ? (
+            <button
+              type="button"
+              disabled={isSubmitting}
+              onClick={handleUnassign}
+              style={{
+                padding: '9px 16px',
+                borderRadius: '6px',
+                background: 'rgba(231,76,60,0.15)',
+                border: '1px solid rgba(231,76,60,0.4)',
+                color: '#e74c3c',
+                fontSize: '0.8rem',
+                fontWeight: 700,
+                cursor: isSubmitting ? 'not-allowed' : 'pointer',
+              }}
+            >
+              Unassign
+            </button>
+          ) : <div />}
+
+          <div style={{ display: 'flex', gap: '10px' }}>
+            <button
+              type="button"
+              disabled={isSubmitting}
+              onClick={onClose}
+              style={{
+                padding: '9px 18px',
+                borderRadius: '6px',
+                background: 'rgba(255,255,255,0.06)',
+                border: '1px solid rgba(255,255,255,0.15)',
+                color: 'var(--cream)',
+                fontSize: '0.8rem',
+                fontWeight: 600,
+                cursor: isSubmitting ? 'not-allowed' : 'pointer',
+              }}
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              disabled={isSubmitting || !selectedBoyId || deliveryBoys.length === 0}
+              onClick={handleAssign}
+              style={{
+                padding: '9px 20px',
+                borderRadius: '6px',
+                background: !selectedBoyId ? 'rgba(255,255,255,0.1)' : 'var(--gold)',
+                border: 'none',
+                color: '#0f0c0a',
+                fontSize: '0.82rem',
+                fontWeight: 800,
+                cursor: !selectedBoyId || isSubmitting ? 'not-allowed' : 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+              }}
+            >
+              {isSubmitting ? <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /> : <Truck size={14} />}
+              {isSubmitting ? 'Assigning...' : 'Assign to Order'}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 // ─── Main OrderManagement Component ──────────────────────────────────────────
 
@@ -448,6 +1436,7 @@ export const OrderManagement: React.FC<OrderManagementProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
+  const [fulfillmentTypeFilter, setFulfillmentTypeFilter] = useState<'ALL' | 'LOCAL' | 'COURIER'>('ALL');
   const [fulfillmentFilter, setFulfillmentFilter] = useState('ALL');
   const [paymentFilter, setPaymentFilter] = useState('ALL');
   const [page, setPage] = useState(1);
@@ -456,20 +1445,75 @@ export const OrderManagement: React.FC<OrderManagementProps> = ({
   const [dbOrderData, setDbOrderData] = useState<any>(null);
 
   const [viewingOrder, setViewingOrder] = useState<any | null>(null);
+  const [assignModalOrder, setAssignModalOrder] = useState<any | null>(null);
+  const [deliveryBoysList, setDeliveryBoysList] = useState<any[]>([]);
   const [pendingConfirm, setPendingConfirm] = useState<{ order: any; newStatus: string } | null>(null);
   const [isConfirming, setIsConfirming] = useState(false);
   const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth <= 768);
+  const [isPushingIThink, setIsPushingIThink] = useState<string | null>(null);
+  const [showIThinkSettingsModal, setShowIThinkSettingsModal] = useState<boolean>(false);
+  const [ithinkConfig, setIthinkConfig] = useState<{ configured: boolean; api_key?: string }>({ configured: false });
+  const [ithinkApiKeyInput, setIthinkApiKeyInput] = useState<string>('');
+  const [ithinkSecretKeyInput, setIthinkSecretKeyInput] = useState<string>('');
+  const [isSavingIThinkConfig, setIsSavingIThinkConfig] = useState<boolean>(false);
 
   useEffect(() => {
-    const handleResize = () => setIsMobile(window.innerWidth <= 768);
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    adminService.getIThinkConfig().then((cfg) => {
+      if (cfg) setIthinkConfig(cfg);
+    }).catch(() => {});
   }, []);
+
+  const handlePushToIThink = async (orderId: string) => {
+    setIsPushingIThink(orderId);
+    try {
+      const res = await adminService.pushOrderToIThink(orderId);
+      addToast('success', res.message || `Booked with iThink Logistics! AWB: ${res.awb_number}`, 'iThink Courier Dispatched');
+      fetchDbOrders();
+    } catch (err: any) {
+      addToast('error', err?.detail || err?.message || 'Failed to dispatch order to iThink Logistics.', 'iThink Error');
+    } finally {
+      setIsPushingIThink(null);
+    }
+  };
+
+  const handleSaveIThinkFromModal = async () => {
+    if (!ithinkApiKeyInput.trim() && !ithinkSecretKeyInput.trim()) {
+      addToast('error', 'Please enter an API Key or Secret Key.', 'Missing Credentials');
+      return;
+    }
+    setIsSavingIThinkConfig(true);
+    try {
+      const res = await adminService.updateIThinkConfig({
+        api_key: ithinkApiKeyInput.trim(),
+        secret_key: ithinkSecretKeyInput.trim(),
+      });
+      setIthinkConfig({ configured: res.configured, api_key: res.api_key_masked });
+      setIthinkApiKeyInput('');
+      setIthinkSecretKeyInput('');
+      setShowIThinkSettingsModal(false);
+      addToast('success', 'iThink Logistics API credentials updated successfully.', 'Credentials Saved');
+    } catch (err: any) {
+      addToast('error', err?.detail || err?.message || 'Failed to save iThink credentials.', 'Save Error');
+    } finally {
+      setIsSavingIThinkConfig(false);
+    }
+  };
+
+  const fetchDeliveryBoys = useCallback(() => {
+    deliveryService.getDeliveryBoys(true).then((data) => {
+      setDeliveryBoysList(data || []);
+    }).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    fetchDeliveryBoys();
+  }, [fetchDeliveryBoys]);
 
   const fetchDbOrders = useCallback(async () => {
     setOrdersLoading(true);
     try {
       const data = await adminService.getAllOrders({
+        fulfillment_type: fulfillmentTypeFilter !== 'ALL' ? fulfillmentTypeFilter : undefined,
         status: fulfillmentFilter !== 'ALL' ? fulfillmentFilter : undefined,
         payment_status: paymentFilter !== 'ALL' ? paymentFilter : undefined,
         search: searchQuery.trim() || undefined,
@@ -485,7 +1529,7 @@ export const OrderManagement: React.FC<OrderManagementProps> = ({
     } finally {
       setOrdersLoading(false);
     }
-  }, [fulfillmentFilter, paymentFilter, searchQuery, dateFrom, dateTo, page, limit, addToast]);
+  }, [fulfillmentTypeFilter, fulfillmentFilter, paymentFilter, searchQuery, dateFrom, dateTo, page, limit, addToast]);
 
   useEffect(() => {
     fetchDbOrders();
@@ -503,6 +1547,9 @@ export const OrderManagement: React.FC<OrderManagementProps> = ({
     delivered: summary.delivered ?? 0,
     cancelled: summary.cancelled ?? 0,
     revenue: summary.total_revenue ?? 0,
+    local: summary.local_orders ?? 0,
+    courier: summary.courier_orders ?? 0,
+    unassignedLocal: summary.unassigned_local ?? 0,
   };
 
   const handleQuickChange = (order: any, newSt: string) => {
@@ -549,12 +1596,60 @@ export const OrderManagement: React.FC<OrderManagementProps> = ({
 
   return (
     <>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'wrap', gap: '12px', marginBottom: '28px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'wrap', gap: '12px', marginBottom: '24px' }}>
         <div>
           <span className="section-label">Order Operations</span>
           <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '2.4rem', color: 'var(--cream)', margin: 0 }}>Order Management</h1>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+          {/* iThink Logistics API Key Modal Trigger */}
+          <button
+            type="button"
+            onClick={() => setShowIThinkSettingsModal(true)}
+            title="Configure iThink Logistics API Key & Multi-Carrier Courier Integration"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '7px',
+              padding: '10px 16px',
+              borderRadius: '6px',
+              fontSize: '0.84rem',
+              fontWeight: 700,
+              cursor: 'pointer',
+              border: '1px solid rgba(59,130,246,0.4)',
+              background: 'linear-gradient(135deg, rgba(59,130,246,0.15) 0%, rgba(26,18,11,0.9) 100%)',
+              color: '#93c5fd',
+              boxShadow: '0 2px 10px rgba(59,130,246,0.15)',
+            }}
+          >
+            <Send size={14} color="#60a5fa" />
+            <span>iThink Logistics API</span>
+            {ithinkConfig.configured ? (
+              <span
+                style={{
+                  width: '8px',
+                  height: '8px',
+                  borderRadius: '50%',
+                  background: '#2ecc71',
+                  boxShadow: '0 0 6px #2ecc71',
+                  display: 'inline-block',
+                }}
+              />
+            ) : (
+              <span
+                style={{
+                  fontSize: '0.65rem',
+                  padding: '1px 6px',
+                  borderRadius: '4px',
+                  background: 'rgba(243,156,18,0.2)',
+                  color: '#f39c12',
+                }}
+              >
+                Sandbox
+              </span>
+            )}
+          </button>
+
           <button
             onClick={() => exportToCSV('Order_Management_Export', ordersList)}
             disabled={ordersList.length === 0}
@@ -564,7 +1659,7 @@ export const OrderManagement: React.FC<OrderManagementProps> = ({
             Export CSV
           </button>
           <button
-            onClick={fetchDbOrders}
+            onClick={() => { fetchDbOrders(); fetchDeliveryBoys(); }}
             disabled={ordersLoading}
             style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 18px', borderRadius: '6px', fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer', border: '1px solid rgba(201,168,76,0.35)', background: 'rgba(201,168,76,0.08)', color: 'var(--gold)' }}
           >
@@ -574,18 +1669,144 @@ export const OrderManagement: React.FC<OrderManagementProps> = ({
         </div>
       </div>
 
+      {/* Top Segmented Channel Filter: All / Local Express / iThink Logistics Courier */}
+      <div style={{ display: 'flex', gap: '12px', marginBottom: '20px', flexWrap: 'wrap', alignItems: 'center' }}>
+        {/* All Royal Orders */}
+        <button
+          type="button"
+          onClick={() => { setFulfillmentTypeFilter('ALL'); setPage(1); }}
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '8px',
+            padding: '9px 20px',
+            borderRadius: '24px',
+            fontSize: '0.84rem',
+            fontWeight: 700,
+            cursor: 'pointer',
+            transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+            background: fulfillmentTypeFilter === 'ALL'
+              ? 'linear-gradient(135deg, #c9a84c 0%, #a07d2c 100%)'
+              : 'rgba(255,255,255,0.04)',
+            color: fulfillmentTypeFilter === 'ALL' ? '#0f0c0a' : 'var(--cream)',
+            border: fulfillmentTypeFilter === 'ALL' ? '1px solid #e5c158' : '1px solid rgba(255,255,255,0.1)',
+            boxShadow: fulfillmentTypeFilter === 'ALL' ? '0 4px 14px rgba(201,168,76,0.35)' : 'none',
+          }}
+        >
+          <Crown size={15} color={fulfillmentTypeFilter === 'ALL' ? '#0f0c0a' : 'var(--gold)'} />
+          <span>All Orders</span>
+          <span style={{
+            fontSize: '0.72rem',
+            padding: '2px 8px',
+            borderRadius: '12px',
+            background: fulfillmentTypeFilter === 'ALL' ? '#0f0c0a' : 'rgba(255,255,255,0.1)',
+            color: fulfillmentTypeFilter === 'ALL' ? 'var(--gold)' : 'var(--cream)',
+            fontWeight: 800,
+          }}>
+            {kpis.total}
+          </span>
+        </button>
+
+        {/* Local Express Orders */}
+        <button
+          type="button"
+          onClick={() => { setFulfillmentTypeFilter('LOCAL'); setPage(1); }}
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '8px',
+            padding: '9px 20px',
+            borderRadius: '24px',
+            fontSize: '0.84rem',
+            fontWeight: 700,
+            cursor: 'pointer',
+            transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+            background: fulfillmentTypeFilter === 'LOCAL'
+              ? 'linear-gradient(135deg, rgba(201,168,76,0.28) 0%, rgba(26,18,11,0.95) 100%)'
+              : 'rgba(255,255,255,0.04)',
+            color: fulfillmentTypeFilter === 'LOCAL' ? 'var(--gold)' : 'var(--cream)',
+            border: fulfillmentTypeFilter === 'LOCAL' ? '1px solid var(--gold)' : '1px solid rgba(255,255,255,0.1)',
+            boxShadow: fulfillmentTypeFilter === 'LOCAL' ? '0 4px 14px rgba(201,168,76,0.25)' : 'none',
+          }}
+        >
+          <Zap size={15} color="#e5c158" />
+          <span>Local Express Orders</span>
+          <span style={{
+            fontSize: '0.72rem',
+            padding: '2px 8px',
+            borderRadius: '12px',
+            background: 'rgba(201,168,76,0.25)',
+            color: 'var(--gold)',
+            fontWeight: 800,
+          }}>
+            {kpis.local}
+          </span>
+          {kpis.unassignedLocal > 0 && (
+            <span style={{
+              fontSize: '0.7rem',
+              padding: '2px 8px',
+              borderRadius: '10px',
+              background: 'rgba(231,76,60,0.25)',
+              border: '1px solid rgba(231,76,60,0.5)',
+              color: '#ff6b6b',
+              fontWeight: 800,
+            }}>
+              🔴 {kpis.unassignedLocal} Unassigned
+            </span>
+          )}
+        </button>
+
+        {/* iThink Logistics Courier Orders */}
+        <button
+          type="button"
+          onClick={() => { setFulfillmentTypeFilter('COURIER'); setPage(1); }}
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '8px',
+            padding: '9px 20px',
+            borderRadius: '24px',
+            fontSize: '0.84rem',
+            fontWeight: 700,
+            cursor: 'pointer',
+            transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+            background: fulfillmentTypeFilter === 'COURIER'
+              ? 'linear-gradient(135deg, rgba(59,130,246,0.28) 0%, rgba(15,23,42,0.95) 100%)'
+              : 'rgba(255,255,255,0.04)',
+            color: fulfillmentTypeFilter === 'COURIER' ? '#93c5fd' : 'var(--cream)',
+            border: fulfillmentTypeFilter === 'COURIER' ? '1px solid rgba(59,130,246,0.7)' : '1px solid rgba(255,255,255,0.1)',
+            boxShadow: fulfillmentTypeFilter === 'COURIER' ? '0 4px 14px rgba(59,130,246,0.25)' : 'none',
+          }}
+        >
+          <Send size={14} color="#93c5fd" />
+          <span>iThink Logistics Express</span>
+          <span style={{
+            fontSize: '0.72rem',
+            padding: '2px 8px',
+            borderRadius: '12px',
+            background: 'rgba(59,130,246,0.2)',
+            color: '#93c5fd',
+            fontWeight: 800,
+          }}>
+            {kpis.courier}
+          </span>
+        </button>
+      </div>
+
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '14px', marginBottom: '26px' }}>
         {[
           { label: 'Total Orders', value: kpis.total, color: '#c9a84c' },
-          { label: 'Processing', value: kpis.pending, color: '#3498db' },
-          { label: 'In Transit', value: kpis.transit, color: '#f39c12' },
+          { label: 'Local Express', value: `${kpis.local}${kpis.unassignedLocal > 0 ? ` (${kpis.unassignedLocal} unassigned)` : ''}`, color: '#e67e22' },
+          { label: 'iThink Courier', value: kpis.courier, color: '#3498db' },
+          { label: 'Processing', value: kpis.pending, color: '#f1c40f' },
+          { label: 'In Transit', value: kpis.transit, color: '#9b59b6' },
           { label: 'Delivered', value: kpis.delivered, color: '#2ecc71' },
           { label: 'Cancelled', value: kpis.cancelled, color: '#e74c3c' },
           { label: 'Net Revenue', value: `₹${kpis.revenue.toLocaleString('en-IN')}`, color: '#c9a84c' },
         ].map((k) => (
           <div key={k.label} className="glass-panel" style={{ padding: '14px 16px', borderRadius: '10px', borderTop: `2px solid ${k.color}`, border: `1px solid ${k.color}22` }}>
             <div style={{ fontSize: '0.65rem', color: 'var(--grey-light)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '7px' }}>{k.label}</div>
-            <div style={{ fontSize: '1.55rem', fontWeight: 700, color: k.color, fontFamily: 'var(--font-display)' }}>{k.value}</div>
+            <div style={{ fontSize: '1.45rem', fontWeight: 700, color: k.color, fontFamily: 'var(--font-display)' }}>{k.value}</div>
           </div>
         ))}
       </div>
@@ -715,8 +1936,8 @@ export const OrderManagement: React.FC<OrderManagementProps> = ({
               <input type="date" value={dateTo} onChange={(e) => { setDateTo(e.target.value); setPage(1); }}
                 style={{ width: '100%', minWidth: 0, padding: '6px 4px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '6px', color: 'var(--cream)', fontSize: '0.72rem', outline: 'none', colorScheme: 'dark', boxSizing: 'border-box' }} />
             </div>
-            {(dateFrom || dateTo || searchQuery || fulfillmentFilter !== 'ALL' || paymentFilter !== 'ALL') && (
-              <button onClick={() => { setDateFrom(''); setDateTo(''); setSearchQuery(''); setFulfillmentFilter('ALL'); setPaymentFilter('ALL'); setPage(1); }}
+            {(dateFrom || dateTo || searchQuery || fulfillmentTypeFilter !== 'ALL' || fulfillmentFilter !== 'ALL' || paymentFilter !== 'ALL') && (
+              <button onClick={() => { setDateFrom(''); setDateTo(''); setSearchQuery(''); setFulfillmentTypeFilter('ALL'); setFulfillmentFilter('ALL'); setPaymentFilter('ALL'); setPage(1); }}
                 style={{ padding: '6px 8px', background: 'rgba(231,76,60,0.12)', border: '1px solid rgba(231,76,60,0.3)', borderRadius: '6px', color: '#e74c3c', fontSize: '0.72rem', cursor: 'pointer', fontWeight: 600, whiteSpace: 'nowrap', flexShrink: 0 }}>
                 Reset
               </button>
@@ -766,12 +1987,75 @@ export const OrderManagement: React.FC<OrderManagementProps> = ({
                         </div>
                       </div>
 
-                      <div style={{ marginBottom: '12px' }}>
+                      <div style={{ marginBottom: '10px' }}>
                         <div style={{ fontWeight: 600, color: 'var(--cream)', fontSize: '0.9rem' }}>
                           {ord.shipping_address?.name || ord.shippingAddress?.name || ord.customer_name || ord.name || '—'}
                         </div>
                         <div style={{ fontSize: '0.8rem', color: 'var(--beige)' }}>
                           {ord.shipping_address?.phone || ord.shippingAddress?.phone || ord.customer_phone || ord.phone || ''}
+                        </div>
+                      </div>
+
+                      {/* Mobile Fulfillment Channel */}
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', padding: '8px 10px', borderRadius: '6px', flexWrap: 'wrap', gap: '6px' }}>
+                        <div>
+                          {ord.fulfillment_type === 'LOCAL' || (!ord.fulfillment_type && !ord.shipping_provider?.includes('Courier')) ? (
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', padding: '2px 7px', borderRadius: '4px', fontSize: '0.66rem', fontWeight: 800, background: 'rgba(201,168,76,0.18)', color: 'var(--gold)', border: '1px solid rgba(201,168,76,0.3)' }}>
+                              ⚡ LOCAL EXPRESS
+                            </span>
+                          ) : (
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '2px 7px', borderRadius: '4px', fontSize: '0.66rem', fontWeight: 800, background: 'rgba(59,130,246,0.15)', color: '#93c5fd', border: '1px solid rgba(59,130,246,0.3)' }}>
+                              <Send size={10} /> iThink Logistics
+                            </span>
+                          )}
+                        </div>
+                        <div>
+                          {ord.fulfillment_type === 'LOCAL' || (!ord.fulfillment_type && !ord.shipping_provider?.includes('Courier')) ? (
+                            ord.delivery_boy_name ? (
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                <span style={{ fontSize: '0.74rem', color: '#2ecc71', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                                  <UserCheck size={12} /> {ord.delivery_boy_name}
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => setAssignModalOrder(ord)}
+                                  style={{ padding: '2px 6px', fontSize: '0.65rem', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.2)', color: 'var(--cream)', borderRadius: '4px', cursor: 'pointer' }}
+                                >
+                                  Change
+                                </button>
+                              </div>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => setAssignModalOrder(ord)}
+                                style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '3px 8px', borderRadius: '4px', background: 'rgba(231,76,60,0.15)', border: '1px solid rgba(231,76,60,0.4)', color: '#e74c3c', fontSize: '0.7rem', fontWeight: 700, cursor: 'pointer' }}
+                              >
+                                <Truck size={11} /> + Assign Boy
+                              </button>
+                            )
+                          ) : (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              {ord.tracking_number && (
+                                <a
+                                  href={ord.tracking_url || `https://ithinklogistics.com/track?awb=${ord.tracking_number}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  style={{ fontSize: '0.68rem', color: '#93c5fd', textDecoration: 'none', background: 'rgba(59,130,246,0.15)', padding: '2px 6px', borderRadius: '4px', border: '1px solid rgba(59,130,246,0.3)', display: 'inline-flex', alignItems: 'center', gap: '3px' }}
+                                >
+                                  <ExternalLink size={10} /> {ord.tracking_number}
+                                </a>
+                              )}
+                              <button
+                                type="button"
+                                onClick={() => handlePushToIThink(ord.id)}
+                                disabled={isPushingIThink === ord.id}
+                                style={{ padding: '3px 8px', fontSize: '0.68rem', background: 'linear-gradient(135deg, rgba(59,130,246,0.25) 0%, rgba(30,58,138,0.7) 100%)', border: '1px solid rgba(59,130,246,0.5)', color: '#93c5fd', borderRadius: '4px', cursor: 'pointer', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '3px' }}
+                              >
+                                {isPushingIThink === ord.id ? <Loader2 size={10} style={{ animation: 'spin 1s linear infinite' }} /> : <Send size={10} />}
+                                {ord.tracking_number ? 'Re-push' : 'Push iThink'}
+                              </button>
+                            </div>
+                          )}
                         </div>
                       </div>
 
@@ -827,7 +2111,7 @@ export const OrderManagement: React.FC<OrderManagementProps> = ({
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.83rem' }}>
                 <thead>
                   <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
-                    {['Order ID & Date', 'Customer', 'Items & Qty', 'Payment Method', 'Payment Status', 'Order Status', 'Total', 'Actions'].map((h) => (
+                    {['Order ID & Date', 'Customer', 'Fulfillment Channel', 'Items & Qty', 'Payment Method', 'Payment Status', 'Order Status', 'Total', 'Actions'].map((h) => (
                       <th key={h} style={{ padding: '13px 15px', textAlign: 'left', fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px', color: 'var(--gold)', background: 'rgba(201,168,76,0.05)', whiteSpace: 'nowrap' }}>
                         {h}
                       </th>
@@ -864,6 +2148,86 @@ export const OrderManagement: React.FC<OrderManagementProps> = ({
                           <div style={{ fontSize: '0.68rem', color: 'var(--beige)' }}>
                             {ord.shipping_address?.phone || ord.shippingAddress?.phone || ord.customer_phone || ord.phone || ''}
                           </div>
+                        </td>
+                        {/* Fulfillment Channel */}
+                        <td style={{ padding: '10px 12px', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
+                          {ord.fulfillment_type === 'LOCAL' || (!ord.fulfillment_type && !ord.shipping_provider?.includes('Courier')) ? (
+                            <div>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginBottom: '3px' }}>
+                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', padding: '2px 7px', borderRadius: '4px', fontSize: '0.66rem', fontWeight: 800, background: 'rgba(201,168,76,0.18)', color: 'var(--gold)', border: '1px solid rgba(201,168,76,0.3)' }}>
+                                  ⚡ LOCAL EXPRESS
+                                </span>
+                              </div>
+                              {ord.delivery_boy_name ? (
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                  <span style={{ fontSize: '0.74rem', color: '#2ecc71', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                                    <UserCheck size={12} /> {ord.delivery_boy_name}
+                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={() => setAssignModalOrder(ord)}
+                                    title="Change assigned delivery executive"
+                                    style={{ padding: '1px 6px', fontSize: '0.62rem', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.15)', color: 'var(--cream)', borderRadius: '3px', cursor: 'pointer' }}
+                                  >
+                                    Change
+                                  </button>
+                                </div>
+                              ) : (
+                                <div>
+                                  <button
+                                    type="button"
+                                    onClick={() => setAssignModalOrder(ord)}
+                                    style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '3px 8px', borderRadius: '4px', background: 'rgba(231,76,60,0.15)', border: '1px solid rgba(231,76,60,0.4)', color: '#e74c3c', fontSize: '0.68rem', fontWeight: 700, cursor: 'pointer' }}
+                                  >
+                                    <Truck size={11} /> + Assign Executive
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                          ) : (
+                            <div>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '2px 7px', borderRadius: '4px', fontSize: '0.66rem', fontWeight: 800, background: 'rgba(59,130,246,0.15)', color: '#93c5fd', border: '1px solid rgba(59,130,246,0.3)' }}>
+                                  <Send size={10} /> iThink Logistics
+                                </span>
+                              </div>
+                              {ord.tracking_number ? (
+                                <div style={{ marginTop: '3px' }}>
+                                  <a
+                                    href={ord.tracking_url || `https://ithinklogistics.com/track?awb=${ord.tracking_number}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    style={{ fontSize: '0.67rem', color: '#93c5fd', textDecoration: 'none', background: 'rgba(59,130,246,0.12)', padding: '2px 6px', borderRadius: '3px', border: '1px solid rgba(59,130,246,0.3)', display: 'inline-flex', alignItems: 'center', gap: '3px' }}
+                                  >
+                                    <ExternalLink size={9} /> {ord.tracking_number}
+                                  </a>
+                                </div>
+                              ) : null}
+                              <div style={{ marginTop: '3px' }}>
+                                <button
+                                  type="button"
+                                  onClick={() => handlePushToIThink(ord.id)}
+                                  disabled={isPushingIThink === ord.id}
+                                  style={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '3px',
+                                    padding: '2px 7px',
+                                    borderRadius: '4px',
+                                    background: 'linear-gradient(135deg, rgba(59,130,246,0.2) 0%, rgba(30,58,138,0.7) 100%)',
+                                    border: '1px solid rgba(59,130,246,0.4)',
+                                    color: '#93c5fd',
+                                    fontSize: '0.65rem',
+                                    fontWeight: 700,
+                                    cursor: 'pointer',
+                                  }}
+                                >
+                                  {isPushingIThink === ord.id ? <Loader2 size={9} style={{ animation: 'spin 1s linear infinite' }} /> : <Send size={9} />}
+                                  {ord.tracking_number ? 'Re-push iThink' : 'Book on iThink'}
+                                </button>
+                              </div>
+                            </div>
+                          )}
                         </td>
                         {/* Items */}
                         <td style={{ padding: '10px 12px', verticalAlign: 'middle', maxWidth: '160px' }}>
@@ -969,6 +2333,20 @@ export const OrderManagement: React.FC<OrderManagementProps> = ({
         />
       )}
 
+      {/* Assign Delivery Executive Modal */}
+      {assignModalOrder && (
+        <AssignDeliveryModal
+          order={assignModalOrder}
+          deliveryBoys={deliveryBoysList}
+          onClose={() => setAssignModalOrder(null)}
+          onAssigned={() => {
+            fetchDbOrders();
+            fetchDeliveryBoys();
+          }}
+          addToast={addToast}
+        />
+      )}
+
       {/* Quick Confirm Dialog */}
       {pendingConfirm && (
         <QuickConfirmDialog
@@ -978,6 +2356,132 @@ export const OrderManagement: React.FC<OrderManagementProps> = ({
           onConfirm={confirmUpdate}
           onCancel={() => !isConfirming && setPendingConfirm(null)}
         />
+      )}
+
+      {/* Quick iThink Logistics Settings Modal */}
+      {showIThinkSettingsModal && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,0.85)',
+            backdropFilter: 'blur(8px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 9999,
+            padding: '16px',
+          }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setShowIThinkSettingsModal(false);
+          }}
+        >
+          <div
+            style={{
+              width: '100%',
+              maxWidth: '480px',
+              background: 'linear-gradient(135deg, rgba(22, 17, 13, 0.98), rgba(14, 10, 8, 0.98))',
+              border: '1px solid rgba(59,130,246,0.5)',
+              borderRadius: '14px',
+              padding: '24px',
+              boxShadow: '0 20px 50px rgba(0,0,0,0.8)',
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{ width: '36px', height: '36px', borderRadius: '8px', background: 'rgba(59,130,246,0.15)', border: '1px solid rgba(59,130,246,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Send size={18} color="#60a5fa" />
+                </div>
+                <div>
+                  <h3 style={{ fontFamily: 'var(--font-display)', color: 'var(--cream)', fontSize: '1.2rem', margin: 0 }}>
+                    iThink Logistics Courier API
+                  </h3>
+                  <p style={{ fontSize: '0.75rem', color: 'var(--beige)', margin: '2px 0 0 0' }}>
+                    Multi-Carrier Courier Dispatch (BlueDart, Delhivery, DTDC, XpressBees)
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowIThinkSettingsModal(false)}
+                style={{ background: 'none', border: 'none', color: 'var(--grey-light)', cursor: 'pointer', padding: '4px' }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div style={{ marginBottom: '14px', padding: '10px 12px', borderRadius: '8px', background: 'rgba(59,130,246,0.08)', border: '1px solid rgba(59,130,246,0.2)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: '0.78rem', color: '#93c5fd', fontWeight: 700 }}>Connection Status</span>
+                {ithinkConfig.configured ? (
+                  <span style={{ fontSize: '0.72rem', color: '#2ecc71', fontWeight: 800, background: 'rgba(46,204,113,0.15)', padding: '2px 8px', borderRadius: '4px', border: '1px solid rgba(46,204,113,0.3)', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                    <CheckCircle size={11} /> API Connected &amp; Active
+                  </span>
+                ) : (
+                  <span style={{ fontSize: '0.72rem', color: '#f39c12', fontWeight: 800, background: 'rgba(243,156,18,0.15)', padding: '2px 8px', borderRadius: '4px', border: '1px solid rgba(243,156,18,0.3)', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                    <Zap size={11} /> Sandbox Simulation Mode
+                  </span>
+                )}
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', marginBottom: '20px' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.76rem', color: 'var(--gold)', fontWeight: 700, marginBottom: '6px' }}>
+                  iThink Logistics API Key
+                </label>
+                <input
+                  type="text"
+                  placeholder={ithinkConfig.api_key ? `Configured: ${ithinkConfig.api_key}` : 'e.g. itl_live_abc123...'}
+                  value={ithinkApiKeyInput}
+                  onChange={(e) => setIthinkApiKeyInput(e.target.value)}
+                  style={{ width: '100%', padding: '10px 12px', background: '#0e0a06', border: '1px solid rgba(255,255,255,0.15)', borderRadius: '8px', color: '#fff', fontSize: '0.85rem', outline: 'none', boxSizing: 'border-box' }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.76rem', color: 'var(--gold)', fontWeight: 700, marginBottom: '6px' }}>
+                  iThink Logistics Secret Key
+                </label>
+                <input
+                  type="password"
+                  placeholder={ithinkConfig.configured ? '•••••••••••••••• (Active)' : 'Enter Secret Key'}
+                  value={ithinkSecretKeyInput}
+                  onChange={(e) => setIthinkSecretKeyInput(e.target.value)}
+                  style={{ width: '100%', padding: '10px 12px', background: '#0e0a06', border: '1px solid rgba(255,255,255,0.15)', borderRadius: '8px', color: '#fff', fontSize: '0.85rem', outline: 'none', boxSizing: 'border-box' }}
+                />
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <a
+                href="https://ithinklogistics.com"
+                target="_blank"
+                rel="noreferrer"
+                style={{ fontSize: '0.75rem', color: '#93c5fd', textDecoration: 'underline' }}
+              >
+                Sign in to iThink Dashboard
+              </a>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button
+                  type="button"
+                  onClick={() => setShowIThinkSettingsModal(false)}
+                  style={{ padding: '8px 14px', borderRadius: '6px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', color: 'var(--cream)', fontSize: '0.8rem', cursor: 'pointer' }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  disabled={isSavingIThinkConfig}
+                  onClick={handleSaveIThinkFromModal}
+                  style={{ padding: '8px 18px', borderRadius: '6px', background: 'linear-gradient(135deg, rgba(59,130,246,0.3) 0%, rgba(30,58,138,0.8) 100%)', border: '1px solid rgba(59,130,246,0.6)', color: '#93c5fd', fontWeight: 800, fontSize: '0.8rem', cursor: isSavingIThinkConfig ? 'not-allowed' : 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                >
+                  <Key size={13} />
+                  {isSavingIThinkConfig ? 'Saving...' : 'Save & Activate'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </>
   );
