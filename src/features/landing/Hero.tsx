@@ -4,6 +4,7 @@ import { ArrowRight } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useApp } from '../../app/providers';
 import { Button } from '../../components/ui/Button';
+import { getImageUrl } from '../../utils/imageUrl';
 
 export const Hero: React.FC = () => {
   const { banners } = useApp();
@@ -134,7 +135,7 @@ export const Hero: React.FC = () => {
           }}
         >
           <img
-            src={activeBanner.image}
+            src={getImageUrl(activeBanner.image)}
             alt={activeBanner.title}
             style={{
               width: '100%',

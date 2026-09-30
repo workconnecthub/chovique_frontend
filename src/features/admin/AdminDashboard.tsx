@@ -5084,7 +5084,7 @@ export const AdminDashboard: React.FC = () => {
                   
                   {selectedBanner.image && (
                     <div style={{ marginBottom: '20px', borderRadius: '8px', overflow: 'hidden', height: '200px', border: '1px solid var(--glass-border)' }}>
-                      <img src={selectedBanner.image} alt={selectedBanner.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      <img src={getImageUrl(selectedBanner.image)} alt={selectedBanner.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                     </div>
                   )}
 
@@ -6422,7 +6422,7 @@ export const AdminDashboard: React.FC = () => {
                   {editingBanner.image ? (
                     <div style={{ borderRadius: '8px', overflow: 'hidden', height: '160px', border: '1px solid var(--glass-border)', marginBottom: '10px' }}>
                       <img
-                        src={editingBannerImageFile ? URL.createObjectURL(editingBannerImageFile) : editingBanner.image}
+                        src={editingBannerImageFile ? URL.createObjectURL(editingBannerImageFile) : getImageUrl(editingBanner.image)}
                         alt={editingBanner.title}
                         style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                       />
