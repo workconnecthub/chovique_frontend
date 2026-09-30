@@ -47,7 +47,7 @@ export const Navbar: React.FC = () => {
     window.dispatchEvent(new CustomEvent('chovique:switch-dashboard-tab', { detail: tab }));
   };
 
-  const rawAvatar = user?.profile?.avatarUrl || (user?.profile as any)?.avatar_url;
+  const rawAvatar = user?.profile?.avatarUrl || (user?.profile as any)?.avatar_url || (user as any)?.avatar_url;
   useEffect(() => {
     setAvatarError(false);
   }, [rawAvatar]);

@@ -1,19 +1,23 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   User as UserIcon,
   KeyRound,
   FileClock,
   LogOut,
   ChevronDown,
+  Store,
 } from 'lucide-react';
 
 import { useApp } from '../app/providers';
+import { getImageUrl } from '../utils/imageUrl';
 
 interface AdminUserDropdownProps {
   onNavigateTab: (tab: string) => void;
 }
 
 export const AdminUserDropdown: React.FC<AdminUserDropdownProps> = ({ onNavigateTab }) => {
+  const navigate = useNavigate();
   const { user, role, logout } = useApp();
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -33,7 +37,8 @@ export const AdminUserDropdown: React.FC<AdminUserDropdownProps> = ({ onNavigate
     action();
   };
 
-  const avatarUrl = user?.profile?.avatarUrl || (user?.profile as any)?.avatar_url || (user as any)?.avatar_url;
+  const rawAvatar = user?.profile?.avatarUrl || (user?.profile as any)?.avatar_url || (user as any)?.avatar_url;
+  const avatarUrl = rawAvatar ? getImageUrl(rawAvatar) : '';
   const initial = user?.name ? user.name.charAt(0).toUpperCase() : 'A';
   const roleLabel = role === 'superadmin' ? 'Super Admin' : 'Admin';
 
@@ -131,6 +136,31 @@ export const AdminUserDropdown: React.FC<AdminUserDropdownProps> = ({ onNavigate
           >
             <UserIcon size={18} color="#c9a84c" />
             <span>My Account</span>
+          </button>
+
+          {/* Live Customer Store */}
+          <button
+            onClick={() => handleSelect(() => navigate('/'))}
+            style={{
+              width: '100%',
+              padding: '12px 20px',
+              background: 'transparent',
+              border: 'none',
+              color: '#f5efe6',
+              fontSize: '0.88rem',
+              fontWeight: 600,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+              cursor: 'pointer',
+              textAlign: 'left',
+              transition: 'background 0.2s ease',
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(201, 168, 76, 0.12)')}
+            onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+          >
+            <Store size={18} color="#c9a84c" />
+            <span>Live Customer Store</span>
           </button>
 
           {/* Activity Log — Admin only (Super Admin uses dedicated Audit Logs sidebar page) */}

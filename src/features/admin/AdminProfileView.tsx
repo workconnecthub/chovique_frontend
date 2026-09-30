@@ -193,7 +193,7 @@ export const AdminProfileView: React.FC<AdminProfileViewProps> = ({ initialSecti
     }
   };
 
-  const rawAvatar = profile?.avatar_url || user?.profile?.avatarUrl || (user?.profile as any)?.avatar_url;
+  const rawAvatar = profile?.avatar_url || user?.profile?.avatarUrl || (user?.profile as any)?.avatar_url || (user as any)?.avatar_url;
   const initials = fullName ? fullName.split(' ').map((n) => n[0]).join('').substring(0, 2).toUpperCase() : 'SA';
 
   // Validation functions

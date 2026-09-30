@@ -22,7 +22,9 @@ import {
   BookOpen,
   Mail,
   LogOut,
+  ShieldCheck,
 } from 'lucide-react';
+import { getImageUrl } from '../utils/imageUrl';
 
 // Pages
 import { LandingPage, OurStoryPage, ContactPage } from '../features/landing';
@@ -114,7 +116,7 @@ const CustomerMobileNav: React.FC = () => {
   const isAuthRoute = ['/login', '/register', '/set-password', '/forgot-password'].includes(location.pathname);
   const isAdminRoute = ['/admin', '/superadmin'].includes(location.pathname);
 
-  if (!isMobile || role === 'admin' || role === 'superadmin' || isAuthRoute || isAdminRoute) {
+  if (!isMobile || isAuthRoute || isAdminRoute) {
     return null;
   }
 
@@ -171,6 +173,18 @@ const CustomerMobileNav: React.FC = () => {
                 overflow: 'hidden'
               }}
             >
+              {(role === 'admin' || role === 'superadmin') && (
+                <button
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    navigate(role === 'superadmin' ? '/superadmin' : '/admin');
+                  }}
+                  style={{ padding: '12px 16px', background: 'rgba(201, 168, 76, 0.15)', border: 'none', borderBottom: '1px solid rgba(201, 168, 76, 0.25)', color: '#e5c875', textAlign: 'left', display: 'flex', alignItems: 'center', gap: '10px', fontWeight: 700, fontSize: '0.85rem' }}
+                >
+                  <ShieldCheck size={18} color="#c9a84c" />
+                  <span>Return to {role === 'superadmin' ? 'Superadmin' : 'Admin'}</span>
+                </button>
+              )}
               {role === 'customer' ? (
                 <>
                   {/* Logged in customer: notifications, coupons, help/complaints, about, contact, logout */}
@@ -371,26 +385,33 @@ const CustomerMobileNav: React.FC = () => {
           <span>Wishlist</span>
         </button>
 
-        {/* 5. My Account → dashboard account tab */}
+        {/* 5. My Account → dashboard account tab, or return to admin if admin */}
         <button
           className={`cust-mobile-bottom-btn ${isAccount ? 'active' : ''}`}
           onClick={() => {
-            if (role === 'customer') {
+            if (role === 'admin' || role === 'superadmin') {
+              navigate(role === 'superadmin' ? '/superadmin' : '/admin');
+            } else if (role === 'customer') {
               navigate('/dashboard?section=account');
             } else {
               navigate('/login', { state: { from: '/dashboard?section=account' } });
             }
           }}
-          aria-label="My Account"
+          aria-label={role === 'admin' || role === 'superadmin' ? 'Admin Panel' : 'My Account'}
         >
-          {role === 'customer' && user?.profile?.avatarUrl ? (
+          {role === 'admin' || role === 'superadmin' ? (
+            <>
+              <ShieldCheck size={21} color="#c9a84c" />
+              <span style={{ color: '#c9a84c' }}>Admin</span>
+            </>
+          ) : role === 'customer' && user?.profile?.avatarUrl ? (
             <div style={{ width: 22, height: 22, borderRadius: '50%', overflow: 'hidden', border: isAccount ? '2px solid #c9a84c' : '1px solid rgba(255,255,255,0.4)', marginBottom: 2 }}>
-              <img src={user.profile.avatarUrl} alt={user.name || 'Account'} referrerPolicy="no-referrer" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              <img src={getImageUrl(user.profile.avatarUrl)} alt={user.name || 'Account'} referrerPolicy="no-referrer" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
             </div>
           ) : (
             <User size={21} />
           )}
-          <span>{role === 'customer' ? 'My Account' : 'Account'}</span>
+          {!(role === 'admin' || role === 'superadmin') && <span>{role === 'customer' ? 'My Account' : 'Account'}</span>}
         </button>
       </nav>
     </>
@@ -415,9 +436,8 @@ const AppContent: React.FC = () => {
   const isDeliveryRoute = location.pathname.startsWith('/delivery');
   const isCustomerDashboard = location.pathname === '/dashboard';
 
-  // Customer or guest on mobile → we use our own CustomerMobileNav, hide global Navbar
-  const isCustomerOrGuest = role !== 'admin' && role !== 'superadmin' && role !== 'delivery_boy';
-  const isCustomerMobile = isCustomerOrGuest && isMobile && !isAuthRoute && !isAdminDashboard && !isDeliveryRoute;
+  // Mobile customer view: active on mobile for all store/public pages regardless of admin login
+  const isCustomerMobile = isMobile && !isAuthRoute && !isAdminDashboard && !isDeliveryRoute;
 
   const showNavbar = !isAuthRoute && !isAdminDashboard && !isDeliveryRoute && !isCustomerMobile;
 

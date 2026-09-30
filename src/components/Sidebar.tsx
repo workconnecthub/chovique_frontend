@@ -40,6 +40,7 @@ import {
   Store,
 } from 'lucide-react';
 import { NotificationHeaderDropdown } from './NotificationHeaderDropdown';
+import { getImageUrl } from '../utils/imageUrl';
 import { useApp } from '../app/providers';
 
 interface SidebarProps {
@@ -181,7 +182,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, onReq
     }
   };
 
-  const avatarUrl = user?.profile?.avatarUrl || (user?.profile as any)?.avatar_url || (user as any)?.avatar_url;
+  const rawAvatarUrl = user?.profile?.avatarUrl || (user?.profile as any)?.avatar_url || (user as any)?.avatar_url;
+  const avatarUrl = rawAvatarUrl ? getImageUrl(rawAvatarUrl) : '';
   const initial = user?.name ? user.name.charAt(0).toUpperCase() : (role === 'superadmin' ? 'S' : 'A');
   const roleLabel = role === 'superadmin' ? 'Super Admin' : 'Admin';
 

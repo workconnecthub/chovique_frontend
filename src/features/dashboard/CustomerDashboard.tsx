@@ -439,7 +439,7 @@ export const CustomerDashboard: React.FC = () => {
 
   useEffect(() => {
     setImgLoadError(false);
-  }, [avatarPreviewUrl, user?.profile?.avatarUrl, (user?.profile as any)?.avatar_url]);
+  }, [avatarPreviewUrl, user?.profile?.avatarUrl, (user?.profile as any)?.avatar_url, (user as any)?.avatar_url]);
 
   // --- Unsaved Changes Tracking ---
   const [showUnsavedModal, setShowUnsavedModal] = useState(false);
@@ -1654,7 +1654,7 @@ export const CustomerDashboard: React.FC = () => {
                     </span>
 
                     {(() => {
-                      const profileAvatarRaw = avatarPreviewUrl || user?.profile?.avatarUrl || (user?.profile as any)?.avatar_url;
+                      const profileAvatarRaw = avatarPreviewUrl || user?.profile?.avatarUrl || (user?.profile as any)?.avatar_url || (user as any)?.avatar_url;
                       const formattedAvatarUrl = profileAvatarRaw && (profileAvatarRaw.startsWith('data:') || profileAvatarRaw.startsWith('blob:'))
                         ? profileAvatarRaw
                         : profileAvatarRaw ? getImageUrl(profileAvatarRaw) : '';
@@ -6303,7 +6303,7 @@ export const CustomerDashboard: React.FC = () => {
                     {/* Avatar */}
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px', marginBottom: '28px' }}>
                       {(() => {
-                        const raw = avatarPreviewUrl || user?.profile?.avatarUrl || (user?.profile as any)?.avatar_url;
+                        const raw = avatarPreviewUrl || user?.profile?.avatarUrl || (user?.profile as any)?.avatar_url || (user as any)?.avatar_url;
                         const url = raw && (raw.startsWith('data:') || raw.startsWith('blob:')) ? raw : raw ? getImageUrl(raw) : '';
                         return url && !imgLoadError ? (
                           <img src={url} alt="Profile" referrerPolicy="no-referrer" onError={() => setImgLoadError(true)}

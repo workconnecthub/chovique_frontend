@@ -115,6 +115,13 @@ export const deliveryService = {
   assignOrder: (orderId: string, deliveryBoyId: string): Promise<Order> =>
     apiPost<Order>(`/admin/orders/${orderId}/assign-delivery-boy`, { delivery_boy_id: deliveryBoyId }),
 
+  /** Assign multiple orders to a delivery boy in batch (Admin only) */
+  batchAssignOrders: (orderIds: string[], deliveryBoyId: string): Promise<{ message: string; count: number }> =>
+    apiPost<{ message: string; count: number }>('/admin/orders/batch-assign-delivery-boy', {
+      order_ids: orderIds,
+      delivery_boy_id: deliveryBoyId,
+    }),
+
   /** Unassign delivery boy from an order (Admin only) */
   unassignOrder: (orderId: string): Promise<Order> =>
     apiPost<Order>(`/admin/orders/${orderId}/unassign-delivery-boy`),

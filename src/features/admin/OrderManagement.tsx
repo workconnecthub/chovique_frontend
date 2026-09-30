@@ -1163,33 +1163,86 @@ const QuickConfirmDialog: React.FC<{
 // ─── Assign Delivery Executive Modal ─────────────────────────────────────────
 
 export const AssignDeliveryModal: React.FC<{
-  order: any;
+  order?: any | null;
+  initialSelectedOrders?: any[];
+  availableLocalOrders?: any[];
   deliveryBoys: any[];
   onClose: () => void;
   onAssigned: () => void;
   addToast: (type: 'success' | 'error' | 'info', msg: string, title?: string) => void;
-}> = ({ order, deliveryBoys, onClose, onAssigned, addToast }) => {
-  const [selectedBoyId, setSelectedBoyId] = useState<string>(order.delivery_boy_id || '');
+}> = ({
+  order,
+  initialSelectedOrders = [],
+  availableLocalOrders = [],
+  deliveryBoys,
+  onClose,
+  onAssigned,
+  addToast,
+}) => {
+  // Aggregate pool of local orders for batch selection
+  const ordersMap = new Map<string, any>();
+  if (order) ordersMap.set(order.id, order);
+  initialSelectedOrders.forEach((o) => { if (o?.id) ordersMap.set(o.id, o); });
+  availableLocalOrders.forEach((o) => { if (o?.id) ordersMap.set(o.id, o); });
+  const poolOrders = Array.from(ordersMap.values());
+
+  const initialIds = initialSelectedOrders.length > 0
+    ? initialSelectedOrders.map((o) => o.id)
+    : order
+    ? [order.id]
+    : poolOrders.length > 0
+    ? [poolOrders[0].id]
+    : [];
+
+  const [selectedOrderIds, setSelectedOrderIds] = useState<string[]>(initialIds);
+  const [selectedBoyId, setSelectedBoyId] = useState<string>(
+    order?.delivery_boy_id || (deliveryBoys.length > 0 ? deliveryBoys[0].id : '')
+  );
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const shipAddr = order.shipping_address || order.shippingAddress || {};
-  const customerName = order.shipping_name || shipAddr.name || order.customer_name || 'Customer';
-  const customerPhone = order.shipping_phone || shipAddr.phone || order.customer_phone || '';
-  const street = order.shipping_street || shipAddr.street || '';
-  const area = order.shipping_area || shipAddr.area || '';
-  const city = order.shipping_city || shipAddr.city || '';
-  const pincode = order.shipping_pincode || shipAddr.pincode || shipAddr.zip || '';
+  const selectedBoy = deliveryBoys.find((b) => b.id === selectedBoyId);
+
+  const toggleOrderSelection = (id: string) => {
+    setSelectedOrderIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+    );
+  };
+
+  const handleSelectAll = () => {
+    if (selectedOrderIds.length === poolOrders.length) {
+      setSelectedOrderIds([]);
+    } else {
+      setSelectedOrderIds(poolOrders.map((o) => o.id));
+    }
+  };
+
+  const handleSelectUnassignedOnly = () => {
+    const unassigned = poolOrders.filter((o) => !o.delivery_boy_id).map((o) => o.id);
+    setSelectedOrderIds(unassigned);
+  };
 
   const handleAssign = async () => {
     if (!selectedBoyId) {
-      addToast('error', 'Please select a delivery executive from the list.', 'Selection Required');
+      addToast('error', 'Please select a delivery executive from the dropdown.', 'Selection Required');
       return;
     }
+    if (selectedOrderIds.length === 0) {
+      addToast('error', 'Please select at least one local order to assign.', 'No Orders Selected');
+      return;
+    }
+
     setIsSubmitting(true);
     try {
-      await deliveryService.assignOrder(order.id, selectedBoyId);
-      const boy = deliveryBoys.find((b) => b.id === selectedBoyId);
-      addToast('success', `Assigned order ${order.id} to ${boy?.full_name || 'delivery executive'}.`, 'Assigned Successfully');
+      if (selectedOrderIds.length === 1) {
+        await deliveryService.assignOrder(selectedOrderIds[0], selectedBoyId);
+      } else {
+        await deliveryService.batchAssignOrders(selectedOrderIds, selectedBoyId);
+      }
+      addToast(
+        'success',
+        `Assigned ${selectedOrderIds.length} order(s) to ${selectedBoy?.full_name || 'delivery executive'}.`,
+        'Assigned Successfully'
+      );
       onAssigned();
       onClose();
     } catch (err: any) {
@@ -1199,11 +1252,11 @@ export const AssignDeliveryModal: React.FC<{
     }
   };
 
-  const handleUnassign = async () => {
+  const handleUnassignSingle = async (orderId: string) => {
     setIsSubmitting(true);
     try {
-      await deliveryService.unassignOrder(order.id);
-      addToast('info', `Order ${order.id} unassigned. Order returned to unassigned queue.`, 'Executive Unassigned');
+      await deliveryService.unassignOrder(orderId);
+      addToast('info', `Order ${orderId} unassigned and returned to pool.`, 'Executive Unassigned');
       onAssigned();
       onClose();
     } catch (err: any) {
@@ -1237,22 +1290,35 @@ export const AssignDeliveryModal: React.FC<{
         className="glass-panel"
         style={{
           width: '100%',
-          maxWidth: '520px',
+          maxWidth: '620px',
+          maxHeight: '90vh',
+          display: 'flex',
+          flexDirection: 'column',
           background: 'linear-gradient(135deg, rgba(22, 17, 13, 0.98), rgba(14, 10, 8, 0.98))',
           border: '1px solid var(--gold)',
-          borderRadius: '12px',
+          borderRadius: '14px',
           padding: '24px',
-          boxShadow: '0 16px 40px rgba(0,0,0,0.7)',
+          boxShadow: '0 20px 50px rgba(0,0,0,0.85)',
+          overflow: 'hidden',
         }}
       >
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+        {/* Header */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px', flexShrink: 0 }}>
           <div>
-            <span style={{ fontSize: '0.68rem', color: 'var(--gold)', textTransform: 'uppercase', letterSpacing: '1.2px', fontWeight: 800 }}>
-              Local Express Operations
-            </span>
-            <h3 style={{ fontFamily: 'var(--font-display)', color: 'var(--cream)', fontSize: '1.25rem', margin: '2px 0 0 0' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span style={{ fontSize: '0.68rem', color: 'var(--gold)', textTransform: 'uppercase', letterSpacing: '1.2px', fontWeight: 800 }}>
+                ⚡ Local Express Operations
+              </span>
+              <span style={{ fontSize: '0.65rem', padding: '1px 6px', borderRadius: '4px', background: 'rgba(201,168,76,0.18)', color: 'var(--gold)', fontWeight: 700 }}>
+                BATCH DISPATCH
+              </span>
+            </div>
+            <h3 style={{ fontFamily: 'var(--font-display)', color: 'var(--cream)', fontSize: '1.25rem', margin: '4px 0 0 0' }}>
               Assign Delivery Executive
             </h3>
+            <p style={{ margin: '3px 0 0 0', fontSize: '0.78rem', color: 'var(--grey-light)' }}>
+              Select an active delivery person from the dropdown and assign any number of orders at once.
+            </p>
           </div>
           <button
             onClick={onClose}
@@ -1269,98 +1335,229 @@ export const AssignDeliveryModal: React.FC<{
           </button>
         </div>
 
-        {/* Order Info Card */}
-        <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px', padding: '12px 14px', marginBottom: '18px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-            <span style={{ fontWeight: 700, color: 'var(--gold)', fontFamily: 'monospace', fontSize: '0.85rem' }}>
-              {order.id}
-            </span>
-            <span style={{ fontSize: '0.68rem', padding: '2px 8px', borderRadius: '4px', background: 'rgba(201,168,76,0.18)', color: 'var(--gold)', fontWeight: 800 }}>
-              ⚡ LOCAL EXPRESS ORDER
-            </span>
-          </div>
-          <div style={{ fontSize: '0.84rem', color: 'var(--cream)', fontWeight: 600 }}>
-            {customerName} {customerPhone ? `(${customerPhone})` : ''}
-          </div>
-          <div style={{ fontSize: '0.78rem', color: 'var(--beige)', marginTop: '2px' }}>
-            {[street, area, city].filter(Boolean).join(', ')} {pincode ? `• PIN: ${pincode}` : ''}
-          </div>
-          {order.delivery_boy_name && (
-            <div style={{ marginTop: '8px', fontSize: '0.75rem', color: '#2ecc71', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '5px' }}>
-              <span>Currently assigned to:</span>
-              <strong style={{ color: 'var(--gold)' }}>{order.delivery_boy_name}</strong>
-              <span style={{ fontSize: '0.68rem', padding: '1px 6px', borderRadius: '4px', background: 'rgba(46,204,113,0.15)', color: '#2ecc71' }}>
-                {order.fulfillment_status}
-              </span>
-            </div>
-          )}
-        </div>
+        {/* Scrollable Body */}
+        <div style={{ flex: 1, overflowY: 'auto', paddingRight: '4px', marginBottom: '16px' }}>
+          {/* Executive Selection Dropdown */}
+          <div style={{ marginBottom: '18px' }}>
+            <label style={{ display: 'block', fontSize: '0.74rem', color: 'var(--gold)', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 700, marginBottom: '8px' }}>
+              Select Active Delivery Person (Dropdown) <span style={{ color: '#e74c3c' }}>*</span>
+            </label>
+            {deliveryBoys.length === 0 ? (
+              <div style={{ padding: '14px', background: 'rgba(231,76,60,0.08)', border: '1px solid rgba(231,76,60,0.25)', borderRadius: '8px', color: '#e74c3c', fontSize: '0.82rem' }}>
+                No active delivery executives found. Please create or activate one under <strong>Delivery Management</strong>.
+              </div>
+            ) : (
+              <div>
+                <select
+                  value={selectedBoyId}
+                  onChange={(e) => setSelectedBoyId(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '11px 14px',
+                    borderRadius: '8px',
+                    background: 'rgba(12, 9, 7, 0.95)',
+                    border: '1px solid var(--gold)',
+                    color: 'var(--cream)',
+                    fontSize: '0.88rem',
+                    fontWeight: 600,
+                    outline: 'none',
+                    cursor: 'pointer',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+                  }}
+                >
+                  <option value="">-- Choose Delivery Person ({deliveryBoys.length} available) --</option>
+                  {deliveryBoys.map((boy) => (
+                    <option key={boy.id} value={boy.id}>
+                      {boy.full_name} ({boy.phone || boy.email}) — {boy.active_orders || 0} active orders
+                    </option>
+                  ))}
+                </select>
 
-        {/* Executive Selection */}
-        <div style={{ marginBottom: '20px' }}>
-          <label style={{ display: 'block', fontSize: '0.72rem', color: 'var(--gold)', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 700, marginBottom: '8px' }}>
-            Select Active Delivery Executive
-          </label>
-          {deliveryBoys.length === 0 ? (
-            <div style={{ padding: '16px', background: 'rgba(231,76,60,0.08)', border: '1px solid rgba(231,76,60,0.25)', borderRadius: '8px', color: '#e74c3c', fontSize: '0.82rem' }}>
-              No active delivery executives found. Please create or activate one under <strong>Delivery Management</strong>.
-            </div>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '200px', overflowY: 'auto' }}>
-              {deliveryBoys.map((boy) => {
-                const isSelected = selectedBoyId === boy.id;
-                return (
+                {selectedBoy && (
                   <div
-                    key={boy.id}
-                    onClick={() => setSelectedBoyId(boy.id)}
                     style={{
+                      marginTop: '10px',
                       padding: '10px 14px',
                       borderRadius: '8px',
-                      background: isSelected ? 'rgba(201,168,76,0.18)' : 'rgba(255,255,255,0.03)',
-                      border: isSelected ? '1px solid var(--gold)' : '1px solid rgba(255,255,255,0.08)',
-                      cursor: 'pointer',
+                      background: 'rgba(201,168,76,0.08)',
+                      border: '1px solid rgba(201,168,76,0.25)',
                       display: 'flex',
-                      alignItems: 'center',
                       justifyContent: 'space-between',
-                      transition: 'all 0.2s',
+                      alignItems: 'center',
                     }}
                   >
-                    <div>
-                      <div style={{ color: isSelected ? 'var(--gold)' : 'var(--cream)', fontWeight: 700, fontSize: '0.85rem' }}>
-                        {boy.full_name}
-                      </div>
-                      <div style={{ fontSize: '0.72rem', color: 'var(--grey-light)', marginTop: '2px' }}>
-                        {boy.email} {boy.phone ? `• ${boy.phone}` : ''}
-                      </div>
-                    </div>
-                    <div style={{ textAlign: 'right' }}>
-                      <span
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <div
                         style={{
-                          fontSize: '0.7rem',
-                          padding: '2px 8px',
-                          borderRadius: '10px',
-                          background: (boy.active_orders || 0) === 0 ? 'rgba(46,204,113,0.15)' : 'rgba(230,126,34,0.15)',
-                          color: (boy.active_orders || 0) === 0 ? '#2ecc71' : '#e67e22',
-                          fontWeight: 700,
+                          width: '32px',
+                          height: '32px',
+                          borderRadius: '50%',
+                          background: 'linear-gradient(135deg, #c9a84c, #8c7335)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          color: '#0f0c0a',
+                          fontWeight: 800,
+                          fontSize: '0.8rem',
                         }}
                       >
-                        {boy.active_orders || 0} active
-                      </span>
+                        {selectedBoy.full_name.charAt(0).toUpperCase()}
+                      </div>
+                      <div>
+                        <div style={{ color: 'var(--gold)', fontWeight: 700, fontSize: '0.86rem' }}>
+                          {selectedBoy.full_name}
+                        </div>
+                        <div style={{ fontSize: '0.72rem', color: 'var(--grey-light)' }}>
+                          {selectedBoy.phone || selectedBoy.email}
+                        </div>
+                      </div>
                     </div>
+                    <span
+                      style={{
+                        fontSize: '0.72rem',
+                        padding: '3px 10px',
+                        borderRadius: '12px',
+                        background: (selectedBoy.active_orders || 0) === 0 ? 'rgba(46,204,113,0.18)' : 'rgba(230,126,34,0.18)',
+                        color: (selectedBoy.active_orders || 0) === 0 ? '#2ecc71' : '#e67e22',
+                        fontWeight: 700,
+                        border: `1px solid ${(selectedBoy.active_orders || 0) === 0 ? '#2ecc7155' : '#e67e2255'}`,
+                      }}
+                    >
+                      {selectedBoy.active_orders || 0} active assigned
+                    </span>
                   </div>
-                );
-              })}
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Orders Multi-Select Card List */}
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', flexWrap: 'wrap', gap: '6px' }}>
+              <label style={{ fontSize: '0.74rem', color: 'var(--gold)', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 700 }}>
+                Local Orders to Assign ({selectedOrderIds.length} of {poolOrders.length} selected)
+              </label>
+              <div style={{ display: 'flex', gap: '6px' }}>
+                <button
+                  type="button"
+                  onClick={handleSelectAll}
+                  style={{
+                    padding: '3px 8px',
+                    fontSize: '0.7rem',
+                    background: 'rgba(255,255,255,0.06)',
+                    border: '1px solid rgba(255,255,255,0.15)',
+                    color: 'var(--cream)',
+                    borderRadius: '4px',
+                    cursor: 'pointer',
+                  }}
+                >
+                  {selectedOrderIds.length === poolOrders.length ? 'Deselect All' : 'Select All'}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSelectUnassignedOnly}
+                  style={{
+                    padding: '3px 8px',
+                    fontSize: '0.7rem',
+                    background: 'rgba(201,168,76,0.12)',
+                    border: '1px solid rgba(201,168,76,0.3)',
+                    color: 'var(--gold)',
+                    borderRadius: '4px',
+                    cursor: 'pointer',
+                  }}
+                >
+                  Unassigned Only
+                </button>
+              </div>
             </div>
-          )}
+
+            {poolOrders.length === 0 ? (
+              <div style={{ padding: '16px', textAlign: 'center', color: 'var(--grey-light)', fontSize: '0.82rem' }}>
+                No local express orders available.
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '250px', overflowY: 'auto' }}>
+                {poolOrders.map((ord: any) => {
+                  const isChecked = selectedOrderIds.includes(ord.id);
+                  const shipAddr = ord.shipping_address || ord.shippingAddress || {};
+                  const custName = ord.shipping_name || shipAddr.name || ord.customer_name || ord.name || 'Customer';
+                  const custPhone = ord.shipping_phone || shipAddr.phone || ord.customer_phone || '';
+                  const street = ord.shipping_street || shipAddr.street || '';
+                  const area = ord.shipping_area || shipAddr.area || '';
+                  const pin = ord.shipping_pincode || shipAddr.pincode || shipAddr.zip || '';
+
+                  return (
+                    <div
+                      key={ord.id}
+                      onClick={() => toggleOrderSelection(ord.id)}
+                      style={{
+                        padding: '10px 12px',
+                        borderRadius: '8px',
+                        background: isChecked ? 'rgba(201,168,76,0.14)' : 'rgba(255,255,255,0.025)',
+                        border: isChecked ? '1px solid var(--gold)' : '1px solid rgba(255,255,255,0.08)',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        gap: '10px',
+                        transition: 'all 0.15s ease',
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={() => {}}
+                          style={{ accentColor: 'var(--gold)', width: '16px', height: '16px', cursor: 'pointer', flexShrink: 0 }}
+                        />
+                        <div style={{ minWidth: 0 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                            <span style={{ fontWeight: 700, color: 'var(--gold)', fontFamily: 'monospace', fontSize: '0.82rem' }}>
+                              {ord.id}
+                            </span>
+                            <span style={{ fontSize: '0.78rem', color: 'var(--cream)', fontWeight: 600 }}>
+                              • {custName}
+                            </span>
+                            {custPhone && (
+                              <span style={{ fontSize: '0.72rem', color: 'var(--beige)' }}>
+                                ({custPhone})
+                              </span>
+                            )}
+                          </div>
+                          <div style={{ fontSize: '0.74rem', color: 'var(--grey-light)', marginTop: '2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {[street, area].filter(Boolean).join(', ')} {pin ? `• PIN: ${pin}` : ''}
+                          </div>
+                          {ord.delivery_boy_name && (
+                            <div style={{ fontSize: '0.7rem', color: '#2ecc71', marginTop: '2px' }}>
+                              Currently: <strong>{ord.delivery_boy_name}</strong> ({ord.fulfillment_status})
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                        <div style={{ fontWeight: 700, color: 'var(--gold)', fontSize: '0.85rem' }}>
+                          ₹{ord.total?.toLocaleString('en-IN') || '0'}
+                        </div>
+                        <div style={{ fontSize: '0.68rem', color: 'var(--grey-light)', marginTop: '2px' }}>
+                          {ord.items?.length || 1} item(s)
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
         </div>
 
-        {/* Action Buttons */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px' }}>
-          {order.delivery_boy_id ? (
+        {/* Footer Actions */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px', flexShrink: 0, borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '16px' }}>
+          {order && order.delivery_boy_id && selectedOrderIds.length === 1 && selectedOrderIds[0] === order.id ? (
             <button
               type="button"
               disabled={isSubmitting}
-              onClick={handleUnassign}
+              onClick={() => handleUnassignSingle(order.id)}
               style={{
                 padding: '9px 16px',
                 borderRadius: '6px',
@@ -1372,7 +1569,7 @@ export const AssignDeliveryModal: React.FC<{
                 cursor: isSubmitting ? 'not-allowed' : 'pointer',
               }}
             >
-              Unassign
+              Unassign Order
             </button>
           ) : <div />}
 
@@ -1396,24 +1593,27 @@ export const AssignDeliveryModal: React.FC<{
             </button>
             <button
               type="button"
-              disabled={isSubmitting || !selectedBoyId || deliveryBoys.length === 0}
+              disabled={isSubmitting || !selectedBoyId || selectedOrderIds.length === 0 || deliveryBoys.length === 0}
               onClick={handleAssign}
               style={{
-                padding: '9px 20px',
+                padding: '9px 22px',
                 borderRadius: '6px',
-                background: !selectedBoyId ? 'rgba(255,255,255,0.1)' : 'var(--gold)',
+                background: !selectedBoyId || selectedOrderIds.length === 0 ? 'rgba(255,255,255,0.1)' : 'var(--gold)',
                 border: 'none',
                 color: '#0f0c0a',
                 fontSize: '0.82rem',
                 fontWeight: 800,
-                cursor: !selectedBoyId || isSubmitting ? 'not-allowed' : 'pointer',
+                cursor: !selectedBoyId || selectedOrderIds.length === 0 || isSubmitting ? 'not-allowed' : 'pointer',
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '6px',
+                boxShadow: !selectedBoyId || selectedOrderIds.length === 0 ? 'none' : '0 4px 14px rgba(201,168,76,0.3)',
               }}
             >
               {isSubmitting ? <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /> : <Truck size={14} />}
-              {isSubmitting ? 'Assigning...' : 'Assign to Order'}
+              {isSubmitting
+                ? 'Assigning...'
+                : `Assign ${selectedOrderIds.length} Order${selectedOrderIds.length > 1 ? 's' : ''} to ${selectedBoy ? selectedBoy.full_name : 'Executive'}`}
             </button>
           </div>
         </div>
@@ -1446,6 +1646,8 @@ export const OrderManagement: React.FC<OrderManagementProps> = ({
 
   const [viewingOrder, setViewingOrder] = useState<any | null>(null);
   const [assignModalOrder, setAssignModalOrder] = useState<any | null>(null);
+  const [selectedLocalOrderIds, setSelectedLocalOrderIds] = useState<string[]>([]);
+  const [batchAssignModalOpen, setBatchAssignModalOpen] = useState<boolean>(false);
   const [deliveryBoysList, setDeliveryBoysList] = useState<any[]>([]);
   const [pendingConfirm, setPendingConfirm] = useState<{ order: any; newStatus: string } | null>(null);
   const [isConfirming, setIsConfirming] = useState(false);
@@ -1539,6 +1741,29 @@ export const OrderManagement: React.FC<OrderManagementProps> = ({
   const ordersList = dbOrderData?.items || [];
   const totalCount = dbOrderData?.total || 0;
   const totalPages = dbOrderData?.total_pages || 1;
+
+  const isLocalExpressOrder = (o: any) =>
+    o.fulfillment_type === 'LOCAL' ||
+    (!o.fulfillment_type && !o.shipping_provider?.includes('Courier'));
+
+  const localOrdersOnPage = ordersList.filter(isLocalExpressOrder);
+  const unassignedLocalOrders = localOrdersOnPage.filter(
+    (o: any) => !o.delivery_boy_id && o.status !== 'Delivered' && o.status !== 'Cancelled'
+  );
+
+  const toggleSelectLocalOrder = (orderId: string) => {
+    setSelectedLocalOrderIds((prev) =>
+      prev.includes(orderId) ? prev.filter((id) => id !== orderId) : [...prev, orderId]
+    );
+  };
+
+  const toggleSelectAllLocalOrders = () => {
+    if (selectedLocalOrderIds.length === localOrdersOnPage.length && localOrdersOnPage.length > 0) {
+      setSelectedLocalOrderIds([]);
+    } else {
+      setSelectedLocalOrderIds(localOrdersOnPage.map((o: any) => o.id));
+    }
+  };
 
   const kpis = {
     total: summary.total_orders ?? 0,
@@ -1946,6 +2171,108 @@ export const OrderManagement: React.FC<OrderManagementProps> = ({
         </div>
       </div>
 
+      {/* Batch Operations Bar for Local Express Orders */}
+      {selectedLocalOrderIds.length > 0 && (
+        <div
+          className="glass-panel"
+          style={{
+            padding: '12px 18px',
+            marginBottom: '16px',
+            background: 'linear-gradient(135deg, rgba(201,168,76,0.18) 0%, rgba(26,13,0,0.85) 100%)',
+            border: '1px solid var(--gold)',
+            borderRadius: '10px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: '12px',
+            boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <div style={{ width: '34px', height: '34px', borderRadius: '50%', background: 'rgba(201,168,76,0.2)', border: '1px solid var(--gold)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Truck size={17} color="var(--gold)" />
+            </div>
+            <div>
+              <div style={{ fontWeight: 800, color: 'var(--gold)', fontSize: '0.92rem' }}>
+                {selectedLocalOrderIds.length} Local Express Order{selectedLocalOrderIds.length > 1 ? 's' : ''} Selected
+              </div>
+              <div style={{ fontSize: '0.74rem', color: 'var(--cream)', opacity: 0.85 }}>
+                Assign all selected local orders to a chosen delivery executive at once.
+              </div>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            <button
+              type="button"
+              onClick={() => setSelectedLocalOrderIds([])}
+              style={{
+                padding: '7px 14px',
+                borderRadius: '6px',
+                background: 'rgba(255,255,255,0.06)',
+                border: '1px solid rgba(255,255,255,0.18)',
+                color: 'var(--cream)',
+                fontSize: '0.78rem',
+                fontWeight: 600,
+                cursor: 'pointer',
+              }}
+            >
+              Clear Selection
+            </button>
+            <button
+              type="button"
+              onClick={() => setBatchAssignModalOpen(true)}
+              style={{
+                padding: '8px 18px',
+                borderRadius: '6px',
+                background: 'var(--gold)',
+                border: 'none',
+                color: '#0f0c0a',
+                fontSize: '0.82rem',
+                fontWeight: 800,
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                boxShadow: '0 4px 12px rgba(201,168,76,0.35)',
+              }}
+            >
+              <Truck size={15} />
+              Assign to Delivery Boy ({selectedLocalOrderIds.length})
+            </button>
+          </div>
+        </div>
+      )}
+
+      {unassignedLocalOrders.length > 0 && selectedLocalOrderIds.length === 0 && (
+        <div style={{ marginBottom: '14px', display: 'flex', justifyContent: 'flex-end' }}>
+          <button
+            type="button"
+            onClick={() => {
+              setSelectedLocalOrderIds(unassignedLocalOrders.map((o: any) => o.id));
+              setBatchAssignModalOpen(true);
+            }}
+            style={{
+              padding: '7px 14px',
+              borderRadius: '6px',
+              background: 'rgba(201,168,76,0.12)',
+              border: '1px solid rgba(201,168,76,0.35)',
+              color: 'var(--gold)',
+              fontSize: '0.78rem',
+              fontWeight: 700,
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+            }}
+          >
+            <Zap size={14} />
+            Quick Batch Assign All Unassigned Local Orders ({unassignedLocalOrders.length})
+          </button>
+        </div>
+      )}
+
       <div className="glass-panel" style={{ padding: '0', border: '1px solid var(--glass-border)', overflowX: 'auto', borderRadius: '10px' }}>
         {ordersLoading ? (
           <div style={{ padding: '60px', textAlign: 'center', color: 'var(--beige)' }}>
@@ -1978,9 +2305,20 @@ export const OrderManagement: React.FC<OrderManagementProps> = ({
                   return (
                     <div key={ord.id} className="glass-panel" style={{ padding: '16px', borderRadius: '8px', background: 'rgba(26,13,0,0.4)', border: '1px solid var(--glass-border)' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
-                        <div>
-                          <div style={{ fontWeight: 700, color: 'var(--gold)', fontFamily: 'monospace', fontSize: '0.85rem' }}>{ord.id}</div>
-                          <div style={{ fontSize: '0.75rem', color: 'var(--grey-light)' }}>{ordDate?.slice(0, 10)}</div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          {isLocalExpressOrder(ord) && (
+                            <input
+                              type="checkbox"
+                              checked={selectedLocalOrderIds.includes(ord.id)}
+                              onChange={() => toggleSelectLocalOrder(ord.id)}
+                              title="Select order for batch assignment"
+                              style={{ cursor: 'pointer', accentColor: 'var(--gold)', width: '16px', height: '16px', flexShrink: 0 }}
+                            />
+                          )}
+                          <div>
+                            <div style={{ fontWeight: 700, color: 'var(--gold)', fontFamily: 'monospace', fontSize: '0.85rem' }}>{ord.id}</div>
+                            <div style={{ fontSize: '0.75rem', color: 'var(--grey-light)' }}>{ordDate?.slice(0, 10)}</div>
+                          </div>
                         </div>
                         <div style={{ fontWeight: 700, color: 'var(--gold)', fontSize: '1rem' }}>
                           ₹{ord.total?.toLocaleString('en-IN')}
@@ -2111,6 +2449,15 @@ export const OrderManagement: React.FC<OrderManagementProps> = ({
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.83rem' }}>
                 <thead>
                   <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+                    <th style={{ padding: '13px 12px', textAlign: 'center', width: '38px', background: 'rgba(201,168,76,0.05)' }}>
+                      <input
+                        type="checkbox"
+                        checked={localOrdersOnPage.length > 0 && selectedLocalOrderIds.length === localOrdersOnPage.length}
+                        onChange={toggleSelectAllLocalOrders}
+                        title="Select/deselect all local express orders on page"
+                        style={{ cursor: 'pointer', accentColor: 'var(--gold)', width: '16px', height: '16px' }}
+                      />
+                    </th>
                     {['Order ID & Date', 'Customer', 'Fulfillment Channel', 'Items & Qty', 'Payment Method', 'Payment Status', 'Order Status', 'Total', 'Actions'].map((h) => (
                       <th key={h} style={{ padding: '13px 15px', textAlign: 'left', fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px', color: 'var(--gold)', background: 'rgba(201,168,76,0.05)', whiteSpace: 'nowrap' }}>
                         {h}
@@ -2131,10 +2478,28 @@ export const OrderManagement: React.FC<OrderManagementProps> = ({
 
                     return (
                       <tr key={ord.id}
-                        style={{ borderBottom: idx < ordersList.length - 1 ? '1px solid rgba(255,255,255,0.04)' : 'none', transition: 'background 0.2s' }}
-                        onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(255,255,255,0.022)')}
-                        onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+                        style={{
+                          borderBottom: idx < ordersList.length - 1 ? '1px solid rgba(255,255,255,0.04)' : 'none',
+                          transition: 'background 0.2s',
+                          background: selectedLocalOrderIds.includes(ord.id) ? 'rgba(201,168,76,0.08)' : 'transparent',
+                        }}
+                        onMouseEnter={(e) => (e.currentTarget.style.background = selectedLocalOrderIds.includes(ord.id) ? 'rgba(201,168,76,0.14)' : 'rgba(255,255,255,0.022)')}
+                        onMouseLeave={(e) => (e.currentTarget.style.background = selectedLocalOrderIds.includes(ord.id) ? 'rgba(201,168,76,0.08)' : 'transparent')}
                       >
+                        {/* Multi-Select Checkbox */}
+                        <td style={{ padding: '10px 12px', textAlign: 'center', verticalAlign: 'middle' }}>
+                          {isLocalExpressOrder(ord) ? (
+                            <input
+                              type="checkbox"
+                              checked={selectedLocalOrderIds.includes(ord.id)}
+                              onChange={() => toggleSelectLocalOrder(ord.id)}
+                              title="Select order for batch assignment"
+                              style={{ cursor: 'pointer', accentColor: 'var(--gold)', width: '16px', height: '16px' }}
+                            />
+                          ) : (
+                            <span style={{ color: 'rgba(255,255,255,0.2)', fontSize: '0.8rem' }}>—</span>
+                          )}
+                        </td>
                         {/* Order ID & Date */}
                         <td style={{ padding: '10px 12px', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
                           <div style={{ fontWeight: 700, color: 'var(--gold)', fontFamily: 'monospace', fontSize: '0.75rem' }}>{ord.id}</div>
@@ -2333,13 +2698,23 @@ export const OrderManagement: React.FC<OrderManagementProps> = ({
         />
       )}
 
-      {/* Assign Delivery Executive Modal */}
-      {assignModalOrder && (
+      {/* Assign Delivery Executive Modal (Single or Batch) */}
+      {(assignModalOrder || batchAssignModalOpen) && (
         <AssignDeliveryModal
           order={assignModalOrder}
+          initialSelectedOrders={
+            assignModalOrder
+              ? [assignModalOrder]
+              : ordersList.filter((o: any) => selectedLocalOrderIds.includes(o.id))
+          }
+          availableLocalOrders={localOrdersOnPage}
           deliveryBoys={deliveryBoysList}
-          onClose={() => setAssignModalOrder(null)}
+          onClose={() => {
+            setAssignModalOrder(null);
+            setBatchAssignModalOpen(false);
+          }}
           onAssigned={() => {
+            setSelectedLocalOrderIds([]);
             fetchDbOrders();
             fetchDeliveryBoys();
           }}
