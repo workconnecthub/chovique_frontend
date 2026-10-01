@@ -6,7 +6,6 @@ import {
   FileClock,
   LogOut,
   ChevronDown,
-  Store,
 } from 'lucide-react';
 
 import { useApp } from '../app/providers';
@@ -136,31 +135,6 @@ export const AdminUserDropdown: React.FC<AdminUserDropdownProps> = ({ onNavigate
           >
             <UserIcon size={18} color="#c9a84c" />
             <span>My Account</span>
-          </button>
-
-          {/* Live Customer Store */}
-          <button
-            onClick={() => handleSelect(() => navigate('/'))}
-            style={{
-              width: '100%',
-              padding: '12px 20px',
-              background: 'transparent',
-              border: 'none',
-              color: '#f5efe6',
-              fontSize: '0.88rem',
-              fontWeight: 600,
-              display: 'flex',
-              alignItems: 'center',
-              gap: '12px',
-              cursor: 'pointer',
-              textAlign: 'left',
-              transition: 'background 0.2s ease',
-            }}
-            onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(201, 168, 76, 0.12)')}
-            onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
-          >
-            <Store size={18} color="#c9a84c" />
-            <span>Live Customer Store</span>
           </button>
 
           {/* Activity Log — Admin only (Super Admin uses dedicated Audit Logs sidebar page) */}

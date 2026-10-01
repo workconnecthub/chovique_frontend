@@ -370,6 +370,10 @@ export const adminService = {
     return apiGet<ActivityLogListResponse>(`/admin/activity-logs?${q.toString()}`);
   },
 
+  /** Delete selected admin activity logs */
+  deleteActivityLogs: (logIds: string[]): Promise<{ deleted: number; message: string }> =>
+    apiPost<{ deleted: number; message: string }>('/admin/activity-logs/delete', { log_ids: logIds }),
+
   /** Secure admin logout */
   adminLogout: async (): Promise<{ message: string }> => {
     setAuthToken(null);

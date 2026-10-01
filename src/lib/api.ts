@@ -354,11 +354,12 @@ export const apiPut = async <T>(path: string, body?: unknown): Promise<T> => {
 };
 
 /** Core DELETE request */
-export const apiDelete = async <T>(path: string): Promise<T> => {
+export const apiDelete = async <T>(path: string, body?: unknown): Promise<T> => {
   const response = await fetchWithAuth(path, {
     method: 'DELETE',
     headers: buildHeaders(),
     credentials: 'include',
+    body: body !== undefined ? JSON.stringify(body) : undefined,
   });
 
   if (response.status === 204) {

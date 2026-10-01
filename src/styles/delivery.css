@@ -133,6 +133,237 @@
   gap: 14px;
 }
 
+/* ─── Dispatch Status Bar — Always 3-column grid ─────────────────────────── */
+.dispatch-status-bar {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-bottom: 18px;
+}
+
+.dispatch-capsule {
+  border-radius: 12px;
+  padding: 10px 11px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  min-width: 0;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.dispatch-capsule:active {
+  transform: scale(0.96);
+}
+
+.dispatch-capsule-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.dispatch-capsule-texts {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+}
+
+.dispatch-capsule-label {
+  font-size: 0.58rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.2;
+}
+
+.dispatch-capsule-value {
+  font-size: 0.96rem;
+  font-weight: 800;
+  white-space: nowrap;
+  line-height: 1.15;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dispatch-capsule-sub {
+  font-size: 0.58rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.2;
+}
+
+/* ─── Notification Bell Button ────────────────────────────────────────────── */
+.notif-bell-btn {
+  position: relative;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.65);
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  flex-shrink: 0;
+  outline: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.notif-bell-btn.has-notif {
+  border-color: rgba(230, 126, 34, 0.55);
+  background: rgba(230, 126, 34, 0.14);
+  color: #e67e22;
+  animation: bell-shake 0.65s ease-in-out;
+}
+
+.notif-bell-btn:hover {
+  background: rgba(201, 168, 76, 0.15);
+  border-color: rgba(201, 168, 76, 0.5);
+  color: #c9a84c;
+}
+
+.notif-bell-btn:active {
+  transform: scale(0.92);
+}
+
+.notif-badge {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  min-width: 16px;
+  height: 16px;
+  background: #e74c3c;
+  color: #fff;
+  border-radius: 8px;
+  font-size: 0.58rem;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 3px;
+  border: 1.5px solid rgba(12, 9, 7, 0.96);
+  line-height: 1;
+  pointer-events: none;
+}
+
+@keyframes bell-shake {
+  0%   { transform: rotate(0deg); }
+  15%  { transform: rotate(14deg); }
+  30%  { transform: rotate(-12deg); }
+  45%  { transform: rotate(8deg); }
+  60%  { transform: rotate(-6deg); }
+  80%  { transform: rotate(3deg); }
+  100% { transform: rotate(0deg); }
+}
+
+/* ─── Mission Action Button Groups ───────────────────────────────────────── */
+.mission-action-group {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  padding-top: 2px;
+}
+
+.btn-mission-primary {
+  width: 100%;
+  padding: 16px 20px;
+  border-radius: 14px;
+  font-size: 1rem;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  cursor: pointer;
+  border: none;
+  letter-spacing: 0.2px;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.btn-mission-primary.accept {
+  background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%);
+  color: #0f0c0a;
+  box-shadow: 0 6px 20px rgba(46, 204, 113, 0.35);
+}
+
+.btn-mission-primary.accept:hover:not(:disabled),
+.btn-mission-primary.accept:active:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 28px rgba(46, 204, 113, 0.5);
+}
+
+.btn-mission-primary.pickup {
+  background: linear-gradient(135deg, #27ae60 0%, #1e8449 100%);
+  color: #fff;
+  box-shadow: 0 6px 20px rgba(39, 174, 96, 0.35);
+}
+
+.btn-mission-primary.pickup:hover:not(:disabled),
+.btn-mission-primary.pickup:active:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 28px rgba(39, 174, 96, 0.5);
+}
+
+.btn-mission-primary.outenroute {
+  background: linear-gradient(135deg, #e67e22 0%, #d35400 100%);
+  color: #fff;
+  box-shadow: 0 6px 20px rgba(230, 126, 34, 0.35);
+}
+
+.btn-mission-primary.outenroute:hover:not(:disabled),
+.btn-mission-primary.outenroute:active:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 28px rgba(230, 126, 34, 0.5);
+}
+
+.btn-mission-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+.btn-mission-secondary {
+  width: 100%;
+  padding: 13px 20px;
+  border-radius: 12px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  background: rgba(231, 76, 60, 0.1);
+  border: 1px solid rgba(231, 76, 60, 0.3);
+  color: #e74c3c;
+  transition: all 0.2s ease;
+  letter-spacing: 0.1px;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.btn-mission-secondary:hover {
+  background: rgba(231, 76, 60, 0.18);
+  border-color: rgba(231, 76, 60, 0.55);
+}
+
+.btn-mission-secondary:active {
+  transform: scale(0.98);
+}
+
 .delivery-stat-card {
   background: rgba(24, 19, 15, 0.85);
   border: 1px solid rgba(201, 168, 76, 0.15);
@@ -339,6 +570,7 @@
   display: flex;
   gap: 10px;
   flex-wrap: wrap;
+  margin-bottom: 12px;
 }
 
 .btn-contact {
@@ -462,10 +694,15 @@
 }
 
 .mission-step-label {
-  font-size: 0.72rem;
+  font-size: 0.66rem;
   font-weight: 700;
   color: rgba(255, 255, 255, 0.6);
   text-transform: uppercase;
+  text-align: center;
+  max-width: 56px;
+  line-height: 1.25;
+  word-break: break-word;
+  hyphens: auto;
 }
 
 .mission-step-node.active .mission-step-label { color: #c9a84c; }
@@ -505,9 +742,9 @@
 }
 
 .otp-digit-input {
-  width: 48px;
-  height: 56px;
-  font-size: 1.6rem;
+  width: 46px;
+  height: 54px;
+  font-size: 1.55rem;
   font-weight: 800;
   text-align: center;
   background: rgba(14, 11, 9, 0.9);
@@ -516,6 +753,7 @@
   color: #c9a84c;
   outline: none;
   transition: all 0.2s;
+  caret-color: #2ecc71;
 }
 
 .otp-digit-input:focus {
@@ -1050,3 +1288,97 @@
   line-height: 1.4;
 }
 
+
+/* ─── Mobile UX Improvements ─────────────────────────────────────────────── */
+@media (max-width: 600px) {
+  .mission-contact-actions {
+    flex-direction: column;
+  }
+
+  .btn-contact {
+    width: 100%;
+    min-width: unset;
+    padding: 14px 16px;
+    font-size: 0.92rem;
+    border-radius: 12px;
+  }
+
+  .btn-maps {
+    font-size: 0.9rem;
+    padding: 14px 16px;
+    white-space: normal;
+    text-align: center;
+    line-height: 1.4;
+  }
+
+  .otp-digit-input {
+    width: 42px;
+    height: 50px;
+    font-size: 1.35rem;
+    border-radius: 8px;
+  }
+
+  .otp-inputs-row {
+    gap: 6px;
+  }
+
+  .otp-entry-box {
+    padding: 16px 14px;
+  }
+
+  .mission-progress-track {
+    padding: 0 4px;
+  }
+
+  .mission-step-circle {
+    width: 30px;
+    height: 30px;
+    font-size: 0.75rem;
+  }
+
+  .mission-step-label {
+    font-size: 0.58rem;
+    max-width: 50px;
+  }
+
+  .active-mission-card {
+    padding: 18px 16px;
+    border-radius: 16px;
+  }
+
+  .mission-order-id {
+    font-size: 1.15rem;
+  }
+}
+
+@media (max-width: 400px) {
+  .otp-digit-input {
+    width: 38px;
+    height: 46px;
+    font-size: 1.2rem;
+    border-radius: 7px;
+  }
+
+  .otp-inputs-row {
+    gap: 5px;
+  }
+
+  .dispatch-status-bar {
+    gap: 5px;
+  }
+
+  .dispatch-capsule {
+    padding: 8px 7px;
+    gap: 6px;
+  }
+
+  .dispatch-capsule-icon {
+    width: 28px;
+    height: 28px;
+    border-radius: 7px;
+  }
+
+  .dispatch-capsule-value {
+    font-size: 0.85rem;
+  }
+}

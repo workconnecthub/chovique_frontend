@@ -2018,20 +2018,82 @@ export const OrderManagement: React.FC<OrderManagementProps> = ({
         </button>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '14px', marginBottom: '26px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '14px', marginBottom: '26px' }}>
         {[
-          { label: 'Total Orders', value: kpis.total, color: '#c9a84c' },
-          { label: 'Local Express', value: `${kpis.local}${kpis.unassignedLocal > 0 ? ` (${kpis.unassignedLocal} unassigned)` : ''}`, color: '#e67e22' },
-          { label: 'iThink Courier', value: kpis.courier, color: '#3498db' },
-          { label: 'Processing', value: kpis.pending, color: '#f1c40f' },
-          { label: 'In Transit', value: kpis.transit, color: '#9b59b6' },
-          { label: 'Delivered', value: kpis.delivered, color: '#2ecc71' },
-          { label: 'Cancelled', value: kpis.cancelled, color: '#e74c3c' },
-          { label: 'Net Revenue', value: `₹${kpis.revenue.toLocaleString('en-IN')}`, color: '#c9a84c' },
+          { label: 'Total Orders', value: kpis.total, sub: null, color: '#c9a84c' },
+          {
+            label: 'Local Express',
+            value: kpis.local,
+            sub: kpis.unassignedLocal > 0 ? `${kpis.unassignedLocal} unassigned` : null,
+            subColor: '#e67e22',
+            color: '#e67e22',
+          },
+          { label: 'iThink Courier', value: kpis.courier, sub: null, color: '#3498db' },
+          { label: 'Processing', value: kpis.pending, sub: null, color: '#f1c40f' },
+          { label: 'In Transit', value: kpis.transit, sub: null, color: '#9b59b6' },
+          { label: 'Delivered', value: kpis.delivered, sub: null, color: '#2ecc71' },
+          { label: 'Cancelled', value: kpis.cancelled, sub: null, color: '#e74c3c' },
+          {
+            label: 'Net Revenue',
+            value: `₹${kpis.revenue.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+            isRevenue: true,
+            sub: null,
+            color: '#c9a84c',
+          },
         ].map((k) => (
-          <div key={k.label} className="glass-panel" style={{ padding: '14px 16px', borderRadius: '10px', borderTop: `2px solid ${k.color}`, border: `1px solid ${k.color}22` }}>
-            <div style={{ fontSize: '0.65rem', color: 'var(--grey-light)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '7px' }}>{k.label}</div>
-            <div style={{ fontSize: '1.45rem', fontWeight: 700, color: k.color, fontFamily: 'var(--font-display)' }}>{k.value}</div>
+          <div
+            key={k.label}
+            className="glass-panel"
+            style={{
+              padding: '14px 16px',
+              borderRadius: '10px',
+              borderTop: `2px solid ${k.color}`,
+              border: `1px solid ${k.color}22`,
+              minHeight: '100px',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'space-between',
+              boxSizing: 'border-box',
+              overflow: 'hidden',
+            }}
+          >
+            <div style={{ fontSize: '0.68rem', color: 'var(--grey-light)', textTransform: 'uppercase', letterSpacing: '0.8px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              {k.label}
+            </div>
+            <div>
+              <div
+                style={{
+                  fontSize: k.isRevenue ? '1.25rem' : '1.45rem',
+                  fontWeight: 800,
+                  color: k.color,
+                  fontFamily: 'var(--font-display)',
+                  lineHeight: 1.1,
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                }}
+              >
+                {k.value}
+              </div>
+              {k.sub && (
+                <div
+                  style={{
+                    display: 'inline-block',
+                    marginTop: '5px',
+                    fontSize: '0.68rem',
+                    fontWeight: 700,
+                    padding: '2px 6px',
+                    borderRadius: '4px',
+                    background: 'rgba(230, 126, 34, 0.15)',
+                    color: k.subColor || '#e67e22',
+                    border: '1px solid rgba(230, 126, 34, 0.3)',
+                    lineHeight: 1.2,
+                  }}
+                >
+                  {k.sub}
+                </div>
+              )}
+            </div>
           </div>
         ))}
       </div>

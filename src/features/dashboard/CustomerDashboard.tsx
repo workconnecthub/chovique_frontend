@@ -28,6 +28,7 @@ import {
   Printer,
   ArrowLeft,
   Check,
+  Copy,
   CheckCheck,
   RefreshCw,
   Filter,
@@ -56,6 +57,7 @@ import { orderService } from '../../services/orderService';
 import { walletService, type CoinTransaction } from '../../services/walletService';
 import type { UserCoupon, CustomerAddress, SupportNotification } from '../../types';
 import { WishlistPage } from '../wishlist/WishlistPage';
+import { isNotificationSupported, getNotificationPermission, requestNotificationPermission, sendBrowserNotification } from '../../utils/browserNotifications';
 
 type CustomerTab =
   | 'overview'
@@ -965,31 +967,84 @@ export const CustomerDashboard: React.FC = () => {
 
   // --- Orders: fetched from backend when orders or overview tab is active ---
   const [isOrdersLoading, setIsOrdersLoading] = useState(false);
+  const [isRefreshingOrders, setIsRefreshingOrders] = useState(false);
   const [ordersError, setOrdersError] = useState('');
+
+  const handleManualRefreshOrders = async () => {
+    setIsRefreshingOrders(true);
+    try {
+      await fetchOrdersData(false);
+      await refreshNotifications();
+      if (isNotificationSupported() && getNotificationPermission() === 'default') {
+        requestNotificationPermission().catch(() => {});
+      }
+      addToast('success', 'Order history updated with live status.');
+    } catch (e) {
+      addToast('error', 'Failed to refresh orders.');
+    } finally {
+      setTimeout(() => setIsRefreshingOrders(false), 500);
+    }
+  };
+
+  const fetchOrdersData = useCallback(async (silent = false) => {
+    if (!silent) {
+      setIsOrdersLoading(true);
+      setOrdersError('');
+    }
+    try {
+      const data = await orderService.getOrders();
+      setOrders(data);
+      // Synchronize selectedOrder if detail view is currently open
+      setSelectedOrder((prev: any) => {
+        if (!prev) return null;
+        const found = data.find((o) => o.id === prev.id);
+        return found || prev;
+      });
+    } catch (err: unknown) {
+      if (!silent) {
+        const msg = err instanceof Error ? err.message : 'Failed to load order history.';
+        setOrdersError(msg);
+      }
+    } finally {
+      if (!silent) setIsOrdersLoading(false);
+    }
+  }, [setOrders]);
 
   useEffect(() => {
     if (activeTab !== 'orders' && activeTab !== 'overview') return;
-    let cancelled = false;
-    setIsOrdersLoading(true);
-    setOrdersError('');
-    orderService
-      .getOrders()
-      .then((data) => {
-        if (!cancelled) setOrders(data);
-      })
-      .catch((err: unknown) => {
-        if (!cancelled) {
-          const msg = err instanceof Error ? err.message : 'Failed to load order history.';
-          setOrdersError(msg);
-        }
-      })
-      .finally(() => {
-        if (!cancelled) setIsOrdersLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [activeTab, setOrders]);
+    fetchOrdersData(false);
+  }, [activeTab, fetchOrdersData]);
+
+  // Live auto-polling: background update orders & notifications every 10s if active orders exist
+  useEffect(() => {
+    if (activeTab !== 'orders' && activeTab !== 'overview') return;
+    const hasActiveOrders = orders.some(
+      (o) => !['delivered', 'cancelled', 'returned'].includes((o.status || '').toLowerCase())
+    );
+    if (!hasActiveOrders) return;
+
+    const timer = setInterval(() => {
+      fetchOrdersData(true);
+      refreshNotifications();
+    }, 10000);
+
+    return () => clearInterval(timer);
+  }, [activeTab, orders, fetchOrdersData, refreshNotifications]);
+
+  // Native Push Notifications for in-app alerts (orders, OTP, delivery boy assignment)
+  const prevNotificationCountRef = useRef<number>(notifications.length);
+  useEffect(() => {
+    if (notifications.length > prevNotificationCountRef.current) {
+      const latest = notifications[0];
+      if (latest && !latest.read) {
+        sendBrowserNotification(latest.title || 'Chovique Order Alert', {
+          body: latest.message || 'You have a new update regarding your order.',
+          tag: `notif-${latest.id || Date.now()}`,
+        });
+      }
+    }
+    prevNotificationCountRef.current = notifications.length;
+  }, [notifications]);
 
   const handleProfileSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -1393,16 +1448,39 @@ export const CustomerDashboard: React.FC = () => {
                     padding: '24px',
                   }}
                 >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                    <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1.25rem', color: '#f5efe6', margin: 0 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '8px' }}>
+                    <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1.25rem', color: '#f5efe6', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
                       Recent Orders
                     </h3>
-                    <button
-                      onClick={() => setActiveTab('orders')}
-                      style={{ background: 'none', border: 'none', color: '#c9a84c', fontSize: '0.82rem', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
-                    >
-                      View All Orders →
-                    </button>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <button
+                        type="button"
+                        onClick={() => fetchOrdersData(false)}
+                        title="Refresh recent orders"
+                        style={{
+                          background: 'rgba(201, 168, 76, 0.1)',
+                          border: '1px solid rgba(201, 168, 76, 0.3)',
+                          color: '#c9a84c',
+                          padding: '4px 10px',
+                          borderRadius: '6px',
+                          fontSize: '0.75rem',
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '5px',
+                        }}
+                      >
+                        <RefreshCw size={12} style={{ animation: isOrdersLoading ? 'spin 1s linear infinite' : 'none' }} />
+                        <span>Refresh</span>
+                      </button>
+                      <button
+                        onClick={() => setActiveTab('orders')}
+                        style={{ background: 'none', border: 'none', color: '#c9a84c', fontSize: '0.82rem', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                      >
+                        View All Orders →
+                      </button>
+                    </div>
                   </div>
 
                   {orders.length === 0 ? (
@@ -1428,35 +1506,229 @@ export const CustomerDashboard: React.FC = () => {
                             : ord.status === 'Cancelled'
                             ? '1px solid rgba(231, 76, 60, 0.3)'
                             : '1px solid rgba(241, 196, 15, 0.3)';
+
+                        const isOutForDelivery = Boolean(ord.delivery_otp || ord.status === 'Out for Delivery' || ord.fulfillment_status === 'OUT_FOR_DELIVERY');
+                        const deliveryBoyName = ord.delivery_boy_name || (ord as any).deliveryBoyName;
+                        const deliveryBoyPhone = ord.delivery_boy_phone || (ord as any).deliveryBoyPhone;
+                        const totalQty = ord.items.reduce((sum, item) => sum + (item.quantity || 1), 0);
+                        const fallbackImg = 'https://images.unsplash.com/photo-1549007994-cb92caebd54b?auto=format&fit=crop&w=120&q=80';
+
                         return (
                           <div
                             key={ord.id}
                             style={{
-                              padding: isMobileGrid ? '12px' : '12px 14px',
-                              background: 'rgba(0,0,0,0.3)',
-                              border: '1px solid rgba(255,255,255,0.06)',
-                              borderRadius: '8px',
+                              padding: isMobileGrid ? '12px' : '14px 16px',
+                              background: 'rgba(0,0,0,0.35)',
+                              border: isOutForDelivery ? '1.5px solid rgba(201, 168, 76, 0.45)' : '1px solid rgba(255,255,255,0.08)',
+                              borderRadius: '10px',
                               display: 'flex',
                               flexDirection: 'column',
-                              gap: '10px',
+                              gap: '12px',
+                              boxShadow: isOutForDelivery ? '0 4px 20px rgba(201, 168, 76, 0.15)' : 'none',
                             }}
                           >
-                            {/* TOP ROW: thumbnail + order meta */}
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0 }}>
-                              <img
-                                src={ord.items[0]?.product?.image || ord.items[0]?.product?.images?.[0] || 'https://images.unsplash.com/photo-1549007994-cb92caebd54b?auto=format&fit=crop&w=120&q=80'}
-                                alt="Product"
-                                style={{ width: '44px', height: '44px', flexShrink: 0, borderRadius: '6px', objectFit: 'cover', border: '1px solid rgba(201,168,76,0.2)' }}
-                              />
-                              <div style={{ minWidth: 0, flex: 1 }}>
-                                <span style={{ fontWeight: 700, color: '#f5efe6', fontSize: '0.82rem', display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{ord.id}</span>
-                                <span style={{ fontSize: '0.74rem', color: 'rgba(255,255,255,0.45)', display: 'block', marginTop: '2px' }}>
-                                  {ord.date} · {ord.items.length} {ord.items.length === 1 ? 'Item' : 'Items'}
-                                </span>
-                              </div>
-                            </div>
+                            {/* 1. PRODUCT IMAGES ROW (ALL PRODUCTS VISIBLE WITH QUANTITIES) */}
+                            {ord.items.length === 1 ? (
+                              (() => {
+                                const singleItem = ord.items[0];
+                                const singleQty = singleItem?.quantity || 1;
+                                const singleName = singleItem?.product?.name || 'Artisanal Selection';
+                                const rawSingleImg = singleItem?.product?.image || singleItem?.product?.images?.[0] || singleItem?.image;
+                                const singleImg = getImageUrl(rawSingleImg);
 
-                            {/* BOTTOM ROW: amount, status, button */}
+                                return (
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0 }}>
+                                    <div style={{ position: 'relative', width: isMobileGrid ? '48px' : '52px', height: isMobileGrid ? '48px' : '52px', flexShrink: 0 }}>
+                                      <img
+                                        src={singleImg}
+                                        alt={singleName}
+                                        onError={(e) => { (e.target as HTMLImageElement).src = fallbackImg; }}
+                                        style={{
+                                          width: '100%',
+                                          height: '100%',
+                                          borderRadius: '8px',
+                                          objectFit: 'cover',
+                                          border: '1px solid rgba(201,168,76,0.3)',
+                                          background: 'rgba(255,255,255,0.02)',
+                                        }}
+                                      />
+                                      {singleQty > 1 && (
+                                        <span
+                                          style={{
+                                            position: 'absolute',
+                                            bottom: '-4px',
+                                            right: '-4px',
+                                            background: '#c9a84c',
+                                            color: '#0f0c0a',
+                                            fontSize: '0.68rem',
+                                            fontWeight: 800,
+                                            padding: '1px 6px',
+                                            borderRadius: '10px',
+                                            border: '1.5px solid #120e0b',
+                                            lineHeight: 1.2,
+                                            boxShadow: '0 2px 5px rgba(0,0,0,0.7)',
+                                          }}
+                                        >
+                                          ×{singleQty}
+                                        </span>
+                                      )}
+                                    </div>
+                                    <div style={{ minWidth: 0, flex: 1 }}>
+                                      <span style={{ fontWeight: 700, color: '#f5efe6', fontSize: '0.86rem', display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                        {singleName} {singleQty > 1 ? `(×${singleQty})` : ''}
+                                      </span>
+                                      <div style={{ fontSize: '0.74rem', color: 'rgba(255,255,255,0.5)', marginTop: '2px', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                                        <span style={{ color: '#c9a84c', fontWeight: 600 }}>{ord.id}</span>
+                                        <span>·</span>
+                                        <span>{ord.date}</span>
+                                      </div>
+                                    </div>
+                                  </div>
+                                );
+                              })()
+                            ) : (
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                                  {ord.items.map((it, idx) => {
+                                    const itName = it.product?.name || `Product ${idx + 1}`;
+                                    const itQty = it.quantity || 1;
+                                    const itRawImg = it.product?.image || it.product?.images?.[0] || it.image;
+                                    const itImg = getImageUrl(itRawImg);
+                                    return (
+                                      <div
+                                        key={it.product?.id || idx}
+                                        title={`${itName} (Qty: ${itQty})`}
+                                        style={{ position: 'relative', width: isMobileGrid ? '42px' : '46px', height: isMobileGrid ? '42px' : '46px', flexShrink: 0 }}
+                                      >
+                                        <img
+                                          src={itImg}
+                                          alt={itName}
+                                          onError={(e) => { (e.target as HTMLImageElement).src = fallbackImg; }}
+                                          style={{
+                                            width: '100%',
+                                            height: '100%',
+                                            borderRadius: '7px',
+                                            objectFit: 'cover',
+                                            border: '1px solid rgba(201,168,76,0.3)',
+                                            background: 'rgba(255,255,255,0.02)',
+                                          }}
+                                        />
+                                        {itQty > 1 && (
+                                          <span
+                                            style={{
+                                              position: 'absolute',
+                                              bottom: '-4px',
+                                              right: '-4px',
+                                              background: '#c9a84c',
+                                              color: '#0f0c0a',
+                                              fontSize: '0.64rem',
+                                              fontWeight: 800,
+                                              padding: '1px 5px',
+                                              borderRadius: '10px',
+                                              border: '1px solid #120e0b',
+                                              lineHeight: 1.1,
+                                              boxShadow: '0 2px 4px rgba(0,0,0,0.7)',
+                                            }}
+                                          >
+                                            ×{itQty}
+                                          </span>
+                                        )}
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px', flexWrap: 'wrap' }}>
+                                  <span style={{ fontWeight: 700, color: '#c9a84c', fontSize: '0.8rem' }}>{ord.id}</span>
+                                  <span style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.5)' }}>
+                                    {ord.date} · {ord.items.length} Products ({totalQty} Total Items)
+                                  </span>
+                                </div>
+                              </div>
+                            )}
+
+                            {/* 2. LIVE OUT FOR DELIVERY & OTP BANNER */}
+                            {isOutForDelivery && (
+                              <div
+                                style={{
+                                  background: 'linear-gradient(135deg, rgba(201, 168, 76, 0.15) 0%, rgba(30, 20, 14, 0.7) 100%)',
+                                  border: '1px solid rgba(201, 168, 76, 0.45)',
+                                  borderRadius: '8px',
+                                  padding: '8px 12px',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'space-between',
+                                  flexWrap: 'wrap',
+                                  gap: '8px',
+                                }}
+                              >
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                  <Truck size={16} style={{ color: '#c9a84c', flexShrink: 0 }} />
+                                  <div>
+                                    <span style={{ fontSize: '0.7rem', fontWeight: 800, color: '#c9a84c', textTransform: 'uppercase', letterSpacing: '0.5px', display: 'block' }}>
+                                      Out for Delivery
+                                    </span>
+                                    {deliveryBoyName && (
+                                      <span style={{ fontSize: '0.75rem', color: '#f5efe6' }}>
+                                        Partner: <strong>{deliveryBoyName}</strong>{deliveryBoyPhone ? ` (${deliveryBoyPhone})` : ''}
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                                {ord.delivery_otp && (
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                    <span style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.7)' }}>OTP:</span>
+                                    <span
+                                      style={{
+                                        fontFamily: 'monospace',
+                                        fontWeight: 900,
+                                        fontSize: '0.98rem',
+                                        letterSpacing: '2px',
+                                        color: '#0f0c0a',
+                                        background: '#c9a84c',
+                                        padding: '2px 8px',
+                                        borderRadius: '5px',
+                                        boxShadow: '0 2px 6px rgba(201, 168, 76, 0.3)',
+                                      }}
+                                    >
+                                      {ord.delivery_otp}
+                                    </span>
+                                    <button
+                                      type="button"
+                                      onClick={(e) => { e.stopPropagation(); copyToClipboard(String(ord.delivery_otp)); }}
+                                      title="Copy OTP"
+                                      style={{ background: 'none', border: 'none', color: '#c9a84c', cursor: 'pointer', padding: '2px', display: 'flex', alignItems: 'center' }}
+                                    >
+                                      {copiedCode === String(ord.delivery_otp) ? <Check size={14} /> : <Copy size={14} />}
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
+                            )}
+
+                            {/* 3. DELIVERY PARTNER ASSIGNED (BEFORE OUT FOR DELIVERY) */}
+                            {!isOutForDelivery && deliveryBoyName && (
+                              <div
+                                style={{
+                                  background: 'rgba(46, 204, 113, 0.08)',
+                                  border: '1px solid rgba(46, 204, 113, 0.25)',
+                                  borderRadius: '6px',
+                                  padding: '6px 10px',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'space-between',
+                                  gap: '8px',
+                                  fontSize: '0.74rem',
+                                }}
+                              >
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#2ecc71' }}>
+                                  <Truck size={14} />
+                                  <span>Partner: <strong style={{ color: '#fff' }}>{deliveryBoyName}</strong>{deliveryBoyPhone ? ` (${deliveryBoyPhone})` : ''}</span>
+                                </div>
+                                <span style={{ color: '#2ecc71', fontSize: '0.7rem', fontWeight: 600 }}>Accepted</span>
+                              </div>
+                            )}
+
+                            {/* 4. BOTTOM ROW: amount, status, button */}
                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
                               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                                 <span style={{ fontWeight: 700, color: '#f5efe6', fontSize: '0.88rem', whiteSpace: 'nowrap' }}>
@@ -2496,65 +2768,120 @@ export const CustomerDashboard: React.FC = () => {
                           </div>
 
                           {selectedOrder.delivery_boy_name && (
-                            <div
-                              style={{
-                                background: 'rgba(46, 204, 113, 0.12)',
-                                border: '1px solid rgba(46, 204, 113, 0.35)',
-                                padding: '6px 14px',
-                                borderRadius: '20px',
-                                color: '#2ecc71',
-                                fontSize: '0.8rem',
-                                fontWeight: 700,
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '6px',
-                              }}
-                            >
-                              <span>Executive:</span>
-                              <strong style={{ color: '#fff' }}>{selectedOrder.delivery_boy_name}</strong>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                              <div
+                                style={{
+                                  background: 'rgba(46, 204, 113, 0.12)',
+                                  border: '1px solid rgba(46, 204, 113, 0.35)',
+                                  padding: '6px 14px',
+                                  borderRadius: '20px',
+                                  color: '#2ecc71',
+                                  fontSize: '0.8rem',
+                                  fontWeight: 700,
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '6px',
+                                }}
+                              >
+                                <span>Executive:</span>
+                                <strong style={{ color: '#fff' }}>{selectedOrder.delivery_boy_name}</strong>
+                              </div>
+                              {(selectedOrder.delivery_boy_phone || (selectedOrder as any).deliveryBoyPhone) && (
+                                <a
+                                  href={`tel:${selectedOrder.delivery_boy_phone || (selectedOrder as any).deliveryBoyPhone}`}
+                                  style={{
+                                    background: 'rgba(201, 168, 76, 0.15)',
+                                    border: '1px solid rgba(201, 168, 76, 0.4)',
+                                    padding: '6px 14px',
+                                    borderRadius: '20px',
+                                    color: '#c9a84c',
+                                    fontSize: '0.8rem',
+                                    fontWeight: 700,
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '6px',
+                                    textDecoration: 'none',
+                                    transition: 'all 0.2s',
+                                  }}
+                                >
+                                  <Phone size={13} />
+                                  <span>Call: {selectedOrder.delivery_boy_phone || (selectedOrder as any).deliveryBoyPhone}</span>
+                                </a>
+                              )}
                             </div>
                           )}
                         </div>
 
                         {selectedOrder.delivery_otp ? (
                           <div style={{ textAlign: 'center', padding: '10px 0' }}>
-                            <div style={{ fontSize: '0.85rem', color: 'rgba(255, 255, 255, 0.75)', marginBottom: '10px' }}>
+                            <div style={{ fontSize: '0.85rem', color: 'rgba(255, 255, 255, 0.75)', marginBottom: '12px' }}>
                               Share this confidential 6-digit code with your delivery executive upon package handover:
                             </div>
-                            <div
-                              style={{
-                                display: 'inline-flex',
-                                gap: '8px',
-                                padding: '12px 20px',
-                                background: 'rgba(12, 9, 7, 0.85)',
-                                borderRadius: '14px',
-                                border: '2px dashed #c9a84c',
-                                boxShadow: '0 4px 20px rgba(201, 168, 76, 0.25)',
-                              }}
-                            >
-                              {String(selectedOrder.delivery_otp).split('').map((char: string, i: number) => (
-                                <span
-                                  key={i}
-                                  style={{
-                                    width: '42px',
-                                    height: '50px',
-                                    display: 'inline-flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    background: 'rgba(201, 168, 76, 0.15)',
-                                    color: '#f5efe6',
-                                    fontSize: '1.6rem',
-                                    fontWeight: 900,
-                                    borderRadius: '8px',
-                                    border: '1px solid rgba(201, 168, 76, 0.3)',
-                                    letterSpacing: '1px',
-                                  }}
-                                >
-                                  {char}
-                                </span>
-                              ))}
+                            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap', justifyContent: 'center' }}>
+                              <div
+                                style={{
+                                  display: 'inline-flex',
+                                  gap: '8px',
+                                  padding: '12px 20px',
+                                  background: 'rgba(12, 9, 7, 0.85)',
+                                  borderRadius: '14px',
+                                  border: '2px dashed #c9a84c',
+                                  boxShadow: '0 4px 20px rgba(201, 168, 76, 0.25)',
+                                }}
+                              >
+                                {String(selectedOrder.delivery_otp).split('').map((char: string, i: number) => (
+                                  <span
+                                    key={i}
+                                    style={{
+                                      width: '42px',
+                                      height: '50px',
+                                      display: 'inline-flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'center',
+                                      background: 'rgba(201, 168, 76, 0.15)',
+                                      color: '#f5efe6',
+                                      fontSize: '1.6rem',
+                                      fontWeight: 900,
+                                      borderRadius: '8px',
+                                      border: '1px solid rgba(201, 168, 76, 0.3)',
+                                      letterSpacing: '1px',
+                                    }}
+                                  >
+                                    {char}
+                                  </span>
+                                ))}
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => copyToClipboard(String(selectedOrder.delivery_otp))}
+                                style={{
+                                  padding: '10px 18px',
+                                  borderRadius: '8px',
+                                  background: copiedCode === String(selectedOrder.delivery_otp) ? '#2ecc71' : '#c9a84c',
+                                  color: '#0f0c0a',
+                                  fontWeight: 800,
+                                  fontSize: '0.85rem',
+                                  border: 'none',
+                                  cursor: 'pointer',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '6px',
+                                  boxShadow: '0 2px 10px rgba(0,0,0,0.5)',
+                                  transition: 'all 0.2s',
+                                }}
+                              >
+                                {copiedCode === String(selectedOrder.delivery_otp) ? (
+                                  <>
+                                    <Check size={16} /> Copied!
+                                  </>
+                                ) : (
+                                  <>
+                                    <Copy size={16} /> Copy OTP
+                                  </>
+                                )}
+                              </button>
                             </div>
-                            <div style={{ fontSize: '0.78rem', color: 'rgba(201, 168, 76, 0.8)', marginTop: '12px' }}>
+                            <div style={{ fontSize: '0.78rem', color: 'rgba(201, 168, 76, 0.8)', marginTop: '14px' }}>
                               🔒 For security, only share this code when you receive your chilled Chovique packaging.
                             </div>
                           </div>
@@ -2562,6 +2889,77 @@ export const CustomerDashboard: React.FC = () => {
                           <div style={{ textAlign: 'center', padding: '14px 0', color: 'rgba(255,255,255,0.7)', fontSize: '0.88rem' }}>
                             Your delivery partner is en route to your doorstep. The 6-digit delivery OTP will generate automatically upon arrival.
                           </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Delivery Partner Assigned Card (When assigned and accepted, before Out for Delivery) */}
+                    {!Boolean(selectedOrder.delivery_otp || selectedOrder.status === 'Out for Delivery' || selectedOrder.fulfillment_status === 'OUT_FOR_DELIVERY') && selectedOrder.delivery_boy_name && (
+                      <div
+                        className="customer-order-card"
+                        style={{
+                          background: 'linear-gradient(135deg, rgba(20, 35, 25, 0.9) 0%, rgba(14, 22, 16, 0.95) 100%)',
+                          border: '1.5px solid rgba(46, 204, 113, 0.4)',
+                          borderRadius: '14px',
+                          padding: '18px 22px',
+                          marginBottom: '20px',
+                          boxShadow: '0 6px 20px rgba(0, 0, 0, 0.35)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          flexWrap: 'wrap',
+                          gap: '14px',
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                          <div
+                            style={{
+                              width: '42px',
+                              height: '42px',
+                              borderRadius: '10px',
+                              background: 'rgba(46, 204, 113, 0.15)',
+                              border: '1px solid rgba(46, 204, 113, 0.4)',
+                              color: '#2ecc71',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              flexShrink: 0,
+                            }}
+                          >
+                            <Truck size={22} />
+                          </div>
+                          <div>
+                            <div style={{ fontSize: '0.72rem', color: '#2ecc71', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.8px' }}>
+                              DELIVERY PARTNER ASSIGNED & ACCEPTED
+                            </div>
+                            <div style={{ color: '#f5efe6', fontSize: '0.95rem', fontWeight: 700, marginTop: '2px' }}>
+                              Executive: {selectedOrder.delivery_boy_name}
+                            </div>
+                            <div style={{ fontSize: '0.78rem', color: 'rgba(255, 255, 255, 0.6)', marginTop: '2px' }}>
+                              Your package is being prepared for handover. Delivery OTP will generate when out for delivery.
+                            </div>
+                          </div>
+                        </div>
+                        {(selectedOrder.delivery_boy_phone || (selectedOrder as any).deliveryBoyPhone) && (
+                          <a
+                            href={`tel:${selectedOrder.delivery_boy_phone || (selectedOrder as any).deliveryBoyPhone}`}
+                            style={{
+                              background: 'rgba(46, 204, 113, 0.15)',
+                              border: '1px solid rgba(46, 204, 113, 0.4)',
+                              padding: '8px 16px',
+                              borderRadius: '8px',
+                              color: '#2ecc71',
+                              fontSize: '0.82rem',
+                              fontWeight: 700,
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '8px',
+                              textDecoration: 'none',
+                            }}
+                          >
+                            <Phone size={14} />
+                            <span>Contact: {selectedOrder.delivery_boy_phone || (selectedOrder as any).deliveryBoyPhone}</span>
+                          </a>
                         )}
                       </div>
                     )}
@@ -3198,13 +3596,38 @@ export const CustomerDashboard: React.FC = () => {
                 {(!selectedOrder || orderSubView === 'list') && (
                   <div>
                     {/* Header */}
-                    <div style={{ marginBottom: '24px' }}>
-                      <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.8rem', color: '#f5efe6', margin: '0 0 6px 0', fontWeight: 700 }}>
-                        Order History
-                      </h2>
-                      <p style={{ color: 'rgba(255, 255, 255, 0.6)', fontSize: '0.9rem', margin: 0 }}>
-                        Track and manage all your orders in one place.
-                      </p>
+                    <div style={{ marginBottom: '24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '14px' }}>
+                      <div>
+                        <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.8rem', color: '#f5efe6', margin: '0 0 6px 0', fontWeight: 700 }}>
+                          Order History
+                        </h2>
+                        <p style={{ color: 'rgba(255, 255, 255, 0.6)', fontSize: '0.9rem', margin: 0 }}>
+                          Track and manage all your orders in one place with real-time updates.
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleManualRefreshOrders}
+                        disabled={isRefreshingOrders || isOrdersLoading}
+                        style={{
+                          padding: '8px 18px',
+                          borderRadius: '8px',
+                          background: isRefreshingOrders ? 'rgba(201, 168, 76, 0.25)' : 'rgba(201, 168, 76, 0.12)',
+                          border: '1px solid rgba(201, 168, 76, 0.4)',
+                          color: '#c9a84c',
+                          fontSize: '0.84rem',
+                          fontWeight: 700,
+                          cursor: isRefreshingOrders || isOrdersLoading ? 'not-allowed' : 'pointer',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          transition: 'all 0.2s',
+                          boxShadow: isRefreshingOrders ? '0 0 12px rgba(201, 168, 76, 0.3)' : 'none',
+                        }}
+                      >
+                        <RefreshCw size={15} style={{ animation: (isRefreshingOrders || isOrdersLoading) ? 'spin 1s linear infinite' : 'none' }} />
+                        <span>{(isRefreshingOrders || isOrdersLoading) ? 'Refreshing...' : 'Refresh Orders'}</span>
+                      </button>
                     </div>
 
                     {/* Filter Tabs & Search Row */}
@@ -3380,18 +3803,39 @@ export const CustomerDashboard: React.FC = () => {
                             }
 
                             if (orderStatusFilter !== 'All') {
-                              if (ordStatus.toLowerCase() !== orderStatusFilter.toLowerCase()) return false;
+                              const filterNorm = orderStatusFilter.toLowerCase().replace(/[-_ ]/g, '');
+                              const statusNorm = (ord.status || '').toLowerCase().replace(/[-_ ]/g, '');
+                              const fulfillmentNorm = (ord.fulfillment_status || (ord as any).fulfillmentStatus || '').toLowerCase().replace(/[-_ ]/g, '');
+                              if (statusNorm !== filterNorm && fulfillmentNorm !== filterNorm) return false;
                             }
                             if (orderSearchQuery.trim() !== '') {
                               const q = orderSearchQuery.trim().toLowerCase();
-                              if (!(ord.id || '').toLowerCase().includes(q)) return false;
+                              const idMatch = (ord.id || '').toLowerCase().includes(q);
+                              const itemMatch = ord.items?.some((it: any) =>
+                                (it.product?.name || it.name || '').toLowerCase().includes(q)
+                              );
+                              if (!idMatch && !itemMatch) return false;
                             }
                             return true;
                           })
                           .sort((a, b) => {
-                            const tA = new Date(a.date).getTime() || 0;
-                            const tB = new Date(b.date).getTime() || 0;
-                            return orderSortOrder === 'newest' ? tB - tA : tA - tB;
+                            const parseTime = (o: any) => {
+                              const raw = o.created_at || (o as any).createdAt || o.date;
+                              const t = new Date(raw).getTime();
+                              return isNaN(t) ? 0 : t;
+                            };
+                            const tA = parseTime(a);
+                            const tB = parseTime(b);
+                            const idA = String(a.id || '');
+                            const idB = String(b.id || '');
+
+                            if (orderSortOrder === 'newest') {
+                              if (tB !== tA) return tB - tA;
+                              return idB.localeCompare(idA, undefined, { numeric: true });
+                            } else {
+                              if (tA !== tB) return tA - tB;
+                              return idA.localeCompare(idB, undefined, { numeric: true });
+                            }
                           });
 
                         if (filteredList.length === 0) {
@@ -3422,278 +3866,550 @@ export const CustomerDashboard: React.FC = () => {
                         return (
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                             {filteredList.map((ord) => {
-                              const firstItem = ord.items[0];
-                              const prodName = firstItem?.product?.name || 'Artisanal Chocolate Collection';
-                              const prodImage = firstItem?.product?.image || firstItem?.product?.images?.[0] || 'https://images.unsplash.com/photo-1549007994-cb92caebd54b?auto=format&fit=crop&w=120&q=80';
+                              const statusBg =
+                                ord.status === 'Delivered'
+                                  ? 'rgba(46, 204, 113, 0.18)'
+                                  : ord.status === 'Confirmed'
+                                  ? 'rgba(52, 152, 219, 0.18)'
+                                  : ord.status === 'Cancelled'
+                                  ? 'rgba(231, 76, 60, 0.18)'
+                                  : ord.status === 'Returned'
+                                  ? 'rgba(155, 89, 182, 0.18)'
+                                  : 'rgba(241, 196, 15, 0.18)';
+                              const statusColor =
+                                ord.status === 'Delivered'
+                                  ? '#2ecc71'
+                                  : ord.status === 'Confirmed'
+                                  ? '#3498db'
+                                  : ord.status === 'Cancelled'
+                                  ? '#e74c3c'
+                                  : ord.status === 'Returned'
+                                  ? '#9b59b6'
+                                  : '#f1c40f';
+                              const statusBorder =
+                                ord.status === 'Delivered'
+                                  ? '1px solid rgba(46, 204, 113, 0.4)'
+                                  : ord.status === 'Confirmed'
+                                  ? '1px solid rgba(52, 152, 219, 0.4)'
+                                  : ord.status === 'Cancelled'
+                                  ? '1px solid rgba(231, 76, 60, 0.4)'
+                                  : ord.status === 'Returned'
+                                  ? '1px solid rgba(155, 89, 182, 0.4)'
+                                  : '1px solid rgba(241, 196, 15, 0.4)';
+
+                              const isOutForDelivery = Boolean(
+                                ord.delivery_otp ||
+                                ord.status === 'Out for Delivery' ||
+                                ord.fulfillment_status === 'OUT_FOR_DELIVERY'
+                              );
+                              const deliveryBoyName = ord.delivery_boy_name || (ord as any).deliveryBoyName;
+                              const deliveryBoyPhone = ord.delivery_boy_phone || (ord as any).deliveryBoyPhone;
                               const totalQty = ord.items.reduce((sum, item) => sum + (item.quantity || 1), 0);
+                              const fallbackImg = 'https://images.unsplash.com/photo-1549007994-cb92caebd54b?auto=format&fit=crop&w=120&q=80';
 
                               return (
                                 <div
                                   key={ord.id}
                                   style={{
                                     background: 'rgba(18, 14, 11, 0.95)',
-                                    border: '1px solid rgba(201, 168, 76, 0.25)',
+                                    border: isOutForDelivery ? '1.5px solid rgba(201, 168, 76, 0.5)' : '1px solid rgba(201, 168, 76, 0.25)',
                                     borderRadius: '14px',
-                                    padding: '24px',
-                                    boxShadow: '0 8px 30px rgba(0, 0, 0, 0.7)',
-                                    display: 'grid',
-                                    gridTemplateColumns: isMobileGrid ? '1fr' : '1.5fr 1.2fr 1fr',
-                                    gap: '24px',
-                                    alignItems: 'start',
+                                    padding: isMobileGrid ? '16px' : '22px',
+                                    boxShadow: isOutForDelivery ? '0 8px 30px rgba(201, 168, 76, 0.18)' : '0 8px 30px rgba(0, 0, 0, 0.7)',
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    gap: '16px',
+                                    transition: 'all 0.2s ease',
                                   }}
                                 >
-                                  {/* Left: Product Thumbnail & Order Info */}
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                                    <img
-                                      src={prodImage}
-                                      alt={prodName}
-                                      style={{ width: '64px', height: '64px', borderRadius: '10px', objectFit: 'cover', border: '1px solid rgba(201, 168, 76, 0.3)', flexShrink: 0 }}
-                                    />
-                                    <div>
-                                      <h3 style={{ color: '#f5efe6', margin: '0 0 4px 0', fontSize: '1.1rem', fontWeight: 700 }}>
+                                  {/* 1. TOP HEADER ROW: Order ID, Date, Payment method, Status Badges */}
+                                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '12px' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                                      <h3 style={{ color: '#f5efe6', margin: 0, fontSize: '1.15rem', fontWeight: 800, letterSpacing: '0.5px' }}>
                                         {ord.id}
                                       </h3>
-                                      <span style={{ fontSize: '0.8rem', color: 'rgba(255, 255, 255, 0.55)', display: 'block', marginBottom: '8px' }}>
+                                      <span style={{ fontSize: '0.8rem', color: 'rgba(255, 255, 255, 0.55)' }}>
                                         Placed on {ord.date} &nbsp;•&nbsp; {ord.paymentMethod || 'Cash on Delivery'}
                                       </span>
-                                      <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                                        <span
-                                          style={{
-                                            fontSize: '0.72rem',
-                                            fontWeight: 800,
-                                            padding: '3px 10px',
-                                            borderRadius: '4px',
-                                            textTransform: 'uppercase',
-                                            letterSpacing: '0.5px',
-                                            display: 'inline-block',
-                                            background:
-                                              ord.status === 'Delivered'
-                                                ? 'rgba(46, 204, 113, 0.18)'
-                                                : ord.status === 'Confirmed'
-                                                ? 'rgba(52, 152, 219, 0.18)'
-                                                : ord.status === 'Cancelled'
-                                                ? 'rgba(231, 76, 60, 0.18)'
-                                                : ord.status === 'Returned'
-                                                ? 'rgba(155, 89, 182, 0.18)'
-                                                : 'rgba(241, 196, 15, 0.18)',
-                                            color:
-                                              ord.status === 'Delivered'
-                                                ? '#2ecc71'
-                                                : ord.status === 'Confirmed'
-                                                ? '#3498db'
-                                                : ord.status === 'Cancelled'
-                                                ? '#e74c3c'
-                                                : ord.status === 'Returned'
-                                                ? '#9b59b6'
-                                                : '#f1c40f',
-                                            border:
-                                              ord.status === 'Delivered'
-                                                ? '1px solid rgba(46, 204, 113, 0.4)'
-                                                : ord.status === 'Confirmed'
-                                                ? '1px solid rgba(52, 152, 219, 0.4)'
-                                                : ord.status === 'Cancelled'
-                                                ? '1px solid rgba(231, 76, 60, 0.4)'
-                                                : ord.status === 'Returned'
-                                                ? '1px solid rgba(155, 89, 182, 0.4)'
-                                                : '1px solid rgba(241, 196, 15, 0.4)',
-                                          }}
-                                        >
-                                          {ord.status}
-                                        </span>
-                                        <span
-                                          style={{
-                                            fontSize: '0.72rem',
-                                            fontWeight: 800,
-                                            padding: '3px 10px',
-                                            borderRadius: '4px',
-                                            textTransform: 'uppercase',
-                                            letterSpacing: '0.5px',
-                                            display: 'inline-block',
-                                            background:
-                                              (ord.payment_status || 'Paid').toUpperCase() === 'PAID'
-                                                ? 'rgba(46, 204, 113, 0.18)'
-                                                : (ord.payment_status || '').toUpperCase() === 'FAILED'
-                                                ? 'rgba(231, 76, 60, 0.18)'
-                                                : (ord.payment_status || '').toUpperCase().includes('REFUND')
-                                                ? 'rgba(155, 89, 182, 0.18)'
-                                                : 'rgba(241, 196, 15, 0.18)',
-                                            color:
-                                              (ord.payment_status || 'Paid').toUpperCase() === 'PAID'
-                                                ? '#2ecc71'
-                                                : (ord.payment_status || '').toUpperCase() === 'FAILED'
-                                                ? '#e74c3c'
-                                                : (ord.payment_status || '').toUpperCase().includes('REFUND')
-                                                ? '#9b59b6'
-                                                : '#f1c40f',
-                                            border:
-                                              (ord.payment_status || 'Paid').toUpperCase() === 'PAID'
-                                                ? '1px solid rgba(46, 204, 113, 0.4)'
-                                                : (ord.payment_status || '').toUpperCase() === 'FAILED'
-                                                ? '1px solid rgba(231, 76, 60, 0.4)'
-                                                : (ord.payment_status || '').toUpperCase().includes('REFUND')
-                                                ? '1px solid rgba(155, 89, 182, 0.4)'
-                                                : '1px solid rgba(241, 196, 15, 0.4)',
-                                          }}
-                                        >
-                                          Payment: {ord.payment_status || 'Paid'}
-                                        </span>
-                                      </div>
                                     </div>
-                                  </div>
-
-                                  {/* Middle: Item details & Calculation breakdown */}
-                                  <div style={{ fontSize: '0.85rem', color: 'rgba(255, 255, 255, 0.75)', lineHeight: 1.6, width: '100%' }}>
-                                    <div style={{ fontWeight: 700, color: '#f5efe6', fontSize: '0.92rem', marginBottom: '6px' }}>
-                                      {prodName} {totalQty > 1 ? `(x${totalQty})` : ''}
-                                    </div>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
-                                      <span style={{ color: 'rgba(255, 255, 255, 0.5)' }}>Subtotal</span>
-                                      <span style={{ color: '#f5efe6' }}>₹{(ord.subtotal || ord.total).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                                    </div>
-                                    {(ord.coupon_discount || 0) > 0 && (
-                                      <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
-                                        <span style={{ color: 'rgba(255, 255, 255, 0.5)' }}>Coupon Discount</span>
-                                        <span style={{ color: '#2ecc71' }}>- ₹{(ord.coupon_discount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                                      </div>
-                                    )}
-                                    {(ord.coin_discount || 0) > 0 && (
-                                      <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
-                                        <span style={{ color: 'rgba(255, 255, 255, 0.5)' }}>Coin Discount</span>
-                                        <span style={{ color: '#2ecc71' }}>- ₹{(ord.coin_discount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                                      </div>
-                                    )}
-                                    {((ord.discount || 0) > 0 && !(ord.coupon_discount || 0) && !(ord.coin_discount || 0)) && (
-                                      <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
-                                        <span style={{ color: 'rgba(255, 255, 255, 0.5)' }}>Promo Discount</span>
-                                        <span style={{ color: '#2ecc71' }}>- ₹{(ord.discount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                                      </div>
-                                    )}
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
-                                      <span style={{ color: 'rgba(255, 255, 255, 0.5)' }}>Shipping</span>
-                                      <span style={{ color: '#f5efe6' }}>₹{(ord.shipping || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                                    </div>
-                                    {(ord.tax || 0) > 0 && (
-                                      <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
-                                        <span style={{ color: 'rgba(255, 255, 255, 0.5)' }}>Tax (GST)</span>
-                                        <span style={{ color: '#f5efe6' }}>₹{(ord.tax || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                                      </div>
-                                    )}
-                                  </div>
-
-                                  {/* Right: Total & Action Buttons */}
-                                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: isMobileGrid ? 'flex-start' : 'flex-end', gap: '12px' }}>
-                                    <div style={{ textAlign: isMobileGrid ? 'left' : 'right' }}>
-                                      <span style={{ fontSize: '0.78rem', color: 'rgba(255, 255, 255, 0.5)', display: 'block' }}>Total</span>
-                                      <span style={{ fontSize: '1.4rem', fontWeight: 800, color: '#c9a84c' }}>
-                                        ₹{ord.total.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+                                      <span
+                                        style={{
+                                          fontSize: '0.74rem',
+                                          fontWeight: 800,
+                                          padding: '4px 10px',
+                                          borderRadius: '5px',
+                                          textTransform: 'uppercase',
+                                          letterSpacing: '0.5px',
+                                          background: statusBg,
+                                          color: statusColor,
+                                          border: statusBorder,
+                                        }}
+                                      >
+                                        {ord.status}
                                       </span>
-                                      <span style={{ fontSize: '0.78rem', color: '#2ecc71', fontWeight: 700, display: 'block', marginTop: '2px' }}>
+                                      <span
+                                        style={{
+                                          fontSize: '0.72rem',
+                                          fontWeight: 800,
+                                          padding: '4px 10px',
+                                          borderRadius: '5px',
+                                          textTransform: 'uppercase',
+                                          letterSpacing: '0.5px',
+                                          background:
+                                            (ord.payment_status || 'Paid').toUpperCase() === 'PAID'
+                                              ? 'rgba(46, 204, 113, 0.18)'
+                                              : (ord.payment_status || '').toUpperCase() === 'FAILED'
+                                              ? 'rgba(231, 76, 60, 0.18)'
+                                              : 'rgba(241, 196, 15, 0.18)',
+                                          color:
+                                            (ord.payment_status || 'Paid').toUpperCase() === 'PAID'
+                                              ? '#2ecc71'
+                                              : (ord.payment_status || '').toUpperCase() === 'FAILED'
+                                              ? '#e74c3c'
+                                              : '#f1c40f',
+                                          border:
+                                            (ord.payment_status || 'Paid').toUpperCase() === 'PAID'
+                                              ? '1px solid rgba(46, 204, 113, 0.4)'
+                                              : (ord.payment_status || '').toUpperCase() === 'FAILED'
+                                              ? '1px solid rgba(231, 76, 60, 0.4)'
+                                              : '1px solid rgba(241, 196, 15, 0.4)',
+                                        }}
+                                      >
                                         Payment: {ord.payment_status || 'Paid'}
                                       </span>
                                     </div>
+                                  </div>
 
-                                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', justifyContent: isMobileGrid ? 'flex-start' : 'flex-end', marginTop: '4px' }}>
-                                      {isOrderCancellable(ord) && (
+                                  {/* 2. LIVE OUT FOR DELIVERY & 6-DIGIT OTP BANNER */}
+                                  {isOutForDelivery && (
+                                    <div
+                                      style={{
+                                        background: 'linear-gradient(135deg, rgba(201, 168, 76, 0.18) 0%, rgba(30, 20, 14, 0.85) 100%)',
+                                        border: '1.5px solid rgba(201, 168, 76, 0.55)',
+                                        borderRadius: '10px',
+                                        padding: '12px 16px',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'space-between',
+                                        flexWrap: 'wrap',
+                                        gap: '12px',
+                                        boxShadow: '0 4px 18px rgba(201, 168, 76, 0.15)',
+                                      }}
+                                    >
+                                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                        <div
+                                          style={{
+                                            width: '38px',
+                                            height: '38px',
+                                            borderRadius: '8px',
+                                            background: 'rgba(201, 168, 76, 0.2)',
+                                            border: '1px solid #c9a84c',
+                                            color: '#c9a84c',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            flexShrink: 0,
+                                          }}
+                                        >
+                                          <Truck size={20} />
+                                        </div>
+                                        <div>
+                                          <div style={{ fontSize: '0.72rem', color: '#c9a84c', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.8px' }}>
+                                            OUT FOR DELIVERY — ARRIVING TODAY
+                                          </div>
+                                          <div style={{ color: '#f5efe6', fontSize: '0.86rem', fontWeight: 700, marginTop: '2px' }}>
+                                            {deliveryBoyName ? (
+                                              <span>
+                                                Partner: <strong style={{ color: '#fff' }}>{deliveryBoyName}</strong>
+                                              </span>
+                                            ) : (
+                                              <span>Executive is en route with your package</span>
+                                            )}
+                                            {deliveryBoyPhone && (
+                                              <a
+                                                href={`tel:${deliveryBoyPhone}`}
+                                                style={{
+                                                  marginLeft: '10px',
+                                                  color: '#c9a84c',
+                                                  fontSize: '0.78rem',
+                                                  textDecoration: 'none',
+                                                  display: 'inline-flex',
+                                                  alignItems: 'center',
+                                                  gap: '4px',
+                                                  background: 'rgba(201, 168, 76, 0.12)',
+                                                  padding: '2px 8px',
+                                                  borderRadius: '12px',
+                                                  border: '1px solid rgba(201, 168, 76, 0.3)',
+                                                }}
+                                              >
+                                                <Phone size={11} /> Call {deliveryBoyPhone}
+                                              </a>
+                                            )}
+                                          </div>
+                                        </div>
+                                      </div>
+
+                                      {ord.delivery_otp ? (
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                                          <div style={{ textAlign: isMobileGrid ? 'left' : 'right' }}>
+                                            <span style={{ fontSize: '0.68rem', color: 'rgba(255,255,255,0.7)', textTransform: 'uppercase', letterSpacing: '0.5px', display: 'block' }}>
+                                              Delivery OTP
+                                            </span>
+                                            <span style={{ fontSize: '0.65rem', color: '#c9a84c' }}>Share with partner</span>
+                                          </div>
+                                          <div
+                                            style={{
+                                              display: 'inline-flex',
+                                              alignItems: 'center',
+                                              background: '#c9a84c',
+                                              borderRadius: '8px',
+                                              padding: '3px 8px 3px 12px',
+                                              gap: '8px',
+                                              boxShadow: '0 2px 10px rgba(201, 168, 76, 0.35)',
+                                            }}
+                                          >
+                                            <span
+                                              style={{
+                                                fontFamily: 'monospace',
+                                                fontSize: '1.18rem',
+                                                fontWeight: 900,
+                                                color: '#0f0c0a',
+                                                letterSpacing: '3px',
+                                              }}
+                                            >
+                                              {ord.delivery_otp}
+                                            </span>
+                                            <button
+                                              type="button"
+                                              onClick={(e) => { e.stopPropagation(); copyToClipboard(String(ord.delivery_otp)); }}
+                                              title="Copy OTP"
+                                              style={{
+                                                background: 'rgba(15, 12, 10, 0.2)',
+                                                border: 'none',
+                                                borderRadius: '5px',
+                                                color: '#0f0c0a',
+                                                padding: '4px',
+                                                cursor: 'pointer',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                transition: 'background 0.2s',
+                                              }}
+                                            >
+                                              {copiedCode === String(ord.delivery_otp) ? <Check size={14} /> : <Copy size={14} />}
+                                            </button>
+                                          </div>
+                                        </div>
+                                      ) : (
+                                        <span style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.6)', fontStyle: 'italic' }}>
+                                          OTP will generate upon partner arrival
+                                        </span>
+                                      )}
+                                    </div>
+                                  )}
+
+                                  {/* 3. DELIVERY PARTNER ASSIGNED BANNER (BEFORE OUT FOR DELIVERY) */}
+                                  {!isOutForDelivery && deliveryBoyName && (
+                                    <div
+                                      style={{
+                                        background: 'linear-gradient(135deg, rgba(46, 204, 113, 0.1) 0%, rgba(20, 30, 22, 0.7) 100%)',
+                                        border: '1px solid rgba(46, 204, 113, 0.35)',
+                                        borderRadius: '8px',
+                                        padding: '10px 14px',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'space-between',
+                                        flexWrap: 'wrap',
+                                        gap: '10px',
+                                      }}
+                                    >
+                                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        <Truck size={17} style={{ color: '#2ecc71', flexShrink: 0 }} />
+                                        <span style={{ fontSize: '0.82rem', color: '#f5efe6' }}>
+                                          Delivery Partner Assigned: <strong style={{ color: '#fff' }}>{deliveryBoyName}</strong> has accepted your order.
+                                        </span>
+                                      </div>
+                                      {deliveryBoyPhone && (
+                                        <a
+                                          href={`tel:${deliveryBoyPhone}`}
+                                          style={{
+                                            color: '#2ecc71',
+                                            fontSize: '0.76rem',
+                                            fontWeight: 700,
+                                            textDecoration: 'none',
+                                            display: 'inline-flex',
+                                            alignItems: 'center',
+                                            gap: '5px',
+                                            background: 'rgba(46, 204, 113, 0.12)',
+                                            padding: '3px 10px',
+                                            borderRadius: '12px',
+                                            border: '1px solid rgba(46, 204, 113, 0.3)',
+                                          }}
+                                        >
+                                          <Phone size={12} /> Contact: {deliveryBoyPhone}
+                                        </a>
+                                      )}
+                                    </div>
+                                  )}
+
+                                  {/* 4. MAIN BODY (PRODUCTS SHOWCASE ON LEFT, CALCULATION & ACTIONS ON RIGHT) */}
+                                  <div
+                                    style={{
+                                      display: 'grid',
+                                      gridTemplateColumns: isMobileGrid ? '1fr' : '1.5fr 1fr',
+                                      gap: '20px',
+                                      alignItems: 'start',
+                                    }}
+                                  >
+                                    {/* LEFT: PRODUCTS LIST & IMAGES (EVERY PRODUCT VISIBLE WITH QUANTITY BADGE) */}
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                      <div style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 700 }}>
+                                        Ordered Items ({ord.items.length} {ord.items.length === 1 ? 'Product' : 'Products'} · {totalQty} Units)
+                                      </div>
+
+                                      {/* Product Thumbnails Gallery */}
+                                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                                        {ord.items.map((it, idx) => {
+                                          const itName = it.product?.name || it.name || `Artisanal Chocolate ${idx + 1}`;
+                                          const itQty = it.quantity || 1;
+                                          const itRawImg = it.product?.image || it.product?.images?.[0] || it.image;
+                                          const itImg = getImageUrl(itRawImg);
+
+                                          return (
+                                            <div
+                                              key={it.product?.id || idx}
+                                              title={`${itName} (Qty: ${itQty})`}
+                                              style={{
+                                                position: 'relative',
+                                                width: isMobileGrid ? '52px' : '60px',
+                                                height: isMobileGrid ? '52px' : '60px',
+                                                flexShrink: 0,
+                                              }}
+                                            >
+                                              <img
+                                                src={itImg}
+                                                alt={itName}
+                                                onError={(e) => { (e.target as HTMLImageElement).src = fallbackImg; }}
+                                                style={{
+                                                  width: '100%',
+                                                  height: '100%',
+                                                  borderRadius: '10px',
+                                                  objectFit: 'cover',
+                                                  border: '1.5px solid rgba(201, 168, 76, 0.35)',
+                                                  background: 'rgba(255, 255, 255, 0.02)',
+                                                  boxShadow: '0 2px 8px rgba(0, 0, 0, 0.5)',
+                                                }}
+                                              />
+                                              {itQty > 1 && (
+                                                <span
+                                                  style={{
+                                                    position: 'absolute',
+                                                    bottom: '-4px',
+                                                    right: '-4px',
+                                                    background: '#c9a84c',
+                                                    color: '#0f0c0a',
+                                                    fontSize: '0.68rem',
+                                                    fontWeight: 800,
+                                                    padding: '1px 6px',
+                                                    borderRadius: '10px',
+                                                    border: '1.5px solid #120e0b',
+                                                    lineHeight: 1.2,
+                                                    boxShadow: '0 2px 5px rgba(0,0,0,0.8)',
+                                                  }}
+                                                >
+                                                  ×{itQty}
+                                                </span>
+                                              )}
+                                            </div>
+                                          );
+                                        })}
+                                      </div>
+
+                                      {/* Item Names & Quantities List */}
+                                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginTop: '2px' }}>
+                                        {ord.items.map((it, idx) => {
+                                          const itName = it.product?.name || it.name || `Artisanal Chocolate ${idx + 1}`;
+                                          const itQty = it.quantity || 1;
+                                          const itPrice = Number(it.price || it.product?.price || 0);
+
+                                          return (
+                                            <div
+                                              key={idx}
+                                              style={{
+                                                fontSize: '0.84rem',
+                                                color: '#f5efe6',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'space-between',
+                                                gap: '8px',
+                                              }}
+                                            >
+                                              <span style={{ fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                {itName}
+                                                {itQty > 1 && (
+                                                  <span style={{ color: '#c9a84c', fontWeight: 800, marginLeft: '6px' }}>
+                                                    ×{itQty}
+                                                  </span>
+                                                )}
+                                              </span>
+                                              <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.8rem', whiteSpace: 'nowrap' }}>
+                                                ₹{(itPrice * itQty).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                              </span>
+                                            </div>
+                                          );
+                                        })}
+                                      </div>
+                                    </div>
+
+                                    {/* RIGHT: BREAKDOWN, TOTAL, & ACTIONS */}
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', background: 'rgba(0,0,0,0.25)', padding: '14px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.04)' }}>
+                                      {/* Price Breakdown */}
+                                      <div style={{ fontSize: '0.82rem', color: 'rgba(255, 255, 255, 0.75)', lineHeight: 1.6, width: '100%' }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
+                                          <span style={{ color: 'rgba(255, 255, 255, 0.5)' }}>Subtotal</span>
+                                          <span style={{ color: '#f5efe6' }}>₹{(ord.subtotal || ord.total).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                        </div>
+                                        {(ord.coupon_discount || 0) > 0 && (
+                                          <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
+                                            <span style={{ color: 'rgba(255, 255, 255, 0.5)' }}>Coupon Discount</span>
+                                            <span style={{ color: '#2ecc71' }}>- ₹{(ord.coupon_discount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                          </div>
+                                        )}
+                                        {(ord.coin_discount || 0) > 0 && (
+                                          <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
+                                            <span style={{ color: 'rgba(255, 255, 255, 0.5)' }}>Coin Discount</span>
+                                            <span style={{ color: '#2ecc71' }}>- ₹{(ord.coin_discount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                          </div>
+                                        )}
+                                        {((ord.discount || 0) > 0 && !(ord.coupon_discount || 0) && !(ord.coin_discount || 0)) && (
+                                          <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
+                                            <span style={{ color: 'rgba(255, 255, 255, 0.5)' }}>Promo Discount</span>
+                                            <span style={{ color: '#2ecc71' }}>- ₹{(ord.discount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                          </div>
+                                        )}
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
+                                          <span style={{ color: 'rgba(255, 255, 255, 0.5)' }}>Shipping</span>
+                                          <span style={{ color: '#f5efe6' }}>₹{(ord.shipping || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                        </div>
+                                        {(ord.tax || 0) > 0 && (
+                                          <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
+                                            <span style={{ color: 'rgba(255, 255, 255, 0.5)' }}>Tax (GST)</span>
+                                            <span style={{ color: '#f5efe6' }}>₹{(ord.tax || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                          </div>
+                                        )}
+                                        <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)', marginTop: '8px', paddingTop: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                          <span style={{ color: '#f5efe6', fontWeight: 700, fontSize: '0.88rem' }}>Order Total</span>
+                                          <span style={{ color: '#c9a84c', fontWeight: 900, fontSize: '1.25rem' }}>
+                                            ₹{ord.total.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                          </span>
+                                        </div>
+                                      </div>
+
+                                      {/* Action Buttons */}
+                                      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '4px' }}>
+                                        {isOrderCancellable(ord) && (
+                                          <button
+                                            type="button"
+                                            disabled={cancellingOrderId === ord.id}
+                                            onClick={() => handleCancelOrder(ord.id)}
+                                            style={{
+                                              padding: '7px 12px',
+                                              borderRadius: '6px',
+                                              background: 'rgba(231, 76, 60, 0.1)',
+                                              border: '1px solid rgba(231, 76, 60, 0.5)',
+                                              color: '#e74c3c',
+                                              fontSize: '0.78rem',
+                                              fontWeight: 700,
+                                              cursor: cancellingOrderId === ord.id ? 'not-allowed' : 'pointer',
+                                              transition: 'all 0.2s ease',
+                                              display: 'inline-flex',
+                                              alignItems: 'center',
+                                              gap: '6px',
+                                            }}
+                                          >
+                                            {cancellingOrderId === ord.id ? 'Cancelling...' : 'Cancel Order'}
+                                          </button>
+                                        )}
+                                        {isOrderReturnable(ord) && (
+                                          <button
+                                            type="button"
+                                            disabled={returningOrderId === ord.id}
+                                            onClick={() => handleReturnOrder(ord.id)}
+                                            style={{
+                                              padding: '7px 12px',
+                                              borderRadius: '6px',
+                                              background: 'rgba(155, 89, 182, 0.1)',
+                                              border: '1px solid rgba(155, 89, 182, 0.5)',
+                                              color: '#9b59b6',
+                                              fontSize: '0.78rem',
+                                              fontWeight: 700,
+                                              cursor: returningOrderId === ord.id ? 'not-allowed' : 'pointer',
+                                              transition: 'all 0.2s ease',
+                                              display: 'inline-flex',
+                                              alignItems: 'center',
+                                              gap: '6px',
+                                            }}
+                                          >
+                                            {returningOrderId === ord.id ? 'Submitting...' : 'Return Order'}
+                                          </button>
+                                        )}
                                         <button
                                           type="button"
-                                          disabled={cancellingOrderId === ord.id}
-                                          onClick={() => handleCancelOrder(ord.id)}
+                                          onClick={() => { setSelectedOrder(ord); setOrderSubView('details'); }}
                                           style={{
-                                            padding: '8px 16px',
+                                            padding: '7px 14px',
                                             borderRadius: '6px',
-                                            background: 'rgba(231, 76, 60, 0.1)',
-                                            border: '1px solid rgba(231, 76, 60, 0.5)',
-                                            color: '#e74c3c',
-                                            fontSize: '0.82rem',
+                                            background: 'transparent',
+                                            border: '1px solid rgba(255, 255, 255, 0.2)',
+                                            color: '#f5efe6',
+                                            fontSize: '0.8rem',
                                             fontWeight: 700,
-                                            cursor: cancellingOrderId === ord.id ? 'not-allowed' : 'pointer',
+                                            cursor: 'pointer',
                                             transition: 'all 0.2s ease',
+                                          }}
+                                        >
+                                          View Details
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={() => { setSelectedOrder(ord); setOrderSubView('invoice'); }}
+                                          style={{
+                                            padding: '7px 14px',
+                                            borderRadius: '6px',
+                                            background: 'transparent',
+                                            border: '1px solid rgba(201, 168, 76, 0.5)',
+                                            color: '#c9a84c',
+                                            fontSize: '0.8rem',
+                                            fontWeight: 700,
+                                            cursor: 'pointer',
+                                            transition: 'all 0.2s ease',
+                                          }}
+                                        >
+                                          View Invoice
+                                        </button>
+                                        <button
+                                          type="button"
+                                          disabled={isPdfDownloading}
+                                          onClick={(e) => handleDownloadInvoice(ord.id, e)}
+                                          style={{
+                                            padding: '7px 14px',
+                                            borderRadius: '6px',
+                                            background: 'linear-gradient(135deg, #c9a84c 0%, #e5c875 100%)',
+                                            color: '#0f0c0a',
+                                            border: 'none',
+                                            fontSize: '0.8rem',
+                                            fontWeight: 700,
+                                            cursor: isPdfDownloading ? 'not-allowed' : 'pointer',
+                                            boxShadow: '0 2px 10px rgba(201, 168, 76, 0.3)',
                                             display: 'inline-flex',
                                             alignItems: 'center',
                                             gap: '6px',
                                           }}
                                         >
-                                          {cancellingOrderId === ord.id ? 'Cancelling...' : 'Cancel Order'}
+                                          <Download size={14} /> Download PDF
                                         </button>
-                                      )}
-                                      {isOrderReturnable(ord) && (
-                                        <button
-                                          type="button"
-                                          disabled={returningOrderId === ord.id}
-                                          onClick={() => handleReturnOrder(ord.id)}
-                                          style={{
-                                            padding: '8px 16px',
-                                            borderRadius: '6px',
-                                            background: 'rgba(155, 89, 182, 0.1)',
-                                            border: '1px solid rgba(155, 89, 182, 0.5)',
-                                            color: '#9b59b6',
-                                            fontSize: '0.82rem',
-                                            fontWeight: 700,
-                                            cursor: returningOrderId === ord.id ? 'not-allowed' : 'pointer',
-                                            transition: 'all 0.2s ease',
-                                            display: 'inline-flex',
-                                            alignItems: 'center',
-                                            gap: '6px',
-                                          }}
-                                        >
-                                          {returningOrderId === ord.id ? 'Submitting...' : 'Return Order'}
-                                        </button>
-                                      )}
-                                      <button
-                                        type="button"
-                                        onClick={() => { setSelectedOrder(ord); setOrderSubView('details'); }}
-                                        style={{
-                                          padding: '8px 16px',
-                                          borderRadius: '6px',
-                                          background: 'transparent',
-                                          border: '1px solid rgba(255, 255, 255, 0.2)',
-                                          color: '#f5efe6',
-                                          fontSize: '0.82rem',
-                                          fontWeight: 700,
-                                          cursor: 'pointer',
-                                          transition: 'all 0.2s ease',
-                                        }}
-                                      >
-                                        View Details
-                                      </button>
-                                      <button
-                                        type="button"
-                                        onClick={() => { setSelectedOrder(ord); setOrderSubView('invoice'); }}
-                                        style={{
-                                          padding: '8px 16px',
-                                          borderRadius: '6px',
-                                          background: 'transparent',
-                                          border: '1px solid rgba(201, 168, 76, 0.5)',
-                                          color: '#c9a84c',
-                                          fontSize: '0.82rem',
-                                          fontWeight: 700,
-                                          cursor: 'pointer',
-                                          transition: 'all 0.2s ease',
-                                        }}
-                                      >
-                                        View Invoice
-                                      </button>
-                                      <button
-                                        type="button"
-                                        disabled={isPdfDownloading}
-                                        onClick={(e) => handleDownloadInvoice(ord.id, e)}
-                                        style={{
-                                          padding: '8px 16px',
-                                          borderRadius: '6px',
-                                          background: 'linear-gradient(135deg, #c9a84c 0%, #e5c875 100%)',
-                                          color: '#0f0c0a',
-                                          border: 'none',
-                                          fontSize: '0.82rem',
-                                          fontWeight: 700,
-                                          cursor: isPdfDownloading ? 'not-allowed' : 'pointer',
-                                          boxShadow: '0 2px 10px rgba(201, 168, 76, 0.3)',
-                                          display: 'inline-flex',
-                                          alignItems: 'center',
-                                          gap: '6px',
-                                        }}
-                                      >
-                                        <Download size={14} /> Download PDF
-                                      </button>
+                                      </div>
                                     </div>
                                   </div>
                                 </div>

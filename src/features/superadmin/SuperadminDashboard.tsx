@@ -2592,7 +2592,7 @@ export const SuperadminDashboard: React.FC = () => {
             <NotificationHeaderDropdown onNavigateTab={handleTabNavigation} isSuperadmin={true} />
           </div>
 
-          {/* View Home Button */}
+          {/* Live Home Button */}
           <button
             className="view-home-btn"
             onClick={() => navigate('/')}
@@ -2622,11 +2622,11 @@ export const SuperadminDashboard: React.FC = () => {
               e.currentTarget.style.borderColor = 'rgba(201, 168, 76, 0.3)';
               e.currentTarget.style.background = 'rgba(20, 16, 13, 0.9)';
             }}
-            title="View Public Site Homepage"
-            aria-label="View Home"
+            title="View Live Public Storefront"
+            aria-label="Live Home"
           >
             <Home size={16} color="#c9a84c" />
-            <span>View Home</span>
+            <span>Live Home</span>
           </button>
 
           {/* Admin User Profile Dropdown Menu */}

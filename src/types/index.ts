@@ -100,6 +100,11 @@ export interface Product {
 export interface CartItem {
   product: Product;
   quantity: number;
+  id?: string;
+  name?: string;
+  price?: number;
+  image?: string;
+  sku?: string;
 }
 
 export type OrderStatus =
@@ -166,6 +171,8 @@ export interface Order {
   delivery_boy_id?: string | null;
   deliveryBoyId?: string | null;
   delivery_boy_name?: string | null;
+  delivery_boy_phone?: string | null;
+  deliveryBoyPhone?: string | null;
   store_location_id?: string | null;
   storeLocationId?: string | null;
   store_name?: string | null;

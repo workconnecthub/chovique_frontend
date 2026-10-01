@@ -560,8 +560,8 @@ const AppContent: React.FC = () => {
 
       {showFooter && <Footer />}
 
-      {/* Chovique AI Assistant — Coco (hidden on admin/delivery/auth routes) */}
-      {!isDeliveryRoute && !isAdminDashboard && <ChatbotWidget />}
+      {/* Chovique AI Assistant — Coco (available for customers, delivery partners, and guests) */}
+      {!isAdminDashboard && <ChatbotWidget />}
     </div>
   );
 };

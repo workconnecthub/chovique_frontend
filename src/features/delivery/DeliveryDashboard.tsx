@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Truck,
   MapPin,
@@ -19,6 +19,7 @@ import {
   X,
   AlertCircle,
   ExternalLink,
+  ChevronLeft,
   ChevronRight,
   User,
   ArrowRight,
@@ -52,6 +53,7 @@ export type DeliveryTab = 'mission' | 'queue' | 'route' | 'history' | 'profile';
 export const DeliveryDashboard: React.FC = () => {
   const { user, logout } = useApp();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const isSupervisor = user?.role === 'admin' || user?.role === 'superadmin';
 
   // Responsive state
@@ -79,7 +81,30 @@ export const DeliveryDashboard: React.FC = () => {
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
-  const [activeTab, setActiveTab] = useState<DeliveryTab>('mission');
+
+  // Tab Sync with URL parameters
+  const validTabs: DeliveryTab[] = ['mission', 'queue', 'route', 'history', 'profile'];
+  const urlTab = searchParams.get('tab') as DeliveryTab;
+  const [activeTab, setActiveTabState] = useState<DeliveryTab>(
+    validTabs.includes(urlTab) ? urlTab : 'mission'
+  );
+
+  const setActiveTab = (tab: DeliveryTab) => {
+    setActiveTabState(tab);
+    setSearchParams({ tab }, { replace: true });
+  };
+
+  useEffect(() => {
+    const tabFromUrl = searchParams.get('tab') as DeliveryTab;
+    if (tabFromUrl && validTabs.includes(tabFromUrl) && tabFromUrl !== activeTab) {
+      setActiveTabState(tabFromUrl);
+    }
+  }, [searchParams]);
+
+  // Delivery History Pagination
+  const [historyPage, setHistoryPage] = useState<number>(1);
+  const HISTORY_PAGE_SIZE = 5;
+
   const [activeOrderId, setActiveOrderId] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
 
@@ -88,6 +113,7 @@ export const DeliveryDashboard: React.FC = () => {
   const [rejectReason, setRejectReason] = useState<string>('Location out of range');
   const [customRejectReason, setCustomRejectReason] = useState<string>('');
   const [isRejecting, setIsRejecting] = useState<boolean>(false);
+  const [isAcceptingOrderId, setIsAcceptingOrderId] = useState<string | null>(null);
 
   // OTP Verification State
   const [otpDigits, setOtpDigits] = useState<string[]>(['', '', '', '', '', '']);
@@ -328,6 +354,11 @@ export const DeliveryDashboard: React.FC = () => {
   // Mobile Drawer State
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState<boolean>(false);
 
+  // ─── Notification Bell State ─────────────────────────────────────────────
+  const [isNotifPanelOpen, setIsNotifPanelOpen] = useState<boolean>(false);
+  const [seenAssignedCount, setSeenAssignedCount] = useState<number>(0);
+  const prevAssignedCountRef = useRef<number>(0);
+
   // Profile Edit Modal State
   const [isEditProfileOpen, setIsEditProfileOpen] = useState<boolean>(false);
   const [editFullName, setEditFullName] = useState<string>('');
@@ -477,17 +508,56 @@ export const DeliveryDashboard: React.FC = () => {
     return () => clearInterval(interval);
   }, [fetchData]);
 
-  // Derived stats
-  const assignedOrders = orders.filter((o) => o.fulfillment_status === 'ASSIGNED');
-  const acceptedOrders = orders.filter((o) => o.fulfillment_status === 'ACCEPTED');
-  const pickedOrders = orders.filter((o) => o.fulfillment_status === 'PICKED_UP');
-  const outOrders = orders.filter((o) => o.fulfillment_status === 'OUT_FOR_DELIVERY');
-  const inProgressOrders = orders.filter(
-    (o) => o.fulfillment_status === 'ACCEPTED' || o.fulfillment_status === 'PICKED_UP' || o.fulfillment_status === 'OUT_FOR_DELIVERY'
+  // Derived stats: Strictly filter out UNASSIGNED orders so delivery partners never see them
+  const validOrders = orders.filter(
+    (o) =>
+      o.fulfillment_status !== 'UNASSIGNED' &&
+      o.status !== 'UNASSIGNED' &&
+      o.fulfillment_status !== 'CANCELLED' &&
+      (user?.id && o.delivery_boy_id ? String(o.delivery_boy_id) === String(user.id) : true)
   );
-  const deliveredOrders = orders.filter((o) => o.fulfillment_status === 'DELIVERED');
 
-  const activeMissionOrder = orders.find((o) => o.id === activeOrderId) || inProgressOrders[0] || assignedOrders[0] || null;
+  const assignedOrders = validOrders.filter((o) => o.fulfillment_status === 'ASSIGNED');
+  const acceptedOrders = validOrders.filter((o) => o.fulfillment_status === 'ACCEPTED');
+  const pickedOrders = validOrders.filter((o) => o.fulfillment_status === 'PICKED_UP');
+  const outOrders = validOrders.filter((o) => o.fulfillment_status === 'OUT_FOR_DELIVERY');
+  const inProgressOrders = validOrders.filter(
+    (o) =>
+      o.fulfillment_status === 'ACCEPTED' ||
+      o.fulfillment_status === 'PICKED_UP' ||
+      o.fulfillment_status === 'OUT_FOR_DELIVERY'
+  );
+  const deliveredOrders = validOrders.filter((o) => o.fulfillment_status === 'DELIVERED');
+
+  // ONLY accepted/in-progress orders can be the active delivery target!
+  const activeMissionOrder =
+    inProgressOrders.find((o) => o.id === activeOrderId) || inProgressOrders[0] || null;
+
+  // Track newly assigned orders and open notification panel automatically
+  useEffect(() => {
+    const newCount = assignedOrders.length;
+    if (newCount > prevAssignedCountRef.current && prevAssignedCountRef.current !== -1) {
+      // New orders arrived — flash notification
+      setIsNotifPanelOpen(true);
+      showToast(
+        `🔔 ${newCount - prevAssignedCountRef.current} new order${newCount - prevAssignedCountRef.current > 1 ? 's' : ''} assigned! Tap to review.`,
+        'success'
+      );
+    }
+    prevAssignedCountRef.current = newCount;
+  }, [assignedOrders.length]);
+
+  const unreadNotifCount = Math.max(0, assignedOrders.length - seenAssignedCount);
+
+  const handleOpenNotifPanel = () => {
+    setIsNotifPanelOpen(true);
+    setSeenAssignedCount(assignedOrders.length);
+  };
+
+  const handleCloseNotifPanel = () => {
+    setIsNotifPanelOpen(false);
+    setSeenAssignedCount(assignedOrders.length);
+  };
 
   // ─── Actions ───────────────────────────────────────────────────────────────
 
@@ -495,6 +565,7 @@ export const DeliveryDashboard: React.FC = () => {
 
   // Accept Order
   const handleAcceptOrder = async (orderId: string) => {
+    setIsAcceptingOrderId(orderId);
     try {
       const updated = await deliveryService.acceptOrder(orderId);
       setOrders((prev) => prev.map((o) => (o.id === orderId ? updated : o)));
@@ -507,6 +578,8 @@ export const DeliveryDashboard: React.FC = () => {
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Failed to accept order.';
       showToast(msg, 'error');
+    } finally {
+      setIsAcceptingOrderId(null);
     }
   };
 
@@ -781,7 +854,7 @@ export const DeliveryDashboard: React.FC = () => {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', flex: 1, overflow: 'hidden' }}>
             {/* Brand Header with Unique Official Chovique Logo */}
             <div
-              onClick={() => navigate('/')}
+              onClick={() => setActiveTab('mission')}
               style={{
                 display: 'flex',
                 alignItems: 'center',
@@ -789,7 +862,7 @@ export const DeliveryDashboard: React.FC = () => {
                 cursor: 'pointer',
                 paddingLeft: '6px',
               }}
-              title="Return to Public Store"
+              title="Delivery Workspace"
             >
               <img
                 src="/assets/logo.png"
@@ -911,7 +984,7 @@ export const DeliveryDashboard: React.FC = () => {
               >
                 <div className="sidebar-item-left">
                   <Navigation size={16} color={activeTab === 'mission' ? '#0f0c0a' : '#c9a84c'} />
-                  <span>Active Mission</span>
+                  <span>Active Delivery</span>
                 </div>
                 {activeMissionOrder && (
                   <span className="sidebar-badge" style={{ background: activeTab === 'mission' ? '#0f0c0a' : 'rgba(201,168,76,0.2)', color: '#c9a84c' }}>LIVE</span>
@@ -942,7 +1015,7 @@ export const DeliveryDashboard: React.FC = () => {
               <button onClick={() => setActiveTab('history')} className={`delivery-sidebar-item ${activeTab === 'history' ? 'active' : ''}`}>
                 <div className="sidebar-item-left">
                   <Award size={16} color={activeTab === 'history' ? '#0f0c0a' : '#c9a84c'} />
-                  <span>Delivered History</span>
+                  <span>Delivery History</span>
                 </div>
                 <span className="sidebar-badge" style={{ background: activeTab === 'history' ? '#0f0c0a' : 'rgba(46,204,113,0.2)', color: '#2ecc71' }}>{deliveredOrders.length}</span>
               </button>
@@ -955,31 +1028,7 @@ export const DeliveryDashboard: React.FC = () => {
                 </div>
               </button>
 
-              <div style={{ height: '1px', background: 'rgba(255,255,255,0.08)', margin: '8px 0' }} />
 
-              {/* View Store Quick Action */}
-              <button
-                onClick={() => navigate('/')}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '10px',
-                  width: '100%',
-                  padding: '10px 14px',
-                  borderRadius: '8px',
-                  fontSize: '0.82rem',
-                  color: 'rgba(255,255,255,0.65)',
-                  background: 'transparent',
-                  border: 'none',
-                  textAlign: 'left',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s',
-                }}
-              >
-                <Store size={15} color="#c9a84c" />
-                <span>Customer Shop & Home Page</span>
-                <ExternalLink size={12} style={{ marginLeft: 'auto', opacity: 0.6 }} />
-              </button>
             </nav>
           </div>
 
@@ -1071,44 +1120,47 @@ export const DeliveryDashboard: React.FC = () => {
           }}
         >
           <div
-            onClick={() => navigate('/')}
+            onClick={() => setActiveTab('mission')}
             style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}
           >
             <img
               src="/assets/logo.png"
               alt="Chovique Logo"
-              style={{ width: '32px', height: '32px', borderRadius: '50%', border: '1px solid #c9a84c', objectFit: 'cover' }}
+              style={{ width: '34px', height: '34px', borderRadius: '50%', border: '1px solid #c9a84c', objectFit: 'cover' }}
               onError={(e) => {
                 (e.target as HTMLImageElement).src =
                   'https://images.unsplash.com/photo-1548907040-4d42b52115ca?auto=format&fit=crop&w=100&q=80';
               }}
             />
-            <span
-              style={{
-                fontFamily: 'var(--font-display, serif)',
-                fontWeight: 700,
-                fontSize: '1.1rem',
-                letterSpacing: '1px',
-                background: 'var(--gradient-gold-text, linear-gradient(135deg, #d4af37 0%, #f3e5ab 50%, #aa771c 100%))',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-              }}
-            >
-              CHOVIQUE
-            </span>
-            <span
-              style={{
-                fontSize: '0.62rem',
-                background: 'rgba(201,168,76,0.18)',
-                color: '#c9a84c',
-                padding: '2px 6px',
-                borderRadius: '4px',
-                fontWeight: 800,
-                letterSpacing: '0.5px',
-              }}
-            >
-              DELIVERY PARTNER
-            </span>
+            <div style={{ display: 'flex', flexDirection: 'column' }}>
+              <span
+                style={{
+                  fontFamily: 'var(--font-display, serif)',
+                  fontWeight: 700,
+                  fontSize: '1.05rem',
+                  letterSpacing: '1.2px',
+                  background: 'var(--gradient-gold-text, linear-gradient(135deg, #d4af37 0%, #f3e5ab 50%, #aa771c 100%))',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  lineHeight: 1.1,
+                }}
+              >
+                CHOVIQUE
+              </span>
+              <span
+                style={{
+                  fontSize: '0.62rem',
+                  color: '#c9a84c',
+                  letterSpacing: '1.4px',
+                  fontWeight: 800,
+                  textTransform: 'uppercase',
+                  lineHeight: 1,
+                  marginTop: '2px',
+                }}
+              >
+                DELIVERY PARTNER
+              </span>
+            </div>
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -1135,32 +1187,48 @@ export const DeliveryDashboard: React.FC = () => {
               </button>
             )}
 
-            {/* Duty Toggle Button */}
+            {/* Duty Toggle Button: explicit ON DUTY / OFF DUTY pill with pulse indicator */}
             <button
               onClick={handleToggleDuty}
               style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: '4px',
-                padding: '4px 8px',
-                borderRadius: '16px',
+                gap: '6px',
+                padding: '5px 10px',
+                borderRadius: '20px',
                 background: isOnDuty ? 'rgba(46, 204, 113, 0.15)' : 'rgba(231, 76, 60, 0.15)',
-                border: `1px solid ${isOnDuty ? 'rgba(46, 204, 113, 0.4)' : 'rgba(231, 76, 60, 0.4)'}`,
+                border: `1px solid ${isOnDuty ? 'rgba(46, 204, 113, 0.5)' : 'rgba(231, 76, 60, 0.5)'}`,
                 color: isOnDuty ? '#2ecc71' : '#e74c3c',
-                fontSize: '0.7rem',
-                fontWeight: 700,
+                fontSize: '0.72rem',
+                fontWeight: 800,
                 cursor: 'pointer',
+                letterSpacing: '0.4px',
               }}
             >
               <span
+                className="status-dot-pulse"
                 style={{
-                  width: '6px',
-                  height: '6px',
+                  width: '7px',
+                  height: '7px',
                   borderRadius: '50%',
                   background: isOnDuty ? '#2ecc71' : '#e74c3c',
+                  boxShadow: isOnDuty ? '0 0 8px #2ecc71' : '0 0 6px #e74c3c',
                 }}
               />
-              {isOnDuty ? 'ON' : 'OFF'}
+              <span>{isOnDuty ? 'ON DUTY' : 'OFF DUTY'}</span>
+            </button>
+
+            {/* Notification Bell Button */}
+            <button
+              className={`notif-bell-btn${unreadNotifCount > 0 ? ' has-notif' : ''}`}
+              onClick={handleOpenNotifPanel}
+              title={unreadNotifCount > 0 ? `${unreadNotifCount} new assignment${unreadNotifCount > 1 ? 's' : ''}` : 'Notifications'}
+              aria-label="Notifications"
+            >
+              <Bell size={16} />
+              {unreadNotifCount > 0 && (
+                <span className="notif-badge">{unreadNotifCount > 9 ? '9+' : unreadNotifCount}</span>
+              )}
             </button>
 
             {/* Refresh Button */}
@@ -1311,30 +1379,6 @@ export const DeliveryDashboard: React.FC = () => {
                   <span>Edit Profile & Photo</span>
                 </button>
 
-                <button
-                  onClick={() => {
-                    navigate('/');
-                    setIsMobileDrawerOpen(false);
-                  }}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '10px',
-                    padding: '10px 12px',
-                    borderRadius: '8px',
-                    background: 'transparent',
-                    border: 'none',
-                    color: '#f5efe6',
-                    fontSize: '0.82rem',
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                    textAlign: 'left',
-                  }}
-                >
-                  <Store size={16} color="#c9a84c" />
-                  <span>Customer Shop & Home Page</span>
-                </button>
-
                 {isSupervisor && (
                   <button
                     onClick={() => {
@@ -1435,7 +1479,208 @@ export const DeliveryDashboard: React.FC = () => {
       )}
 
       {/* ══════════════════════════════════════════════════════════════
-          MOBILE FIXED BOTTOM NAVBAR (≤ 768px only)
+          NOTIFICATION PANEL (Slide-down from mobile top bar)
+          ══════════════════════════════════════════════════════════════ */}
+      {isNotifPanelOpen && (
+        <>
+          {/* Backdrop */}
+          <div
+            onClick={handleCloseNotifPanel}
+            style={{
+              position: 'fixed',
+              inset: 0,
+              background: 'rgba(0,0,0,0.55)',
+              backdropFilter: 'blur(4px)',
+              zIndex: 1050,
+            }}
+          />
+          {/* Notification Panel */}
+          <div
+            style={{
+              position: 'fixed',
+              top: isMobile ? '64px' : '0',
+              right: isMobile ? '0' : 'auto',
+              left: isMobile ? '0' : 'auto',
+              bottom: isMobile ? 'auto' : 'auto',
+              width: isMobile ? '100%' : '380px',
+              maxHeight: isMobile ? '70dvh' : '500px',
+              background: 'linear-gradient(145deg, #1a1410 0%, #0f0c0a 100%)',
+              border: '1px solid rgba(201, 168, 76, 0.35)',
+              borderRadius: isMobile ? '0 0 20px 20px' : '14px',
+              boxShadow: '0 16px 48px rgba(0,0,0,0.7)',
+              zIndex: 1060,
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden',
+            }}
+          >
+            {/* Panel Header */}
+            <div
+              style={{
+                padding: '16px 20px',
+                borderBottom: '1px solid rgba(201, 168, 76, 0.2)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div
+                  style={{
+                    width: '32px',
+                    height: '32px',
+                    borderRadius: '8px',
+                    background: unreadNotifCount > 0 ? 'rgba(230, 126, 34, 0.2)' : 'rgba(201, 168, 76, 0.1)',
+                    border: `1px solid ${unreadNotifCount > 0 ? '#e67e22' : 'rgba(201,168,76,0.3)'}`,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: unreadNotifCount > 0 ? '#e67e22' : '#c9a84c',
+                  }}
+                >
+                  <Bell size={16} />
+                </div>
+                <div>
+                  <div style={{ fontWeight: 800, fontSize: '0.92rem', color: '#f5efe6' }}>Notifications</div>
+                  <div style={{ fontSize: '0.72rem', color: '#c9a84c' }}>
+                    {assignedOrders.length > 0 ? `${assignedOrders.length} order${assignedOrders.length > 1 ? 's' : ''} awaiting acceptance` : 'All caught up!'}
+                  </div>
+                </div>
+              </div>
+              <button
+                onClick={handleCloseNotifPanel}
+                style={{ background: 'transparent', border: 'none', color: 'rgba(255,255,255,0.5)', cursor: 'pointer', padding: '4px' }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Notification List */}
+            <div style={{ flex: 1, overflowY: 'auto', padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              {assignedOrders.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '32px 20px', color: 'rgba(255,255,255,0.45)' }}>
+                  <CheckCircle size={36} style={{ margin: '0 auto 12px', display: 'block', color: '#2ecc71' }} />
+                  <div style={{ fontWeight: 700, fontSize: '0.9rem', color: '#f5efe6' }}>No pending assignments</div>
+                  <div style={{ fontSize: '0.78rem', marginTop: '4px' }}>You're all caught up! Check back soon.</div>
+                </div>
+              ) : (
+                assignedOrders.map((order) => (
+                  <div
+                    key={order.id}
+                    style={{
+                      background: 'rgba(230, 126, 34, 0.08)',
+                      border: '1px solid rgba(230, 126, 34, 0.3)',
+                      borderRadius: '12px',
+                      padding: '14px 16px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '12px',
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: '40px',
+                        height: '40px',
+                        borderRadius: '10px',
+                        background: 'rgba(230, 126, 34, 0.15)',
+                        border: '1px solid rgba(230, 126, 34, 0.4)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: '#e67e22',
+                        flexShrink: 0,
+                      }}
+                    >
+                      <Package size={18} />
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontWeight: 800, fontSize: '0.86rem', color: '#f5efe6' }}>
+                        Order #{order.id}
+                      </div>
+                      <div style={{ fontSize: '0.74rem', color: 'rgba(255,255,255,0.6)', marginTop: '2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {getCustomerName(order)} — {order.shipping_area || order.shipping_city || 'Address on file'}
+                      </div>
+                      <div style={{ fontSize: '0.7rem', color: '#e67e22', fontWeight: 700, marginTop: '4px' }}>
+                        ₹{(order.total ?? 0).toLocaleString('en-IN')} · Awaiting Accept
+                      </div>
+                    </div>
+                    <button
+                      onClick={async () => {
+                        handleCloseNotifPanel();
+                        await handleAcceptOrder(order.id);
+                      }}
+                      disabled={isAcceptingOrderId === order.id}
+                      style={{
+                        padding: '8px 14px',
+                        borderRadius: '8px',
+                        background: 'linear-gradient(135deg, #2ecc71, #27ae60)',
+                        border: 'none',
+                        color: '#0f0c0a',
+                        fontWeight: 800,
+                        fontSize: '0.78rem',
+                        cursor: 'pointer',
+                        flexShrink: 0,
+                        opacity: isAcceptingOrderId === order.id ? 0.6 : 1,
+                      }}
+                    >
+                      {isAcceptingOrderId === order.id ? '...' : 'Accept'}
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+
+            {/* Panel Footer */}
+            {assignedOrders.length > 0 && (
+              <div style={{ padding: '12px 16px', borderTop: '1px solid rgba(201,168,76,0.15)', display: 'flex', gap: '8px' }}>
+                <button
+                  onClick={() => {
+                    handleCloseNotifPanel();
+                    setActiveTab('queue');
+                  }}
+                  style={{
+                    flex: 1,
+                    padding: '11px',
+                    borderRadius: '10px',
+                    background: 'rgba(201,168,76,0.12)',
+                    border: '1px solid rgba(201,168,76,0.3)',
+                    color: '#c9a84c',
+                    fontWeight: 700,
+                    fontSize: '0.82rem',
+                    cursor: 'pointer',
+                  }}
+                >
+                  View All ({assignedOrders.length})
+                </button>
+                <button
+                  onClick={async () => {
+                    handleCloseNotifPanel();
+                    await handleBatchAcceptAll();
+                  }}
+                  disabled={isBatchAccepting}
+                  style={{
+                    flex: 1,
+                    padding: '11px',
+                    borderRadius: '10px',
+                    background: 'linear-gradient(135deg, #2ecc71, #27ae60)',
+                    border: 'none',
+                    color: '#0f0c0a',
+                    fontWeight: 800,
+                    fontSize: '0.82rem',
+                    cursor: isBatchAccepting ? 'not-allowed' : 'pointer',
+                    opacity: isBatchAccepting ? 0.6 : 1,
+                  }}
+                >
+                  {isBatchAccepting ? 'Accepting...' : 'Accept All'}
+                </button>
+              </div>
+            )}
+          </div>
+        </>
+      )}
+
+      {/* ══════════════════════════════════════════════════════════════
+          MOBILE LUXURY BOTTOM NAVBAR (Docked edge-to-edge, matching customer nav)
           ══════════════════════════════════════════════════════════════ */}
       {isMobile && (
         <nav
@@ -1444,26 +1689,61 @@ export const DeliveryDashboard: React.FC = () => {
             bottom: 0,
             left: 0,
             right: 0,
-            height: '68px',
-            background: 'rgba(18, 14, 11, 0.98)',
+            height: '64px',
+            background: 'rgba(10, 7, 5, 0.98)',
+            borderTop: '1px solid rgba(201, 168, 76, 0.25)',
             backdropFilter: 'blur(16px)',
-            borderTop: '1px solid rgba(201, 168, 76, 0.3)',
-            display: 'grid',
-            gridTemplateColumns: 'repeat(5, 1fr)',
-            alignItems: 'center',
-            zIndex: 1000,
-            boxShadow: '0 -6px 20px rgba(0, 0, 0, 0.6)',
-            padding: '0 4px',
+            WebkitBackdropFilter: 'blur(16px)',
+            display: 'flex',
+            alignItems: 'stretch',
+            justifyContent: 'space-around',
+            zIndex: 200,
+            boxShadow: '0 -4px 20px rgba(0, 0, 0, 0.7)',
+            paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+            boxSizing: 'border-box',
           }}
+          aria-label="Delivery Partner Mobile Bottom Navigation"
         >
-          {/* Mission */}
+          {/* 1. Active */}
           <button
+            type="button"
             onClick={() => setActiveTab('mission')}
-            className={`delivery-mobile-bottom-btn ${activeTab === 'mission' ? 'active' : ''}`}
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flex: 1,
+              gap: '3px',
+              background: activeTab === 'mission' ? 'rgba(201, 168, 76, 0.1)' : 'transparent',
+              border: 'none',
+              borderRadius: '8px',
+              color: activeTab === 'mission' ? '#c9a84c' : 'rgba(255, 255, 255, 0.45)',
+              cursor: 'pointer',
+              padding: '6px 4px',
+              position: 'relative',
+              transition: 'color 0.2s ease, transform 0.15s ease',
+              outline: 'none',
+            }}
+            aria-label="Active Mission"
           >
-            <Navigation size={18} />
-            <span style={{ fontSize: '0.68rem', fontWeight: activeTab === 'mission' ? 700 : 500 }}>Mission</span>
-            {activeMissionOrder && (
+            {activeTab === 'mission' && (
+              <span
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: '50%',
+                  transform: 'translateX(-50%)',
+                  width: '24px',
+                  height: '3px',
+                  background: '#c9a84c',
+                  borderRadius: '0 0 2px 2px',
+                }}
+              />
+            )}
+            <Navigation size={21} />
+            <span style={{ fontSize: '0.62rem', fontWeight: 600, letterSpacing: '0.01em' }}>Active</span>
+            {inProgressOrders.length > 0 && (
               <span
                 style={{
                   position: 'absolute',
@@ -1473,31 +1753,65 @@ export const DeliveryDashboard: React.FC = () => {
                   height: '7px',
                   borderRadius: '50%',
                   background: '#2ecc71',
+                  boxShadow: '0 0 8px #2ecc71',
                 }}
               />
             )}
           </button>
 
-          {/* Queue */}
+          {/* 2. Queue */}
           <button
+            type="button"
             onClick={() => setActiveTab('queue')}
-            className={`delivery-mobile-bottom-btn ${activeTab === 'queue' ? 'active' : ''}`}
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flex: 1,
+              gap: '3px',
+              background: activeTab === 'queue' ? 'rgba(201, 168, 76, 0.1)' : 'transparent',
+              border: 'none',
+              borderRadius: '8px',
+              color: activeTab === 'queue' ? '#c9a84c' : 'rgba(255, 255, 255, 0.45)',
+              cursor: 'pointer',
+              padding: '6px 4px',
+              position: 'relative',
+              transition: 'color 0.2s ease, transform 0.15s ease',
+              outline: 'none',
+            }}
+            aria-label="Assigned Queue"
           >
-            <Package size={18} />
-            <span style={{ fontSize: '0.68rem', fontWeight: activeTab === 'queue' ? 700 : 500 }}>Queue</span>
+            {activeTab === 'queue' && (
+              <span
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: '50%',
+                  transform: 'translateX(-50%)',
+                  width: '24px',
+                  height: '3px',
+                  background: '#c9a84c',
+                  borderRadius: '0 0 2px 2px',
+                }}
+              />
+            )}
+            <Package size={21} />
+            <span style={{ fontSize: '0.62rem', fontWeight: 600, letterSpacing: '0.01em' }}>Queue</span>
             {assignedOrders.length > 0 && (
               <span
                 style={{
                   position: 'absolute',
                   top: '4px',
-                  right: '14px',
+                  right: '12px',
                   background: '#e67e22',
                   color: '#fff',
-                  borderRadius: '8px',
-                  fontSize: '0.62rem',
+                  borderRadius: '10px',
+                  fontSize: '0.6rem',
                   fontWeight: 800,
                   padding: '1px 5px',
                   lineHeight: 1.1,
+                  boxShadow: '0 0 6px rgba(230, 126, 34, 0.6)',
                 }}
               >
                 {assignedOrders.length}
@@ -1505,49 +1819,148 @@ export const DeliveryDashboard: React.FC = () => {
             )}
           </button>
 
-          {/* Route (Center accent) */}
+          {/* 3. Route — Floating Elevated Button in the Center (like Shop in Customer Nav) */}
           <button
+            type="button"
             onClick={() => setActiveTab('route')}
-            className={`delivery-mobile-bottom-btn ${activeTab === 'route' ? 'active' : ''}`}
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flex: 1,
+              gap: '3px',
+              background: 'transparent',
+              border: 'none',
+              color: activeTab === 'route' ? '#c9a84c' : 'rgba(255, 255, 255, 0.45)',
+              cursor: 'pointer',
+              padding: '6px 4px',
+              position: 'relative',
+              overflow: 'visible',
+              outline: 'none',
+            }}
+            aria-label="Delivery Route"
           >
             <div
               style={{
-                width: '36px',
-                height: '36px',
+                background: activeTab === 'route' ? '#e5c875' : '#c9a84c',
+                color: '#1a1512',
                 borderRadius: '50%',
-                background: activeTab === 'route' ? 'var(--gradient-gold, linear-gradient(135deg, #c9a84c 0%, #a07d2c 100%))' : 'rgba(201, 168, 76, 0.15)',
-                border: '1px solid rgba(201, 168, 76, 0.4)',
-                color: activeTab === 'route' ? '#0f0c0a' : '#c9a84c',
+                width: '48px',
+                height: '48px',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                marginTop: '-12px',
-                boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
+                marginTop: '-24px',
+                boxShadow: activeTab === 'route'
+                  ? '0 4px 25px rgba(201, 168, 76, 0.7)'
+                  : '0 4px 15px rgba(201, 168, 76, 0.4)',
+                border: '4px solid #0a0705',
+                transition: 'transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease',
               }}
             >
-              <Route size={18} />
+              <Route size={24} />
             </div>
-            <span style={{ fontSize: '0.68rem', fontWeight: activeTab === 'route' ? 700 : 500 }}>
-              Route ({inProgressOrders.length})
+            <span style={{ fontSize: '0.62rem', fontWeight: 600, letterSpacing: '0.01em', marginTop: '2px' }}>
+              Route
             </span>
           </button>
 
-          {/* History */}
+          {/* 4. History */}
           <button
+            type="button"
             onClick={() => setActiveTab('history')}
-            className={`delivery-mobile-bottom-btn ${activeTab === 'history' ? 'active' : ''}`}
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flex: 1,
+              gap: '3px',
+              background: activeTab === 'history' ? 'rgba(201, 168, 76, 0.1)' : 'transparent',
+              border: 'none',
+              borderRadius: '8px',
+              color: activeTab === 'history' ? '#c9a84c' : 'rgba(255, 255, 255, 0.45)',
+              cursor: 'pointer',
+              padding: '6px 4px',
+              position: 'relative',
+              transition: 'color 0.2s ease, transform 0.15s ease',
+              outline: 'none',
+            }}
+            aria-label="Delivery History"
           >
-            <Award size={18} />
-            <span style={{ fontSize: '0.68rem', fontWeight: activeTab === 'history' ? 700 : 500 }}>History</span>
+            {activeTab === 'history' && (
+              <span
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: '50%',
+                  transform: 'translateX(-50%)',
+                  width: '24px',
+                  height: '3px',
+                  background: '#c9a84c',
+                  borderRadius: '0 0 2px 2px',
+                }}
+              />
+            )}
+            <Award size={21} />
+            <span style={{ fontSize: '0.62rem', fontWeight: 600, letterSpacing: '0.01em' }}>History</span>
           </button>
 
-          {/* Profile */}
+          {/* 5. Profile */}
           <button
+            type="button"
             onClick={() => setActiveTab('profile')}
-            className={`delivery-mobile-bottom-btn ${activeTab === 'profile' ? 'active' : ''}`}
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flex: 1,
+              gap: '3px',
+              background: activeTab === 'profile' ? 'rgba(201, 168, 76, 0.1)' : 'transparent',
+              border: 'none',
+              borderRadius: '8px',
+              color: activeTab === 'profile' ? '#c9a84c' : 'rgba(255, 255, 255, 0.45)',
+              cursor: 'pointer',
+              padding: '6px 4px',
+              position: 'relative',
+              transition: 'color 0.2s ease, transform 0.15s ease',
+              outline: 'none',
+            }}
+            aria-label="Delivery Profile"
           >
-            <User size={18} />
-            <span style={{ fontSize: '0.68rem', fontWeight: activeTab === 'profile' ? 700 : 500 }}>Profile</span>
+            {activeTab === 'profile' && (
+              <span
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: '50%',
+                  transform: 'translateX(-50%)',
+                  width: '24px',
+                  height: '3px',
+                  background: '#c9a84c',
+                  borderRadius: '0 0 2px 2px',
+                }}
+              />
+            )}
+            {profile?.avatar_url ? (
+              <div
+                style={{
+                  width: '22px',
+                  height: '22px',
+                  borderRadius: '50%',
+                  overflow: 'hidden',
+                  border: activeTab === 'profile' ? '2px solid #c9a84c' : '1px solid rgba(255,255,255,0.4)',
+                  marginBottom: '2px',
+                }}
+              >
+                <img src={profile.avatar_url} alt="Profile" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              </div>
+            ) : (
+              <User size={21} />
+            )}
+            <span style={{ fontSize: '0.62rem', fontWeight: 600, letterSpacing: '0.01em' }}>Profile</span>
           </button>
         </nav>
       )}
@@ -1593,10 +2006,10 @@ export const DeliveryDashboard: React.FC = () => {
                   gap: '10px',
                 }}
               >
-                {activeTab === 'mission' && 'Active Delivery Mission'}
+                {activeTab === 'mission' && 'Active Delivery'}
                 {activeTab === 'queue' && 'Assigned Orders Queue'}
                 {activeTab === 'route' && `Multi-Stop Batch Route (${inProgressOrders.length} Locations)`}
-                {activeTab === 'history' && 'Delivered Fulfillment History'}
+                {activeTab === 'history' && 'Delivery History'}
                 {activeTab === 'profile' && 'Delivery Partner Profile & Fulfillment Hub'}
               </h2>
               <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.8rem', margin: '3px 0 0 0' }}>
@@ -1609,37 +2022,6 @@ export const DeliveryDashboard: React.FC = () => {
             </div>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-              {/* Duty Pill with Toggle */}
-              <button
-                type="button"
-                onClick={handleToggleDuty}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  padding: '6px 14px',
-                  borderRadius: '20px',
-                  background: isOnDuty ? 'rgba(46, 204, 113, 0.15)' : 'rgba(231, 76, 60, 0.15)',
-                  border: `1px solid ${isOnDuty ? 'rgba(46, 204, 113, 0.4)' : 'rgba(231, 76, 60, 0.4)'}`,
-                  color: isOnDuty ? '#2ecc71' : '#e74c3c',
-                  fontSize: '0.8rem',
-                  fontWeight: 800,
-                  cursor: 'pointer',
-                  transition: 'all 0.2s',
-                }}
-              >
-                <span
-                  style={{
-                    width: '8px',
-                    height: '8px',
-                    borderRadius: '50%',
-                    background: isOnDuty ? '#2ecc71' : '#e74c3c',
-                    boxShadow: isOnDuty ? '0 0 8px #2ecc71' : 'none',
-                  }}
-                />
-                <span>{isOnDuty ? 'ON DUTY (LIVE)' : 'OFF DUTY (STANDBY)'}</span>
-              </button>
-
               {/* Refresh Button */}
               <button
                 onClick={() => fetchData()}
@@ -1738,49 +2120,6 @@ export const DeliveryDashboard: React.FC = () => {
           </div>
         )}
 
-        {/* ─── Metric Stats Strip ────────────────────────────────────────────── */}
-        <section className="delivery-stats-grid" style={{ marginTop: '20px' }}>
-          <div className="delivery-stat-card">
-            <div className="delivery-stat-icon" style={{ background: 'rgba(201,168,76,0.15)', color: '#c9a84c' }}>
-              <Package size={20} />
-            </div>
-            <div>
-              <div className="delivery-stat-val">{assignedOrders.length}</div>
-              <div className="delivery-stat-lbl">New Assigned</div>
-            </div>
-          </div>
-
-          <div className="delivery-stat-card">
-            <div className="delivery-stat-icon" style={{ background: 'rgba(52,152,219,0.15)', color: '#3498db' }}>
-              <Navigation size={20} />
-            </div>
-            <div>
-              <div className="delivery-stat-val">{inProgressOrders.length}</div>
-              <div className="delivery-stat-lbl">In Progress / Picked</div>
-            </div>
-          </div>
-
-          <div className="delivery-stat-card">
-            <div className="delivery-stat-icon" style={{ background: 'rgba(46,204,113,0.15)', color: '#2ecc71' }}>
-              <ShieldCheck size={20} />
-            </div>
-            <div>
-              <div className="delivery-stat-val">{deliveredOrders.length}</div>
-              <div className="delivery-stat-lbl">Delivered Today</div>
-            </div>
-          </div>
-
-          <div className="delivery-stat-card">
-            <div className="delivery-stat-icon" style={{ background: 'rgba(155,89,182,0.15)', color: '#9b59b6' }}>
-              <Layers size={20} />
-            </div>
-            <div>
-              <div className="delivery-stat-val">{orders.length}</div>
-              <div className="delivery-stat-lbl">Total Batch Orders</div>
-            </div>
-          </div>
-        </section>
-
         {/* ─── Main Content Views ─────────────────────────────────────────────── */}
         <div className="delivery-content">
         {isLoading ? (
@@ -1795,6 +2134,154 @@ export const DeliveryDashboard: React.FC = () => {
                ════════════════════════════════════════════════════════════════════ */}
             {activeTab === 'mission' && (
               <div>
+                {/* ─── High-Visibility Live Dispatch Status Bar (Mobile-Optimized) ─── */}
+                <div
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
+                    gap: '10px',
+                    marginBottom: '18px',
+                  }}
+                >
+                  {/* Capsule 1: Queue Waiting */}
+                  <div
+                    onClick={() => setActiveTab('queue')}
+                    style={{
+                      background: assignedOrders.length > 0
+                        ? 'linear-gradient(135deg, rgba(230, 126, 34, 0.22) 0%, rgba(20, 16, 13, 0.95) 100%)'
+                        : 'rgba(20, 16, 13, 0.85)',
+                      border: `1.5px solid ${assignedOrders.length > 0 ? '#e67e22' : 'rgba(201, 168, 76, 0.25)'}`,
+                      borderRadius: '12px',
+                      padding: '12px 14px',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '10px',
+                      boxShadow: assignedOrders.length > 0 ? '0 4px 16px rgba(230, 126, 34, 0.3)' : 'none',
+                      transition: 'transform 0.15s ease',
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: '36px',
+                        height: '36px',
+                        borderRadius: '10px',
+                        background: assignedOrders.length > 0 ? 'rgba(230, 126, 34, 0.25)' : 'rgba(255, 255, 255, 0.05)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: assignedOrders.length > 0 ? '#e67e22' : 'rgba(255, 255, 255, 0.45)',
+                        flexShrink: 0,
+                      }}
+                    >
+                      <Package size={18} />
+                    </div>
+                    <div>
+                      <div style={{ fontSize: '0.66rem', color: assignedOrders.length > 0 ? '#f39c12' : 'rgba(255,255,255,0.5)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                        Queue Waiting
+                      </div>
+                      <div style={{ fontSize: '1.08rem', fontWeight: 800, color: assignedOrders.length > 0 ? '#f5efe6' : 'rgba(255,255,255,0.7)' }}>
+                        {assignedOrders.length} {assignedOrders.length === 1 ? 'Order' : 'Orders'}
+                      </div>
+                      {assignedOrders.length > 0 ? (
+                        <span style={{ fontSize: '0.66rem', color: '#e67e22', fontWeight: 700 }}>Tap to review →</span>
+                      ) : (
+                        <span style={{ fontSize: '0.64rem', color: 'rgba(255,255,255,0.4)' }}>Queue clear</span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Capsule 2: In Progress / En Route */}
+                  <div
+                    onClick={() => {
+                      if (inProgressOrders.length > 0) {
+                        if (!activeOrderId && inProgressOrders[0]) setActiveOrderId(inProgressOrders[0].id);
+                      } else if (assignedOrders.length > 0) {
+                        setActiveTab('queue');
+                      }
+                    }}
+                    style={{
+                      background: inProgressOrders.length > 0
+                        ? 'linear-gradient(135deg, rgba(46, 204, 113, 0.18) 0%, rgba(20, 16, 13, 0.95) 100%)'
+                        : 'rgba(20, 16, 13, 0.85)',
+                      border: `1.5px solid ${inProgressOrders.length > 0 ? '#2ecc71' : 'rgba(201, 168, 76, 0.25)'}`,
+                      borderRadius: '12px',
+                      padding: '12px 14px',
+                      cursor: inProgressOrders.length > 0 ? 'pointer' : 'default',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '10px',
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: '36px',
+                        height: '36px',
+                        borderRadius: '10px',
+                        background: inProgressOrders.length > 0 ? 'rgba(46, 204, 113, 0.22)' : 'rgba(255, 255, 255, 0.05)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: inProgressOrders.length > 0 ? '#2ecc71' : 'rgba(255, 255, 255, 0.45)',
+                        flexShrink: 0,
+                      }}
+                    >
+                      <Truck size={18} />
+                    </div>
+                    <div>
+                      <div style={{ fontSize: '0.66rem', color: inProgressOrders.length > 0 ? '#2ecc71' : 'rgba(255,255,255,0.5)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                        Active En-Route
+                      </div>
+                      <div style={{ fontSize: '1.08rem', fontWeight: 800, color: inProgressOrders.length > 0 ? '#f5efe6' : 'rgba(255,255,255,0.7)' }}>
+                        {inProgressOrders.length} {inProgressOrders.length === 1 ? 'Order' : 'Orders'}
+                      </div>
+                      <div style={{ fontSize: '0.64rem', color: 'rgba(255,255,255,0.5)' }}>
+                        {acceptedOrders.length} acc • {pickedOrders.length} pick • {outOrders.length} out
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Capsule 3: Delivered Today */}
+                  <div
+                    onClick={() => setActiveTab('history')}
+                    style={{
+                      background: 'rgba(20, 16, 13, 0.85)',
+                      border: '1px solid rgba(201, 168, 76, 0.25)',
+                      borderRadius: '12px',
+                      padding: '12px 14px',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '10px',
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: '36px',
+                        height: '36px',
+                        borderRadius: '10px',
+                        background: 'rgba(201, 168, 76, 0.15)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: '#c9a84c',
+                        flexShrink: 0,
+                      }}
+                    >
+                      <CheckCircle2 size={18} />
+                    </div>
+                    <div>
+                      <div style={{ fontSize: '0.66rem', color: '#c9a84c', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                        Delivered Today
+                      </div>
+                      <div style={{ fontSize: '1.08rem', fontWeight: 800, color: '#f5efe6' }}>
+                        {deliveredOrders.length} {deliveredOrders.length === 1 ? 'Order' : 'Orders'}
+                      </div>
+                      <span style={{ fontSize: '0.64rem', color: 'rgba(255,255,255,0.45)' }}>View logs →</span>
+                    </div>
+                  </div>
+                </div>
+
                 {/* Multi-Order Route Recommendation Banner */}
                 {inProgressOrders.length > 1 && (
                   <div
@@ -2205,23 +2692,219 @@ export const DeliveryDashboard: React.FC = () => {
                     </div>
                   </div>
                 ) : (
-                  <div
-                    style={{
-                      background: 'rgba(24, 19, 15, 0.8)',
-                      border: '1px dashed rgba(201, 168, 76, 0.3)',
-                      borderRadius: '16px',
-                      padding: '50px 20px',
-                      textAlign: 'center',
-                    }}
-                  >
-                    <Package size={48} color="#c9a84c" style={{ margin: '0 auto 16px', opacity: 0.8 }} />
-                    <h3 style={{ fontSize: '1.25rem', color: '#f5efe6', marginBottom: '8px' }}>No Active Delivery Mission Selected</h3>
-                    <p style={{ color: 'rgba(255,255,255,0.6)', maxWidth: '420px', margin: '0 auto 20px', fontSize: '0.88rem' }}>
-                      Choose an order from your assigned queue to set as your primary active delivery target.
-                    </p>
-                    <button className="btn-tab" style={{ background: '#c9a84c', color: '#0f0c0a', padding: '10px 20px', borderRadius: '8px', fontWeight: 700 }} onClick={() => setActiveTab('queue')}>
-                      View Assigned Orders Queue
-                    </button>
+                  <div>
+                    {assignedOrders.length > 0 ? (
+                      <div
+                        style={{
+                          background: 'linear-gradient(135deg, rgba(201, 168, 76, 0.12) 0%, rgba(26, 17, 14, 0.95) 100%)',
+                          border: '1.5px solid rgba(201, 168, 76, 0.45)',
+                          borderRadius: '16px',
+                          padding: '24px 20px',
+                          boxShadow: '0 8px 30px rgba(0,0,0,0.5)',
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px', marginBottom: '18px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                            <div
+                              style={{
+                                width: '42px',
+                                height: '42px',
+                                borderRadius: '12px',
+                                background: 'linear-gradient(135deg, #e67e22, #d35400)',
+                                color: '#fff',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                boxShadow: '0 4px 15px rgba(230, 126, 34, 0.4)',
+                              }}
+                            >
+                              <Package size={22} />
+                            </div>
+                            <div>
+                              <h3 style={{ margin: 0, fontSize: '1.15rem', color: '#f5efe6', fontWeight: 800 }}>
+                                {assignedOrders.length} {assignedOrders.length === 1 ? 'Order' : 'Orders'} Waiting in Queue!
+                              </h3>
+                              <p style={{ margin: '2px 0 0', fontSize: '0.8rem', color: '#f39c12' }}>
+                                Dispatch assigned these deliveries to you. Accept one to begin turn-by-turn navigation.
+                              </p>
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => setActiveTab('queue')}
+                            style={{
+                              padding: '8px 16px',
+                              borderRadius: '8px',
+                              background: 'rgba(201, 168, 76, 0.2)',
+                              border: '1px solid #c9a84c',
+                              color: '#f5d77f',
+                              fontSize: '0.82rem',
+                              fontWeight: 700,
+                              cursor: 'pointer',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '6px',
+                            }}
+                          >
+                            <span>Open Queue Tab ({assignedOrders.length})</span>
+                            <ArrowRight size={14} />
+                          </button>
+                        </div>
+
+                        {/* Quick Card Previews of Pending Orders */}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                          {assignedOrders.map((ord) => (
+                            <div
+                              key={ord.id}
+                              style={{
+                                background: 'rgba(18, 14, 11, 0.9)',
+                                border: '1px solid rgba(255, 255, 255, 0.1)',
+                                borderRadius: '12px',
+                                padding: '16px',
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                alignItems: 'center',
+                                flexWrap: 'wrap',
+                                gap: '12px',
+                              }}
+                            >
+                              <div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                                  <span style={{ color: '#c9a84c', fontWeight: 800, fontSize: '0.95rem' }}>Order #{ord.id}</span>
+                                  <span style={{ fontSize: '0.72rem', background: 'rgba(230, 126, 34, 0.2)', color: '#f39c12', padding: '2px 8px', borderRadius: '4px', fontWeight: 700 }}>
+                                    ASSIGNED
+                                  </span>
+                                </div>
+                                <div style={{ color: '#f5efe6', fontWeight: 700, fontSize: '0.9rem', marginBottom: '3px' }}>
+                                  {getCustomerName(ord)}
+                                </div>
+                                <div style={{ color: 'rgba(255, 255, 255, 0.65)', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                  <MapPin size={13} color="#c9a84c" />
+                                  <span>{getFullAddress(ord)}</span>
+                                </div>
+                              </div>
+
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                                <div style={{ textAlign: 'right', marginRight: '6px' }}>
+                                  <div style={{ color: '#2ecc71', fontWeight: 800, fontSize: '1.05rem' }}>
+                                    ₹{ord.total?.toLocaleString('en-IN')}
+                                  </div>
+                                  <div style={{ color: 'rgba(255, 255, 255, 0.5)', fontSize: '0.72rem' }}>
+                                    {ord.items?.length || 1} {(ord.items?.length || 1) === 1 ? 'item' : 'items'}
+                                  </div>
+                                </div>
+                                <button
+                                  onClick={() => handleAcceptOrder(ord.id)}
+                                  disabled={isAcceptingOrderId === ord.id}
+                                  style={{
+                                    padding: '9px 18px',
+                                    borderRadius: '8px',
+                                    background: 'linear-gradient(135deg, #c9a84c 0%, #e5c875 100%)',
+                                    color: '#0f0c0a',
+                                    border: 'none',
+                                    fontWeight: 800,
+                                    fontSize: '0.84rem',
+                                    cursor: isAcceptingOrderId === ord.id ? 'not-allowed' : 'pointer',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '6px',
+                                    boxShadow: '0 4px 12px rgba(201, 168, 76, 0.3)',
+                                  }}
+                                >
+                                  {isAcceptingOrderId === ord.id ? <RefreshCw size={14} className="spinning" /> : <CheckCircle size={15} />}
+                                  <span>{isAcceptingOrderId === ord.id ? 'Accepting...' : 'Accept & Start'}</span>
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ) : inProgressOrders.length > 0 ? (
+                      <div
+                        style={{
+                          background: 'rgba(24, 19, 15, 0.85)',
+                          border: '1px solid rgba(201, 168, 76, 0.3)',
+                          borderRadius: '16px',
+                          padding: '36px 20px',
+                          textAlign: 'center',
+                        }}
+                      >
+                        <Navigation size={42} color="#c9a84c" style={{ margin: '0 auto 14px' }} />
+                        <h3 style={{ fontSize: '1.2rem', color: '#f5efe6', marginBottom: '8px' }}>
+                          Select an Active Order to Navigate
+                        </h3>
+                        <p style={{ color: 'rgba(255,255,255,0.65)', maxWidth: '420px', margin: '0 auto 18px', fontSize: '0.86rem' }}>
+                          You have {inProgressOrders.length} accepted deliveries in progress. Tap an order below or optimize your route.
+                        </p>
+                        <div style={{ display: 'flex', justifyContent: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                          <button
+                            onClick={() => {
+                              if (inProgressOrders[0]) {
+                                setActiveOrderId(inProgressOrders[0].id);
+                              }
+                            }}
+                            style={{
+                              background: '#c9a84c',
+                              color: '#0f0c0a',
+                              padding: '10px 20px',
+                              borderRadius: '8px',
+                              fontWeight: 700,
+                              border: 'none',
+                              cursor: 'pointer',
+                            }}
+                          >
+                            Target Next Order (#{inProgressOrders[0]?.id})
+                          </button>
+                          <button
+                            onClick={() => setActiveTab('route')}
+                            style={{
+                              background: 'rgba(255,255,255,0.08)',
+                              color: '#f5efe6',
+                              border: '1px solid rgba(255,255,255,0.2)',
+                              padding: '10px 20px',
+                              borderRadius: '8px',
+                              fontWeight: 700,
+                              cursor: 'pointer',
+                            }}
+                          >
+                            View Optimized Route Map
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div
+                        style={{
+                          background: 'rgba(24, 19, 15, 0.85)',
+                          border: '1px dashed rgba(201, 168, 76, 0.3)',
+                          borderRadius: '16px',
+                          padding: '50px 20px',
+                          textAlign: 'center',
+                        }}
+                      >
+                        <CheckCircle size={48} color="#2ecc71" style={{ margin: '0 auto 16px', opacity: 0.9 }} />
+                        <h3 style={{ fontSize: '1.25rem', color: '#f5efe6', marginBottom: '8px' }}>
+                          All Caught Up & On Duty!
+                        </h3>
+                        <p style={{ color: 'rgba(255,255,255,0.65)', maxWidth: '420px', margin: '0 auto 20px', fontSize: '0.88rem', lineHeight: 1.5 }}>
+                          No deliveries currently assigned to your queue. You are connected and ON DUTY — new assignments will appear here instantly.
+                        </p>
+                        <div style={{ display: 'flex', justifyContent: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                          <button
+                            className="btn-tab"
+                            style={{ background: '#c9a84c', color: '#0f0c0a', padding: '10px 20px', borderRadius: '8px', fontWeight: 700 }}
+                            onClick={() => fetchData()}
+                          >
+                            <RefreshCw size={14} style={{ marginRight: '6px', verticalAlign: 'middle' }} />
+                            Refresh Queue
+                          </button>
+                          <button
+                            style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)', color: '#f5efe6', padding: '10px 18px', borderRadius: '8px', fontWeight: 600, cursor: 'pointer' }}
+                            onClick={() => setActiveTab('history')}
+                          >
+                            Delivered History ({deliveredOrders.length})
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -2232,6 +2915,49 @@ export const DeliveryDashboard: React.FC = () => {
                ════════════════════════════════════════════════════════════════════ */}
             {activeTab === 'queue' && (
               <div>
+                {/* ─── Queue Scoped Metric Stats Strip ──────────────────────────────── */}
+                <section className="delivery-stats-grid" style={{ marginBottom: '22px' }}>
+                  <div className="delivery-stat-card">
+                    <div className="delivery-stat-icon" style={{ background: 'rgba(201,168,76,0.15)', color: '#c9a84c' }}>
+                      <Package size={20} />
+                    </div>
+                    <div>
+                      <div className="delivery-stat-val">{assignedOrders.length}</div>
+                      <div className="delivery-stat-lbl">New Assigned</div>
+                    </div>
+                  </div>
+
+                  <div className="delivery-stat-card">
+                    <div className="delivery-stat-icon" style={{ background: 'rgba(52,152,219,0.15)', color: '#3498db' }}>
+                      <Navigation size={20} />
+                    </div>
+                    <div>
+                      <div className="delivery-stat-val">{inProgressOrders.length}</div>
+                      <div className="delivery-stat-lbl">In Progress / Picked</div>
+                    </div>
+                  </div>
+
+                  <div className="delivery-stat-card">
+                    <div className="delivery-stat-icon" style={{ background: 'rgba(46,204,113,0.15)', color: '#2ecc71' }}>
+                      <ShieldCheck size={20} />
+                    </div>
+                    <div>
+                      <div className="delivery-stat-val">{deliveredOrders.length}</div>
+                      <div className="delivery-stat-lbl">Delivered Today</div>
+                    </div>
+                  </div>
+
+                  <div className="delivery-stat-card">
+                    <div className="delivery-stat-icon" style={{ background: 'rgba(155,89,182,0.15)', color: '#9b59b6' }}>
+                      <Layers size={20} />
+                    </div>
+                    <div>
+                      <div className="delivery-stat-val">{orders.length}</div>
+                      <div className="delivery-stat-lbl">Total Batch Orders</div>
+                    </div>
+                  </div>
+                </section>
+
                 {/* Filter Pills */}
                 <div style={{ display: 'flex', gap: '8px', marginBottom: '18px', flexWrap: 'wrap' }}>
                   {['ALL', 'ASSIGNED', 'ACCEPTED', 'PICKED_UP', 'OUT_FOR_DELIVERY'].map((st) => (
@@ -2255,53 +2981,108 @@ export const DeliveryDashboard: React.FC = () => {
                   ))}
                 </div>
 
-                {/* Batch Accept Banner when assigned orders exist */}
+                {/* Dedicated Batch Assignment Card */}
                 {assignedOrders.length > 0 && (
                   <div
                     style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      padding: '12px 18px',
-                      background: 'linear-gradient(135deg, rgba(201,168,76,0.18), rgba(28,18,12,0.95))',
-                      border: '1px solid rgba(201,168,76,0.4)',
-                      borderRadius: '12px',
-                      marginBottom: '18px',
-                      flexWrap: 'wrap',
-                      gap: '12px',
-                      boxShadow: '0 4px 16px rgba(0,0,0,0.3)',
+                      background: 'linear-gradient(135deg, rgba(201, 168, 76, 0.18) 0%, rgba(30, 20, 14, 0.95) 100%)',
+                      border: '1.5px solid rgba(201, 168, 76, 0.5)',
+                      borderRadius: '14px',
+                      padding: '18px 22px',
+                      marginBottom: '20px',
+                      boxShadow: '0 8px 30px rgba(0, 0, 0, 0.45)',
                     }}
                   >
-                    <div>
-                      <div style={{ color: 'var(--gold)', fontWeight: 800, fontSize: '0.92rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        <span>⚡ {assignedOrders.length} New Orders Assigned to You</span>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '14px', borderBottom: '1px solid rgba(201,168,76,0.2)', paddingBottom: '14px', marginBottom: '14px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: '#c9a84c', color: '#0f0c0a', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '1.2rem', boxShadow: '0 2px 10px rgba(201,168,76,0.3)' }}>
+                          📦
+                        </div>
+                        <div>
+                          <h3 style={{ margin: 0, color: '#f5efe6', fontSize: '1.12rem', fontWeight: 800 }}>
+                            Batch 1: {assignedOrders.length} {assignedOrders.length === 1 ? 'Order' : 'Orders'} Assigned by Admin
+                          </h3>
+                          <p style={{ margin: '3px 0 0', color: '#c9a84c', fontSize: '0.82rem', fontWeight: 600 }}>
+                            In this batch {assignedOrders.length} {assignedOrders.length === 1 ? 'order has' : 'orders have'} been assigned. Do you want to accept these orders or decline?
+                          </p>
+                        </div>
                       </div>
-                      <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.78rem', marginTop: '3px' }}>
-                        Accept your assigned orders to enable nearest stop route optimization and store pickup.
+                      <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                        <button
+                          type="button"
+                          disabled={isBatchAccepting}
+                          onClick={handleBatchAcceptAll}
+                          style={{
+                            padding: '10px 22px',
+                            borderRadius: '8px',
+                            background: 'linear-gradient(135deg, #c9a84c 0%, #e5c875 100%)',
+                            color: '#0f0c0a',
+                            fontWeight: 800,
+                            fontSize: '0.86rem',
+                            border: 'none',
+                            cursor: isBatchAccepting ? 'not-allowed' : 'pointer',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '7px',
+                            boxShadow: '0 4px 14px rgba(201, 168, 76, 0.35)',
+                          }}
+                        >
+                          {isBatchAccepting ? <RefreshCw size={15} className="spinning" /> : <CheckCircle2 size={16} />}
+                          <span>{isBatchAccepting ? 'Accepting Batch...' : `Accept Batch (${assignedOrders.length})`}</span>
+                        </button>
+                        <button
+                          type="button"
+                          disabled={isBatchAccepting}
+                          onClick={() => {
+                            if (assignedOrders.length > 0) {
+                              setRejectModalOrder(assignedOrders[0]);
+                            }
+                          }}
+                          style={{
+                            padding: '10px 18px',
+                            borderRadius: '8px',
+                            background: 'rgba(231, 76, 60, 0.15)',
+                            color: '#e74c3c',
+                            border: '1px solid rgba(231, 76, 60, 0.4)',
+                            fontWeight: 700,
+                            fontSize: '0.84rem',
+                            cursor: 'pointer',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                          }}
+                        >
+                          <X size={15} />
+                          <span>Decline Batch</span>
+                        </button>
                       </div>
                     </div>
-                    <button
-                      type="button"
-                      disabled={isBatchAccepting}
-                      onClick={handleBatchAcceptAll}
-                      style={{
-                        padding: '9px 20px',
-                        borderRadius: '8px',
-                        background: 'linear-gradient(135deg, #c9a84c 0%, #a07d2c 100%)',
-                        color: '#0f0c0a',
-                        fontWeight: 800,
-                        fontSize: '0.84rem',
-                        border: 'none',
-                        cursor: isBatchAccepting ? 'not-allowed' : 'pointer',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '6px',
-                        boxShadow: '0 4px 12px rgba(201,168,76,0.25)',
-                      }}
-                    >
-                      {isBatchAccepting ? <RefreshCw size={14} className="spinning" /> : <CheckCircle2 size={15} />}
-                      <span>{isBatchAccepting ? 'Accepting All...' : `Accept All (${assignedOrders.length}) Orders`}</span>
-                    </button>
+
+                    {/* Batch Orders Overview List */}
+                    <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                      {assignedOrders.map((ord) => (
+                        <div
+                          key={ord.id}
+                          style={{
+                            padding: '8px 14px',
+                            background: 'rgba(0,0,0,0.45)',
+                            borderRadius: '8px',
+                            border: '1px solid rgba(255,255,255,0.08)',
+                            fontSize: '0.8rem',
+                            color: '#f5efe6',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                          }}
+                        >
+                          <span style={{ color: '#c9a84c', fontWeight: 800 }}>#{ord.id}</span>
+                          <span style={{ color: 'rgba(255,255,255,0.4)' }}>·</span>
+                          <span>{getCustomerName(ord)}</span>
+                          <span style={{ color: 'rgba(255,255,255,0.4)' }}>·</span>
+                          <span style={{ color: '#2ecc71', fontWeight: 700 }}>₹{ord.total?.toLocaleString('en-IN')}</span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 )}
 
@@ -2707,65 +3488,216 @@ export const DeliveryDashboard: React.FC = () => {
                ════════════════════════════════════════════════════════════════════ */}
             {activeTab === 'history' && (
               <div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                  {deliveredOrders.map((order) => (
-                    <div
-                      key={order.id}
-                      style={{
-                        background: 'rgba(20, 16, 13, 0.85)',
-                        border: '1px solid rgba(46, 204, 113, 0.25)',
-                        borderRadius: '12px',
-                        padding: '16px 20px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        flexWrap: 'wrap',
-                        gap: '12px',
-                      }}
-                    >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                {/* Delivery History Stats Grid */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '14px', marginBottom: '22px' }}>
+                  <div className="glass-panel" style={{ padding: '14px 18px', borderRadius: '10px', borderTop: '2px solid #c9a84c', background: 'rgba(20,16,13,0.9)' }}>
+                    <div style={{ fontSize: '0.68rem', color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '6px' }}>
+                      Total Assigned Orders
+                    </div>
+                    <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#c9a84c', fontFamily: 'var(--font-display)' }}>
+                      {validOrders.length}
+                    </div>
+                    <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.5)', marginTop: '4px' }}>
+                      Assigned by Dispatch
+                    </div>
+                  </div>
+
+                  <div className="glass-panel" style={{ padding: '14px 18px', borderRadius: '10px', borderTop: '2px solid #3498db', background: 'rgba(20,16,13,0.9)' }}>
+                    <div style={{ fontSize: '0.68rem', color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '6px' }}>
+                      Accepted Orders
+                    </div>
+                    <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#3498db', fontFamily: 'var(--font-display)' }}>
+                      {acceptedOrders.length + pickedOrders.length + outOrders.length + deliveredOrders.length}
+                    </div>
+                    <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.5)', marginTop: '4px' }}>
+                      Accepted into workflow
+                    </div>
+                  </div>
+
+                  <div className="glass-panel" style={{ padding: '14px 18px', borderRadius: '10px', borderTop: '2px solid #e67e22', background: 'rgba(20,16,13,0.9)' }}>
+                    <div style={{ fontSize: '0.68rem', color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '6px' }}>
+                      In-Flight / Out
+                    </div>
+                    <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#e67e22', fontFamily: 'var(--font-display)' }}>
+                      {inProgressOrders.length}
+                    </div>
+                    <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.5)', marginTop: '4px' }}>
+                      Active on route
+                    </div>
+                  </div>
+
+                  <div className="glass-panel" style={{ padding: '14px 18px', borderRadius: '10px', borderTop: '2px solid #2ecc71', background: 'rgba(20,16,13,0.9)' }}>
+                    <div style={{ fontSize: '0.68rem', color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '6px' }}>
+                      Delivered Successfully
+                    </div>
+                    <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#2ecc71', fontFamily: 'var(--font-display)' }}>
+                      {deliveredOrders.length}
+                    </div>
+                    <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.5)', marginTop: '4px' }}>
+                      Verified with OTP handoff
+                    </div>
+                  </div>
+                </div>
+
+                {(() => {
+                  const totalHistoryPages = Math.max(1, Math.ceil(deliveredOrders.length / HISTORY_PAGE_SIZE));
+                  const currentHistoryPage = Math.min(historyPage, totalHistoryPages);
+                  const startIndex = (currentHistoryPage - 1) * HISTORY_PAGE_SIZE;
+                  const paginatedDeliveredOrders = deliveredOrders.slice(startIndex, startIndex + HISTORY_PAGE_SIZE);
+
+                  return (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                      {paginatedDeliveredOrders.map((order) => (
                         <div
+                          key={order.id}
                           style={{
-                            width: '38px',
-                            height: '38px',
-                            borderRadius: '10px',
-                            background: 'rgba(46, 204, 113, 0.15)',
-                            color: '#2ecc71',
+                            background: 'rgba(20, 16, 13, 0.85)',
+                            border: '1px solid rgba(46, 204, 113, 0.25)',
+                            borderRadius: '12px',
+                            padding: '16px 20px',
                             display: 'flex',
                             alignItems: 'center',
-                            justifyContent: 'center',
+                            justifyContent: 'space-between',
+                            flexWrap: 'wrap',
+                            gap: '12px',
                           }}
                         >
-                          <CheckCircle size={20} />
-                        </div>
-                        <div>
-                          <div style={{ fontWeight: 700, fontSize: '0.95rem', color: '#f5efe6' }}>
-                            Order #{order.id} • {getCustomerName(order)}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                            <div
+                              style={{
+                                width: '38px',
+                                height: '38px',
+                                borderRadius: '10px',
+                                background: 'rgba(46, 204, 113, 0.15)',
+                                color: '#2ecc71',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                              }}
+                            >
+                              <CheckCircle size={20} />
+                            </div>
+                            <div>
+                              <div style={{ fontWeight: 700, fontSize: '0.95rem', color: '#f5efe6' }}>
+                                Order #{order.id} • {getCustomerName(order)}
+                              </div>
+                              <div style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.6)' }}>
+                                {getFullAddress(order)}
+                              </div>
+                            </div>
                           </div>
-                          <div style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.6)' }}>
-                            {getFullAddress(order)}
+
+                          <div style={{ textAlign: 'right' }}>
+                            <div style={{ fontWeight: 800, color: '#2ecc71', fontSize: '1rem' }}>
+                              ₹{order.total?.toLocaleString('en-IN')}
+                            </div>
+                            <div style={{ fontSize: '0.72rem', color: '#c9a84c', marginTop: '2px' }}>
+                              OTP Verified & Handed Over
+                            </div>
                           </div>
                         </div>
-                      </div>
+                      ))}
 
-                      <div style={{ textAlign: 'right' }}>
-                        <div style={{ fontWeight: 800, color: '#2ecc71', fontSize: '1rem' }}>
-                          ₹{order.total?.toLocaleString('en-IN')}
+                      {deliveredOrders.length === 0 && (
+                        <div style={{ textAlign: 'center', padding: '60px 20px', color: 'rgba(255,255,255,0.5)' }}>
+                          <Clock size={36} color="#c9a84c" style={{ margin: '0 auto 12px' }} />
+                          <div style={{ fontWeight: 700, fontSize: '1rem' }}>No delivered orders yet today</div>
                         </div>
-                        <div style={{ fontSize: '0.72rem', color: '#c9a84c', marginTop: '2px' }}>
-                          OTP Verified & Handed Over
-                        </div>
-                      </div>
-                    </div>
-                  ))}
+                      )}
 
-                  {deliveredOrders.length === 0 && (
-                    <div style={{ textAlign: 'center', padding: '60px 20px', color: 'rgba(255,255,255,0.5)' }}>
-                      <Clock size={36} color="#c9a84c" style={{ margin: '0 auto 12px' }} />
-                      <div style={{ fontWeight: 700, fontSize: '1rem' }}>No delivered orders yet today</div>
+                      {/* Pagination Controls */}
+                      {deliveredOrders.length > HISTORY_PAGE_SIZE && (
+                        <div
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            flexWrap: 'wrap',
+                            gap: '12px',
+                            padding: '14px 18px',
+                            marginTop: '8px',
+                            background: 'rgba(20, 16, 13, 0.75)',
+                            border: '1px solid rgba(201, 168, 76, 0.2)',
+                            borderRadius: '10px',
+                          }}
+                        >
+                          <div style={{ fontSize: '0.8rem', color: 'rgba(255, 255, 255, 0.65)' }}>
+                            Showing <strong style={{ color: '#f5efe6' }}>{startIndex + 1}</strong> to{' '}
+                            <strong style={{ color: '#f5efe6' }}>{Math.min(startIndex + HISTORY_PAGE_SIZE, deliveredOrders.length)}</strong> of{' '}
+                            <strong style={{ color: '#c9a84c' }}>{deliveredOrders.length}</strong> delivered orders
+                          </div>
+
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <button
+                              type="button"
+                              onClick={() => setHistoryPage((p) => Math.max(1, p - 1))}
+                              disabled={currentHistoryPage === 1}
+                              style={{
+                                padding: '6px 12px',
+                                borderRadius: '6px',
+                                background: currentHistoryPage === 1 ? 'rgba(255, 255, 255, 0.04)' : 'rgba(201, 168, 76, 0.15)',
+                                border: '1px solid rgba(201, 168, 76, 0.3)',
+                                color: currentHistoryPage === 1 ? 'rgba(255, 255, 255, 0.3)' : '#f5efe6',
+                                fontSize: '0.78rem',
+                                fontWeight: 700,
+                                cursor: currentHistoryPage === 1 ? 'not-allowed' : 'pointer',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                              }}
+                            >
+                              <ChevronLeft size={14} />
+                              <span>Prev</span>
+                            </button>
+
+                            {Array.from({ length: totalHistoryPages }, (_, i) => i + 1).map((pageNum) => (
+                              <button
+                                key={pageNum}
+                                type="button"
+                                onClick={() => setHistoryPage(pageNum)}
+                                style={{
+                                  width: '32px',
+                                  height: '32px',
+                                  borderRadius: '6px',
+                                  background: pageNum === currentHistoryPage ? '#c9a84c' : 'rgba(255, 255, 255, 0.05)',
+                                  border: pageNum === currentHistoryPage ? '1px solid #c9a84c' : '1px solid rgba(255, 255, 255, 0.1)',
+                                  color: pageNum === currentHistoryPage ? '#0f0c0a' : '#f5efe6',
+                                  fontSize: '0.8rem',
+                                  fontWeight: 800,
+                                  cursor: 'pointer',
+                                }}
+                              >
+                                {pageNum}
+                              </button>
+                            ))}
+
+                            <button
+                              type="button"
+                              onClick={() => setHistoryPage((p) => Math.min(totalHistoryPages, p + 1))}
+                              disabled={currentHistoryPage === totalHistoryPages}
+                              style={{
+                                padding: '6px 12px',
+                                borderRadius: '6px',
+                                background: currentHistoryPage === totalHistoryPages ? 'rgba(255, 255, 255, 0.04)' : 'rgba(201, 168, 76, 0.15)',
+                                border: '1px solid rgba(201, 168, 76, 0.3)',
+                                color: currentHistoryPage === totalHistoryPages ? 'rgba(255, 255, 255, 0.3)' : '#f5efe6',
+                                fontSize: '0.78rem',
+                                fontWeight: 700,
+                                cursor: currentHistoryPage === totalHistoryPages ? 'not-allowed' : 'pointer',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                              }}
+                            >
+                              <span>Next</span>
+                              <ChevronRight size={14} />
+                            </button>
+                          </div>
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
+                  );
+                })()}
               </div>
             )}
 
@@ -2975,25 +3907,6 @@ export const DeliveryDashboard: React.FC = () => {
 
                 {/* Quick Session Actions */}
                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
-                  <button
-                    onClick={() => navigate('/')}
-                    style={{
-                      padding: '10px 18px',
-                      borderRadius: '8px',
-                      background: 'rgba(255,255,255,0.06)',
-                      border: '1px solid rgba(255,255,255,0.15)',
-                      color: '#f5efe6',
-                      fontWeight: 600,
-                      fontSize: '0.84rem',
-                      cursor: 'pointer',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '6px',
-                    }}
-                  >
-                    <Store size={15} />
-                    <span>Live Storefront / Home Page</span>
-                  </button>
                   <button
                     onClick={() => logout()}
                     style={{

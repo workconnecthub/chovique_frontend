@@ -36,6 +36,9 @@ import {
   FileSpreadsheet,
   ShieldCheck,
   Loader2,
+  Route,
+  Navigation,
+  Award,
 } from 'lucide-react';
 import '../styles/chatbot.css';
 
@@ -174,6 +177,15 @@ const SUPERADMIN_SUGGESTIONS = [
   '📈 This month\'s revenue report',
 ];
 
+const DELIVERY_SUGGESTIONS = [
+  '📦 Show my assigned queue',
+  '⚡ Next nearest delivery stop',
+  '📜 My delivery history',
+  '🔑 OTP verification help',
+  '📍 Route map & navigation',
+  '🏢 Central Hub details',
+];
+
 // ─── Hidden routes (only login/auth pages) ─────────────────────────
 
 const HIDDEN_ON_PATHS = [
@@ -216,6 +228,23 @@ const getActionIcon = (url: string, iconType?: string) => {
   }
   if (iconType === 'dashboard' || url === '/admin' || url === '/superadmin') {
     return <LayoutDashboard size={14} className="chv-chat-action-icon" />;
+  }
+
+  // Delivery Partner
+  if (url.startsWith('/delivery')) {
+    if (url.includes('tab=queue') || iconType === 'package') {
+      return <Package size={14} className="chv-chat-action-icon" />;
+    }
+    if (url.includes('tab=route') || iconType === 'route') {
+      return <Route size={14} className="chv-chat-action-icon" />;
+    }
+    if (url.includes('tab=history') || iconType === 'award') {
+      return <Award size={14} className="chv-chat-action-icon" />;
+    }
+    if (url.includes('tab=profile') || iconType === 'user') {
+      return <User size={14} className="chv-chat-action-icon" />;
+    }
+    return <Navigation size={14} className="chv-chat-action-icon" />;
   }
 
   // Customer & Common
@@ -607,39 +636,49 @@ export const ChatbotWidget: React.FC = () => {
   };
 
   const canSend = input.trim().length > 0 && !isLoading;
+  const isDelivery = role === 'delivery_boy' || (role as string) === 'delivery' || location.pathname.startsWith('/delivery');
+
   const currentSuggestions =
     role === 'superadmin'
       ? SUPERADMIN_SUGGESTIONS
       : role === 'admin'
         ? ADMIN_SUGGESTIONS
-        : isLoggedIn
-          ? CUSTOMER_SUGGESTIONS
-          : GUEST_SUGGESTIONS;
+        : isDelivery
+          ? DELIVERY_SUGGESTIONS
+          : isLoggedIn
+            ? CUSTOMER_SUGGESTIONS
+            : GUEST_SUGGESTIONS;
 
   const teaserTitle =
     role === 'superadmin'
       ? `Welcome, Superadmin ${firstName || displayName}! 📊`
       : role === 'admin'
         ? `Welcome, Admin ${firstName || displayName}! ⚙️`
-        : isLoggedIn
-          ? `Welcome back, ${firstName || displayName}! 👋`
-          : "Hi, I'm Coco Chatbot! 👋";
+        : isDelivery
+          ? `Welcome, Delivery Partner ${firstName || displayName}! 🛵`
+          : isLoggedIn
+            ? `Welcome back, ${firstName || displayName}! 👋`
+            : "Hi, I'm Coco Chatbot! 👋";
 
   const teaserSub =
     role === 'superadmin'
       ? "Review today's sales, revenue analytics, or executive reports ✨"
       : role === 'admin'
         ? "Check live inventory, stock levels, or manage products ✨"
-        : isLoggedIn
-          ? "Looking for chocolates or checking your orders? Chat with me ✨"
-          : "Looking for chocolates or need help? Click to chat with me ✨";
+        : isDelivery
+          ? "Check your assigned queue, route stops, or OTP handoff ✨"
+          : isLoggedIn
+            ? "Looking for chocolates or checking your orders? Chat with me ✨"
+            : "Looking for chocolates or need help? Click to chat with me ✨";
 
   const headerTitle =
     role === 'superadmin'
       ? 'Coco · Superadmin Analytics'
       : role === 'admin'
         ? 'Coco · Admin Assistant'
-        : 'Coco · Chovique AI';
+        : isDelivery
+          ? 'Coco · Delivery Assistant'
+          : 'Coco · Chovique AI';
 
   const headerStatus = isLoading
     ? 'Thinking…'
@@ -647,36 +686,44 @@ export const ChatbotWidget: React.FC = () => {
       ? `Online · Executive Insights for ${firstName || 'you'} 📊`
       : role === 'admin'
         ? `Online · Store Operations for ${firstName || 'you'} ⚙️`
-        : isLoggedIn
-          ? `Online · Helping ${firstName || 'you'} ✨`
-          : 'Online · Here to help ✨';
+        : isDelivery
+          ? `Online · Dispatch Assistant for ${firstName || 'you'} 🛵`
+          : isLoggedIn
+            ? `Online · Helping ${firstName || 'you'} ✨`
+            : 'Online · Here to help ✨';
 
   const welcomeHeroBubble =
     role === 'superadmin'
       ? `Welcome, Superadmin ${firstName || displayName}! 📊`
       : role === 'admin'
         ? `Welcome, Admin ${firstName || displayName}! ⚙️`
-        : isLoggedIn
-          ? `Welcome back, ${firstName || displayName}! 👋`
-          : "Welcome to Chovique! 👋";
+        : isDelivery
+          ? `Welcome, Delivery Partner ${firstName || displayName}! 🛵`
+          : isLoggedIn
+            ? `Welcome back, ${firstName || displayName}! 👋`
+            : "Welcome to Chovique! 👋";
 
   const welcomeHeroSub =
     role === 'superadmin'
       ? "I'm Coco, your executive analytics assistant. Ask me about today's sales, specific date reports (e.g. September 14th sales), or revenue trends directly from the database ✨"
       : role === 'admin'
         ? "I'm Coco, your store operations assistant. Ask me about live inventory stocks, low-stock alerts, or steps to add new products ✨"
-        : isLoggedIn
-          ? "I'm Coco, your personal chocolate assistant. Ask me anything about our chocolates, your orders, or gift hampers ✨"
-          : "I'm Coco, your personal Chovique chocolate assistant. Ask me anything about our products, orders, or gifts ✨";
+        : isDelivery
+          ? "I'm Coco, your delivery fulfillment assistant. Ask me about your assigned queue, route stops, delivery history, or OTP handoff instructions ✨"
+          : isLoggedIn
+            ? "I'm Coco, your personal chocolate assistant. Ask me anything about our chocolates, your orders, or gift hampers ✨"
+            : "I'm Coco, your personal Chovique chocolate assistant. Ask me anything about our products, orders, or gifts ✨";
 
   const fabTitle =
     role === 'superadmin'
       ? `Chat with Coco · Superadmin Analytics (${firstName})`
       : role === 'admin'
         ? `Chat with Coco · Admin Operations (${firstName})`
-        : isLoggedIn
-          ? `Chat with Coco · Welcome ${firstName}`
-          : 'Chat with Coco — Chovique AI Chatbot';
+        : isDelivery
+          ? `Chat with Coco · Delivery Assistant (${firstName})`
+          : isLoggedIn
+            ? `Chat with Coco · Welcome ${firstName}`
+            : 'Chat with Coco — Chovique AI Chatbot';
 
   // ─── Render ───────────────────────────────────────────────────
   return (

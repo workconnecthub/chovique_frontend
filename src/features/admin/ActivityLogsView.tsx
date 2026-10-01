@@ -7,11 +7,15 @@ import {
   Calendar,
   CheckCircle2,
   XCircle,
+  Trash2,
+  CheckSquare,
+  Square,
 } from 'lucide-react';
 import { adminService, ActivityLogItem } from '../../services/adminService';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { Pagination } from '../../components/ui/Pagination';
 import { Button } from '../../components/ui/Button';
+import { ConfirmationModal } from '../../components/ui/ConfirmationModal';
 import { AuditLogDetailModal } from '../../components/AuditLogDetailModal';
 
 const formatActionLabel = (action?: string | null): string => {
@@ -69,6 +73,64 @@ export const ActivityLogsView: React.FC = () => {
   const [startDate, setStartDate] = useState<string>('');
   const [endDate, setEndDate] = useState<string>('');
   const [dateError, setDateError] = useState<string>('');
+
+  // Multi-Selection & Batch Delete State
+  const [selectedLogIds, setSelectedLogIds] = useState<Set<string>>(new Set());
+  const [showDeleteConfirmModal, setShowDeleteConfirmModal] = useState<boolean>(false);
+  const [isDeleting, setIsDeleting] = useState<boolean>(false);
+  const [deleteSuccessMessage, setDeleteSuccessMessage] = useState<string>('');
+
+  const handleToggleSelect = (id: string) => {
+    setSelectedLogIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
+
+  const isAllOnPageSelected = logs.length > 0 && logs.every((l) => selectedLogIds.has(l.id));
+
+  const handleToggleSelectAll = () => {
+    if (isAllOnPageSelected) {
+      setSelectedLogIds((prev) => {
+        const next = new Set(prev);
+        logs.forEach((l) => next.delete(l.id));
+        return next;
+      });
+    } else {
+      setSelectedLogIds((prev) => {
+        const next = new Set(prev);
+        logs.forEach((l) => next.add(l.id));
+        return next;
+      });
+    }
+  };
+
+  const handleClearSelection = () => {
+    setSelectedLogIds(new Set());
+  };
+
+  const handleConfirmBatchDelete = async () => {
+    if (selectedLogIds.size === 0) return;
+    setIsDeleting(true);
+    try {
+      const idsToDelete = Array.from(selectedLogIds);
+      const res = await adminService.deleteActivityLogs(idsToDelete);
+      setSelectedLogIds(new Set());
+      setShowDeleteConfirmModal(false);
+      setDeleteSuccessMessage(`Successfully deleted ${res?.deleted ?? idsToDelete.length} activity log(s).`);
+      setTimeout(() => setDeleteSuccessMessage(''), 4000);
+      await fetchLogs(currentPage);
+    } catch (err: any) {
+      alert(err?.detail || err?.message || 'Failed to delete selected activity logs.');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   const fetchLogs = async (page = 1) => {
     // If end date is earlier than start date, do not perform invalid fetch
@@ -367,7 +429,105 @@ export const ActivityLogsView: React.FC = () => {
         role="admin"
       />
 
-      {/* Main Read-Only Logs Table */}
+      {/* Batch Actions Toolbar */}
+      {selectedLogIds.size > 0 && (
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            background: 'linear-gradient(135deg, rgba(30, 22, 17, 0.98), rgba(20, 14, 10, 0.98))',
+            border: '1px solid rgba(201, 168, 76, 0.45)',
+            borderRadius: '12px',
+            padding: '12px 20px',
+            marginBottom: '18px',
+            boxShadow: '0 8px 24px rgba(0,0,0,0.6)',
+            flexWrap: 'wrap',
+            gap: '12px',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap' }}>
+            <span style={{ fontWeight: 700, color: '#f5efe6', fontSize: '0.9rem' }}>
+              <span style={{ color: '#c9a84c', fontSize: '1.05rem', fontWeight: 800 }}>{selectedLogIds.size}</span> log{selectedLogIds.size === 1 ? '' : 's'} selected
+            </span>
+            <button
+              type="button"
+              onClick={handleToggleSelectAll}
+              style={{
+                background: 'rgba(201, 168, 76, 0.15)',
+                border: '1px solid rgba(201, 168, 76, 0.35)',
+                color: '#f5d77f',
+                padding: '5px 12px',
+                borderRadius: '6px',
+                fontSize: '0.78rem',
+                fontWeight: 600,
+                cursor: 'pointer',
+              }}
+            >
+              {isAllOnPageSelected ? 'Deselect Page' : 'Select All on Page'}
+            </button>
+            <button
+              type="button"
+              onClick={handleClearSelection}
+              style={{
+                background: 'transparent',
+                border: 'none',
+                color: 'rgba(255,255,255,0.6)',
+                fontSize: '0.78rem',
+                cursor: 'pointer',
+                textDecoration: 'underline',
+              }}
+            >
+              Clear Selection
+            </button>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setShowDeleteConfirmModal(true)}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              padding: '8px 18px',
+              borderRadius: '8px',
+              background: 'rgba(231, 76, 60, 0.2)',
+              border: '1px solid rgba(231, 76, 60, 0.5)',
+              color: '#ff6b6b',
+              fontSize: '0.84rem',
+              fontWeight: 700,
+              cursor: 'pointer',
+              transition: 'all 0.2s ease',
+            }}
+          >
+            <Trash2 size={16} />
+            <span>Delete Selected ({selectedLogIds.size})</span>
+          </button>
+        </div>
+      )}
+
+      {deleteSuccessMessage && (
+        <div
+          style={{
+            padding: '12px 18px',
+            background: 'rgba(46, 204, 113, 0.15)',
+            border: '1px solid rgba(46, 204, 113, 0.4)',
+            borderRadius: '8px',
+            color: '#2ecc71',
+            fontSize: '0.85rem',
+            fontWeight: 600,
+            marginBottom: '18px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+          }}
+        >
+          <CheckCircle2 size={16} />
+          <span>{deleteSuccessMessage}</span>
+        </div>
+      )}
+
+      {/* Main Logs Table */}
       <div
         style={{
           background: 'rgba(20, 16, 13, 0.85)',
@@ -394,72 +554,112 @@ export const ActivityLogsView: React.FC = () => {
             <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.88rem' }}>
               <thead>
                 <tr style={{ background: 'rgba(10, 8, 6, 0.9)', borderBottom: '1px solid rgba(201, 168, 76, 0.2)', color: '#c9a84c' }}>
-                  <th style={{ padding: '16px 20px', fontWeight: 700 }}>DATE &amp; TIME</th>
-                  <th style={{ padding: '16px 20px', fontWeight: 700 }}>USER</th>
-                  <th style={{ padding: '16px 20px', fontWeight: 700 }}>ROLE</th>
-                  <th style={{ padding: '16px 20px', fontWeight: 700 }}>ACTION</th>
-                  <th style={{ padding: '16px 20px', fontWeight: 700 }}>STATUS</th>
+                  <th style={{ padding: '16px 14px 16px 20px', width: '40px', textAlign: 'center' }}>
+                    <input
+                      type="checkbox"
+                      checked={isAllOnPageSelected}
+                      onChange={handleToggleSelectAll}
+                      title="Select all on this page"
+                      aria-label="Select all activity logs on this page"
+                      style={{ cursor: 'pointer', width: '16px', height: '16px', accentColor: '#c9a84c' }}
+                    />
+                  </th>
+                  <th style={{ padding: '16px 14px', fontWeight: 700 }}>DATE &amp; TIME</th>
+                  <th style={{ padding: '16px 14px', fontWeight: 700 }}>USER</th>
+                  <th style={{ padding: '16px 14px', fontWeight: 700 }}>ROLE</th>
+                  <th style={{ padding: '16px 14px', fontWeight: 700 }}>ACTION</th>
+                  <th style={{ padding: '16px 14px', fontWeight: 700 }}>STATUS</th>
                   <th style={{ padding: '16px 20px', fontWeight: 700, textAlign: 'right' }}>DETAILS</th>
                 </tr>
               </thead>
               <tbody>
-                {logs.map((log: any) => (
-                  <tr
-                    key={log.id}
-                    style={{
-                      borderBottom: '1px solid rgba(255,255,255,0.06)',
-                      transition: 'background 0.2s ease',
-                    }}
-                  >
-                    {/* Timestamp */}
-                    <td style={{ padding: '16px 20px', whiteSpace: 'nowrap', color: 'rgba(255,255,255,0.7)', fontSize: '0.82rem' }}>
-                      {log.created_at}
-                    </td>
+                {logs.map((log: any) => {
+                  const isRowSelected = selectedLogIds.has(log.id);
+                  return (
+                    <tr
+                      key={log.id}
+                      style={{
+                        borderBottom: '1px solid rgba(255,255,255,0.06)',
+                        background: isRowSelected ? 'rgba(201, 168, 76, 0.1)' : 'transparent',
+                        transition: 'background 0.2s ease',
+                      }}
+                    >
+                      {/* Checkbox */}
+                      <td style={{ padding: '16px 14px 16px 20px', width: '40px', textAlign: 'center' }}>
+                        <input
+                          type="checkbox"
+                          checked={isRowSelected}
+                          onChange={() => handleToggleSelect(log.id)}
+                          aria-label={`Select log ${log.id}`}
+                          style={{ cursor: 'pointer', width: '16px', height: '16px', accentColor: '#c9a84c' }}
+                        />
+                      </td>
 
-                    {/* Admin User */}
-                    <td style={{ padding: '16px 20px', whiteSpace: 'nowrap' }}>
-                      <div style={{ fontWeight: 700, color: '#f5efe6' }}>
-                        {log.admin_name || 'System Admin'}
-                      </div>
-                      {log.admin_email && (
-                        <div style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.45)' }}>
-                          {log.admin_email}
+                      {/* Timestamp */}
+                      <td style={{ padding: '16px 14px', whiteSpace: 'nowrap', color: 'rgba(255,255,255,0.7)', fontSize: '0.82rem' }}>
+                        {log.created_at}
+                      </td>
+
+                      {/* Admin User */}
+                      <td style={{ padding: '16px 14px', whiteSpace: 'nowrap' }}>
+                        <div style={{ fontWeight: 700, color: '#f5efe6' }}>
+                          {log.admin_name || 'System Admin'}
                         </div>
-                      )}
-                    </td>
+                        {log.admin_email && (
+                          <div style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.45)' }}>
+                            {log.admin_email}
+                          </div>
+                        )}
+                      </td>
 
-                    {/* Role */}
-                    <td style={{ padding: '16px 20px', whiteSpace: 'nowrap' }}>
-                      <span style={{ fontSize: '0.75rem', padding: '3px 8px', borderRadius: '4px', background: 'rgba(201, 168, 76, 0.15)', color: '#c9a84c', textTransform: 'capitalize' }}>
-                        {log.user_role || log.role || 'Admin'}
-                      </span>
-                    </td>
+                      {/* Role */}
+                      <td style={{ padding: '16px 14px', whiteSpace: 'nowrap' }}>
+                        <span style={{ fontSize: '0.75rem', padding: '3px 8px', borderRadius: '4px', background: 'rgba(201, 168, 76, 0.15)', color: '#c9a84c', textTransform: 'capitalize' }}>
+                          {log.user_role || log.role || 'Admin'}
+                        </span>
+                      </td>
 
-                    {/* Action */}
-                    <td style={{ padding: '16px 20px', whiteSpace: 'nowrap', fontWeight: 600, color: '#f5efe6' }}>
-                      {formatActionLabel(log.action)}
-                    </td>
+                      {/* Action */}
+                      <td style={{ padding: '16px 14px', whiteSpace: 'nowrap', fontWeight: 600, color: '#f5efe6' }}>
+                        {formatActionLabel(log.action)}
+                      </td>
 
-                    {/* Status */}
-                    <td style={{ padding: '16px 20px', whiteSpace: 'nowrap' }}>
-                      <span style={{ fontSize: '0.75rem', fontWeight: 700, color: log.status === 'SUCCESS' ? '#2ecc71' : '#e74c3c' }}>
-                        {log.status}
-                      </span>
-                    </td>
+                      {/* Status */}
+                      <td style={{ padding: '16px 14px', whiteSpace: 'nowrap' }}>
+                        <span style={{ fontSize: '0.75rem', fontWeight: 700, color: log.status === 'SUCCESS' ? '#2ecc71' : '#e74c3c' }}>
+                          {log.status}
+                        </span>
+                      </td>
 
-                    {/* Details View Button */}
-                    <td style={{ padding: '16px 20px', textAlign: 'right', whiteSpace: 'nowrap' }}>
-                      <Button variant="secondary" size="sm" onClick={() => setSelectedLog(log)}>
-                        View Details
-                      </Button>
-                    </td>
-                  </tr>
-                ))}
+                      {/* Details View Button */}
+                      <td style={{ padding: '16px 20px', textAlign: 'right', whiteSpace: 'nowrap' }}>
+                        <Button variant="secondary" size="sm" onClick={() => setSelectedLog(log)}>
+                          View Details
+                        </Button>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
         )}
       </div>
+
+      {/* Confirmation Modal for Batch Delete */}
+      <ConfirmationModal
+        isOpen={showDeleteConfirmModal}
+        title="Delete Selected Activity Logs"
+        message={`Are you sure you want to permanently delete ${selectedLogIds.size} selected activity log(s)? This action cannot be reversed.`}
+        confirmText={isDeleting ? 'Deleting...' : `Delete ${selectedLogIds.size} Log(s)`}
+        cancelText="Cancel"
+        isConfirming={isDeleting}
+        variant="danger"
+        onConfirm={handleConfirmBatchDelete}
+        onCancel={() => {
+          if (!isDeleting) setShowDeleteConfirmModal(false);
+        }}
+      />
 
       {/* Pagination Controls */}
       {total > 15 && (
