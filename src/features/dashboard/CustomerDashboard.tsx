@@ -5921,7 +5921,7 @@ export const CustomerDashboard: React.FC = () => {
                             gap: '6px',
                           }}
                         >
-                          <Trash2 size={16} /> {isBatchDeleting ? 'Deleting...' : `Delete Selected (${selectedNotifIds.length})`}
+                          <Trash2 size={16} /> {isBatchDeleting ? 'Deleting...' : `Delete (${selectedNotifIds.length})`}
                         </button>
                       )}
 
@@ -6626,7 +6626,7 @@ export const CustomerDashboard: React.FC = () => {
                       Help & Support Center
                     </h2>
                     <p style={{ color: 'var(--beige)', fontSize: '0.85rem', margin: 0 }}>
-                      Our Atelier support desk will inspect and resolve your issue within 24-48 business hours.
+                      Our customer support team will inspect and resolve your issue within 24-48 business hours.
                     </p>
                   </div>
                   {!showSupportForm && (
@@ -6669,7 +6669,7 @@ export const CustomerDashboard: React.FC = () => {
                       </button>
                     </div>
                     <p style={{ color: 'var(--beige)', fontSize: '0.85rem', marginBottom: '20px' }}>
-                      Our Atelier support desk will inspect and resolve your issue within 24-48 business hours.
+                      Our customer support team will inspect and resolve your issue within 24-48 business hours.
                     </p>
 
                     <form onSubmit={async (e) => {
@@ -6782,7 +6782,7 @@ export const CustomerDashboard: React.FC = () => {
                               Submitting...
                             </span>
                           ) : (
-                            'Submit Support Ticket'
+                            'Submit Ticket'
                           )}
                         </Button>
                         <Button
@@ -6884,7 +6884,7 @@ export const CustomerDashboard: React.FC = () => {
                                     gap: '4px',
                                   }}
                                 >
-                                  View Related Order (#{relatedOrderId})
+                                  View Order (#{relatedOrderId})
                                 </button>
                               ) : (
                                 <span style={{ fontSize: '0.72rem', color: 'var(--grey-light)', fontStyle: 'italic' }}>
@@ -6909,7 +6909,7 @@ export const CustomerDashboard: React.FC = () => {
                                   marginBottom: '12px',
                                 }}
                               >
-                                <strong style={{ color: 'var(--gold)', display: 'block', marginBottom: '4px' }}>Atelier Resolution Notes:</strong>
+                                <strong style={{ color: 'var(--gold)', display: 'block', marginBottom: '4px' }}>Support Resolution Notes:</strong>
                                 {ticket.adminNotes}
                               </div>
                             )}
@@ -6942,7 +6942,7 @@ export const CustomerDashboard: React.FC = () => {
                                         fontWeight: 600,
                                       }}
                                     >
-                                      Yes, Resolved
+                                      Resolved
                                     </button>
                                     <button
                                       onClick={() => {
@@ -6960,7 +6960,7 @@ export const CustomerDashboard: React.FC = () => {
                                         fontWeight: 600,
                                       }}
                                     >
-                                      No, Still Broken
+                                      Still an Issue
                                     </button>
                                   </div>
                                 )}

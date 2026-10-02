@@ -37,6 +37,7 @@ import { shippingService } from '../../services/shippingService';
 import { DeliveryLocationPicker, AddressFormData } from './DeliveryLocationPicker';
 import type { Order, CheckoutInitiateResponse, VerifyPaymentPayload, ShippingCalculateResponse } from '../../types';
 import { RAZORPAY_CHOVIQUE_LOGO } from '../../assets/razorpayLogo';
+import { getImageUrl } from '../../utils/imageUrl';
 
 // Razorpay global type declaration
 declare global {
@@ -1134,9 +1135,13 @@ export const CheckoutPage: React.FC = () => {
                     >
                       <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
                         <img
-                          src={item.product.image}
+                          src={getImageUrl(item.product.image)}
                           alt={item.product.name}
                           style={{ width: '50px', height: '50px', objectFit: 'cover', borderRadius: '2px' }}
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).src =
+                              'https://images.unsplash.com/photo-1548907040-4d42b52115ca?auto=format&fit=crop&w=100&q=80';
+                          }}
                         />
                         <div>
                           <h4 style={{ fontSize: '0.95rem', color: 'var(--cream)', margin: 0 }}>{item.product.name}</h4>
@@ -2155,7 +2160,7 @@ export const CheckoutPage: React.FC = () => {
                       </div>
 
                       <p style={{ margin: '0 0 16px 0', fontSize: '0.88rem', color: 'var(--beige)', lineHeight: 1.5 }}>
-                        Your artisanal order confirmation is ready. Open WhatsApp to receive and view your receipt on your mobile, or message our private concierge desk.
+                        Your order confirmation is ready. Open WhatsApp to get your receipt on your phone, or contact our support team.
                       </p>
 
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
@@ -2180,7 +2185,7 @@ export const CheckoutPage: React.FC = () => {
                               cursor: 'pointer',
                             }}
                           >
-                            <Send size={15} /> Send / Open on My WhatsApp
+                            <Send size={15} /> Open WhatsApp
                           </a>
                         )}
 
@@ -2204,7 +2209,7 @@ export const CheckoutPage: React.FC = () => {
                             cursor: 'pointer',
                           }}
                         >
-                          <Phone size={14} /> Chovique Concierge (+91 83098 54870)
+                          <Phone size={14} /> Call Support (+91 83098 54870)
                         </a>
                       </div>
                     </div>
@@ -2216,7 +2221,7 @@ export const CheckoutPage: React.FC = () => {
                     Print Invoice
                   </Button>
                   <Button variant="gold" onClick={() => navigate('/')} glow>
-                    Return to Boutique
+                    Continue Shopping
                   </Button>
                 </div>
               </motion.div>

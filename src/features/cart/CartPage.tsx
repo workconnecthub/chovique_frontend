@@ -8,6 +8,7 @@ import { Input } from '../../components/ui/Input';
 import { pageTransition } from '../../lib/framer';
 import { cartService } from '../../services/cartService';
 import type { CouponValidationResponse } from '../../types';
+import { getImageUrl } from '../../utils/imageUrl';
 
 export const CartPage: React.FC = () => {
   const { cart, updateCartQuantity, removeFromCart, role, storeConfig } = useApp();
@@ -292,7 +293,7 @@ export const CartPage: React.FC = () => {
             {/* Add More Items Button */}
             <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '16px' }}>
               <Button variant="outline" onClick={() => navigate('/shop')} size="sm" glow>
-                + ADD MORE ITEMS
+                + Add Items
               </Button>
             </div>
 
@@ -307,7 +308,7 @@ export const CartPage: React.FC = () => {
                 {/* Product image */}
                 <div style={{ width: '100px', height: '100px', borderRadius: '4px', overflow: 'hidden' }}>
                   <img
-                    src={item.product.image}
+                    src={getImageUrl(item.product.image)}
                     alt={item.product.name}
                     style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                     onError={(e) => {

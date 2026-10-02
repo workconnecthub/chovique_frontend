@@ -154,7 +154,7 @@ export const ProductDetails: React.FC = () => {
         {/* Back Link */}
         <Link to="/shop" className="details-back-link">
           <ArrowLeft size={16} />
-          Back to Boutique
+          Back to Shop
         </Link>
 
         {/* Core Layout Grid */}
@@ -692,7 +692,7 @@ export const ProductDetails: React.FC = () => {
           <div style={{ minHeight: '160px', paddingBottom: '40px', borderBottom: '1px solid var(--glass-border)' }}>
             {activeTab === 'description' && (
               <p style={{ color: 'var(--beige)', lineHeight: 1.7, fontSize: '0.98rem' }}>
-                {product.description} Crafted with single-origin beans sourced directly from certified organic farms, ensuring a consistent premium taste profile. Slow-tempered under the precise watch of master chocolatiers to create that signature velvet crunch and clean snap.
+                {product.description} Made with carefully selected cocoa beans from trusted farms, ensuring a rich and consistent taste. Slowly crafted to give you that perfect smooth texture and satisfying snap.
               </p>
             )}
 
@@ -1006,7 +1006,7 @@ const ReviewsTabSection: React.FC<ReviewsTabSectionProps> = ({ productId, user, 
             ))}
           </div>
           <span style={{ fontSize: '0.88rem', color: 'var(--beige)' }}>
-            {total_reviews > 0 ? `Based on ${total_reviews} verified customer review${total_reviews > 1 ? 's' : ''}` : 'Verified Artisanal Chocolate Rating'}
+            {total_reviews > 0 ? `Based on ${total_reviews} verified customer review${total_reviews > 1 ? 's' : ''}` : 'Customer Rating'}
           </span>
         </div>
 
@@ -1223,7 +1223,7 @@ const ReviewsTabSection: React.FC<ReviewsTabSectionProps> = ({ productId, user, 
             <input
               id="review-headline-input"
               type="text"
-              placeholder="What's most important to know? (e.g., Pure velvety heaven!)"
+              placeholder="What's most important to know? (e.g., Amazing taste!)"
               value={reviewTitle}
               onChange={(e) => setReviewTitle(e.target.value)}
               style={{
@@ -1413,7 +1413,7 @@ const ReviewsTabSection: React.FC<ReviewsTabSectionProps> = ({ productId, user, 
         </div>
       ) : filteredReviews.length === 0 ? (
         <p style={{ color: 'var(--grey-light)', fontStyle: 'italic', textAlign: 'center', padding: '30px' }}>
-          {mediaFilter !== 'all' ? 'No reviews match this filter.' : 'No customer reviews yet. Be the first to review this artisanal chocolate!'}
+          {mediaFilter !== 'all' ? 'No reviews match this filter.' : 'No customer reviews yet. Be the first to review this chocolate!'}
         </p>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '22px' }}>

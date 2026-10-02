@@ -103,7 +103,7 @@ export const Contact: React.FC = () => {
                 marginBottom: '24px',
               }}
             >
-              Visit Our Atelier
+              Visit Our Store
             </h3>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
@@ -113,7 +113,7 @@ export const Contact: React.FC = () => {
                 </div>
                 <div>
                   <h5 style={{ color: 'var(--cream)', fontSize: '1rem', fontWeight: 600, margin: '0 0 4px 0' }}>
-                    Chovique Chocolate Atelier
+                    Chovique Flagship Store
                   </h5>
                   <p style={{ color: 'var(--grey-light)', fontSize: '0.88rem', margin: 0 }}>
                     42, MG Road, Indiranagar

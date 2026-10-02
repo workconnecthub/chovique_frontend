@@ -34,7 +34,7 @@ export const TermsPage: React.FC = () => {
             fontWeight: 600,
           }}
         >
-          <ArrowLeft size={16} /> Back to Boutique
+          <ArrowLeft size={16} /> Back to Shop
         </Link>
 
         {/* Page Header */}
@@ -142,7 +142,7 @@ export const TermsPage: React.FC = () => {
               1. Acceptance of Terms
             </h2>
             <p style={{ color: 'rgba(255, 255, 255, 0.82)' }}>
-              Welcome to <strong>Chovique</strong> (&ldquo;Chovique Confectionery&rdquo;, &ldquo;we&rdquo;, &ldquo;our&rdquo;, or &ldquo;us&rdquo;). By accessing our boutique platform, placing an order, or browsing our gourmet chocolate catalog, you agree to be bound by these Terms and Conditions (&ldquo;Terms&rdquo;), along with our Privacy Policy and Refund Policy. If you do not agree with any portion of these Terms, please refrain from using our service.
+              Welcome to <strong>Chovique</strong> (&ldquo;Chovique Confectionery&rdquo;, &ldquo;we&rdquo;, &ldquo;our&rdquo;, or &ldquo;us&rdquo;). By accessing our online store, placing an order, or browsing our chocolates, you agree to be bound by these Terms and Conditions (&ldquo;Terms&rdquo;), along with our Privacy Policy and Refund Policy. If you do not agree with any portion of these Terms, please refrain from using our service.
             </p>
           </section>
 

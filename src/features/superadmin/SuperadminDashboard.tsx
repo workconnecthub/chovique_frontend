@@ -2393,7 +2393,7 @@ export const SuperadminDashboard: React.FC = () => {
     superOrders.forEach((ord: any) => {
       const productsList = ord.items.map((it: any) => `${it.product.name} (x${it.quantity})`).join('; ');
       rows.push([
-        'Online Boutique',
+        'Online Store',
         ord.id,
         ord.date,
         ord.shippingAddress.name,
@@ -2403,10 +2403,10 @@ export const SuperadminDashboard: React.FC = () => {
       ]);
     });
 
-    // Map offline boutique sales
+    // Map offline retail store sales
     offlineSales.forEach((sale: any) => {
       rows.push([
-        'Offline Boutique',
+        'Physical Store',
         sale.id,
         sale.date,
         `Paid via ${sale.paymentMethod}`,
@@ -2556,13 +2556,13 @@ export const SuperadminDashboard: React.FC = () => {
   const salesHistoryData = dashboardStats?.monthly_revenue?.map(m => ({
     name: m.month,
     OnlineSales: m.online_revenue,
-    BoutiqueSales: m.offline_revenue
+    RetailSales: m.offline_revenue
   })) || [];
 
   // Pie chart values for revenue sources
   const revenueChannelsData = [
-    { name: 'Online Boutique', value: totalOnlineRevenue, color: 'var(--rose-gold)' },
-    { name: 'Offline Boutiques', value: totalOfflineRevenue, color: 'var(--gold)' },
+    { name: 'Online Store', value: totalOnlineRevenue, color: 'var(--rose-gold)' },
+    { name: 'Physical Stores', value: totalOfflineRevenue, color: 'var(--gold)' },
   ];
 
   // Specific Customer Inspection Details
@@ -3149,6 +3149,8 @@ export const SuperadminDashboard: React.FC = () => {
           <div>
             <DeliveryBoysView
               addToast={(msg, type) => addToast(type === 'error' ? 'error' : type === 'success' ? 'success' : 'info', msg)}
+              currentUserRole="superadmin"
+              isSuperAdmin={true}
             />
           </div>
         )}
@@ -4571,7 +4573,7 @@ export const SuperadminDashboard: React.FC = () => {
                           >
                             <option value="all">Combined Channels</option>
                             <option value="online">Online Store Only</option>
-                            <option value="offline">Boutique POS Only</option>
+                            <option value="offline">Retail POS Only</option>
                           </select>
                         </div>
                       </div>
@@ -4658,7 +4660,7 @@ export const SuperadminDashboard: React.FC = () => {
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                           <span style={{ width: '10px', height: '10px', background: '#e67e22', borderRadius: '2px', display: 'inline-block' }} />
-                          <span>Offline Boutique</span>
+                          <span>Physical Store</span>
                         </div>
                       </div>
                     </div>
@@ -5628,7 +5630,7 @@ export const SuperadminDashboard: React.FC = () => {
                 style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
               >
                 {isRegisterOpen ? <X size={16} /> : <UserPlus size={16} />}
-                {isRegisterOpen ? 'Close Form' : 'Register Administrator'}
+                {isRegisterOpen ? 'Close' : 'Add Admin'}
               </Button>
             </div>
 
@@ -5768,7 +5770,7 @@ export const SuperadminDashboard: React.FC = () => {
                           Cancel
                         </Button>
                         <Button variant="gold" type="submit" glow disabled={regSubmitting}>
-                          {regSubmitting ? 'Registering...' : 'Submit Administrator'}
+                          {regSubmitting ? 'Registering...' : 'Save Admin'}
                         </Button>
                       </div>
                     </form>
@@ -6125,7 +6127,7 @@ export const SuperadminDashboard: React.FC = () => {
                 style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
               >
                 <Download size={16} />
-                {auditExporting ? 'Exporting...' : 'Export Audit Logs (CSV)'}
+                {auditExporting ? 'Exporting...' : 'Export CSV'}
               </Button>
             </div>
 
@@ -6752,7 +6754,7 @@ export const SuperadminDashboard: React.FC = () => {
               </Button>
               <Button variant="gold" glow onClick={handleApplyTheme} disabled={!isFormValid || isApplyingTheme}>
                 <Check size={16} style={{ marginRight: '6px' }} />
-                {isApplyingTheme ? 'Applying...' : 'Apply Live Palettes'}
+                {isApplyingTheme ? 'Applying...' : 'Apply Theme'}
               </Button>
             </div>
 
@@ -7115,7 +7117,7 @@ export const SuperadminDashboard: React.FC = () => {
                     {psSaving ? (
                       <><span style={{ marginRight: '6px' }}>⏳</span> Saving...</>
                     ) : (
-                      <><Check size={15} style={{ marginRight: '6px' }} /> Save Configurations</>
+                      <><Check size={15} style={{ marginRight: '6px' }} /> Save Settings</>
                     )}
                   </Button>
                 </div>
@@ -7153,7 +7155,7 @@ export const SuperadminDashboard: React.FC = () => {
                         Cancel
                       </Button>
                       <Button variant="secondary" onClick={confirmMaintenanceMode} style={{ background: 'rgba(231,76,60,0.15)', borderColor: 'rgba(231,76,60,0.5)', color: '#e74c3c' }}>
-                        Yes, Enable Maintenance Mode
+                        Enable Maintenance
                       </Button>
                     </div>
                   </motion.div>
@@ -7187,7 +7189,7 @@ export const SuperadminDashboard: React.FC = () => {
                     style={{ background: 'rgba(231,76,60,0.15)', borderColor: '#e74c3c', color: '#e74c3c', fontWeight: 700 }}
                   >
                     <Trash2 size={14} style={{ marginRight: '6px' }} />
-                    {isBatchDeletingNotifs ? 'Deleting...' : `Delete Selected (${selectedNotifIds.length})`}
+                    {isBatchDeletingNotifs ? 'Deleting...' : `Delete (${selectedNotifIds.length})`}
                   </Button>
                 )}
                 {notifUnreadCount > 0 && (
@@ -7532,12 +7534,12 @@ export const SuperadminDashboard: React.FC = () => {
                       )}
                       {selectedNotif.category === 'PLATFORM_SYSTEM' && (
                         <Button variant="gold" size="sm" onClick={() => { setSelectedNotif(null); setActiveTab('platform-settings'); }}>
-                          View Platform Settings
+                          Platform Settings
                         </Button>
                       )}
                       {selectedNotif.category === 'BUSINESS' && (
                         <Button variant="gold" size="sm" onClick={() => { setSelectedNotif(null); setActiveTab('revenue'); }}>
-                          View Revenue Analytics
+                          Revenue Analytics
                         </Button>
                       )}
                       <Button variant="secondary" size="sm" onClick={() => setSelectedNotif(null)}>

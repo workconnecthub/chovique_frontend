@@ -183,10 +183,10 @@ export const ShopPage: React.FC = () => {
         {/* HERO / TITLE HEADER */}
         <div className="shop-hero-header">
           <span className="shop-breadcrumb">
-            HOME / SHOP BOUTIQUE
+            HOME / SHOP
           </span>
           <h1 className="shop-title">
-            The Chocolate Boutique
+            Our Chocolate Shop
           </h1>
 
           {/* Top Search & Category Chips Row (Horizontal inline on desktop) */}

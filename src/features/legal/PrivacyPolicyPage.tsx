@@ -34,7 +34,7 @@ export const PrivacyPolicyPage: React.FC = () => {
             fontWeight: 600,
           }}
         >
-          <ArrowLeft size={16} /> Back to Boutique
+          <ArrowLeft size={16} /> Back to Shop
         </Link>
 
         {/* Page Header */}
@@ -158,13 +158,13 @@ export const PrivacyPolicyPage: React.FC = () => {
               1. Introduction & Overview
             </h2>
             <p>
-              Welcome to <strong>CHOVIQUE</strong> (&ldquo;we,&rdquo; &ldquo;our,&rdquo; or &ldquo;us&rdquo;). We operate the online boutique 
+              Welcome to <strong>CHOVIQUE</strong> (&ldquo;we,&rdquo; &ldquo;our,&rdquo; or &ldquo;us&rdquo;). We operate the online chocolate store 
               accessible at chovique.in dedicated to creating and delivering bespoke, temperature-controlled, 
-              handcrafted artisanal chocolates across India.
+              handcrafted chocolates across India.
             </p>
             <p>
               This Privacy Policy explains how we collect, use, protect, and handle your information when you browse our collections, create an account, 
-              place orders, or communicate with our confectionery concierge.
+              place orders, or communicate with our customer support team.
             </p>
           </section>
 

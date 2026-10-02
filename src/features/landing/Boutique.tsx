@@ -44,13 +44,13 @@ export const Boutique: React.FC = () => {
           }}
         >
           <span className="section-label" style={{ justifyContent: 'center' }}>
-            The Chocolate Boutique
+            Featured Chocolates
           </span>
           <h2 className="section-title">
             Explore Our <span className="gold">Collection</span>
           </h2>
           <p className="section-subtitle">
-            Browse our complete range of artisanal chocolates — from single-origin bars to luxurious gift hampers.
+            Browse our complete range of handcrafted chocolates — from pure dark bars to chocolate gift boxes.
           </p>
         </motion.div>
 

@@ -2222,7 +2222,7 @@ export const AdminDashboard: React.FC = () => {
                   Dashboard
                 </h1>
                 <p style={{ color: 'var(--beige)', fontSize: '0.88rem', margin: '4px 0 0 0' }}>
-                  Atelier boutique performance &amp; revenue metrics overview
+                  Store performance &amp; revenue metrics overview
                 </p>
               </div>
 
@@ -3544,7 +3544,7 @@ export const AdminDashboard: React.FC = () => {
                             }}
                           >
                             <div>
-                              <strong style={{ color: 'var(--gold)' }}>Product Gallery:</strong> The <span style={{ color: 'var(--gold)', fontWeight: 700 }}>1st image</span> is the Main Cover photo displayed on boutique cards and search. Additional images appear sequentially in the product page's gallery.
+                              <strong style={{ color: 'var(--gold)' }}>Product Gallery:</strong> The <span style={{ color: 'var(--gold)', fontWeight: 700 }}>1st image</span> is the Main Cover photo displayed on product cards and search. Additional images appear sequentially in the product page's gallery.
                             </div>
                             <span style={{ fontSize: '0.74rem', color: 'var(--beige)', fontWeight: 600 }}>
                               {newProd.imagePreviewUrls.length} / 10 images
@@ -4890,8 +4890,8 @@ export const AdminDashboard: React.FC = () => {
                       </Button>
                       <Button variant="gold" type="submit" glow>
                         {pendingBatchCategories.length > 0
-                          ? `Save All Categories (${pendingBatchCategories.length + (trimValue(newCategory.name) ? 1 : 0)})`
-                          : 'Create Category'}
+                          ? `Save All (${pendingBatchCategories.length + (trimValue(newCategory.name) ? 1 : 0)})`
+                          : 'Save Category'}
                       </Button>
                     </div>
                   </form>
@@ -5060,6 +5060,8 @@ export const AdminDashboard: React.FC = () => {
             addToast={(msg: string, type?: 'success' | 'error' | 'info') =>
               addToast(type === 'error' ? 'error' : type === 'success' ? 'success' : 'info', msg)
             }
+            currentUserRole={role || user?.role || 'admin'}
+            isSuperAdmin={false}
           />
         )}
 
@@ -5101,7 +5103,7 @@ export const AdminDashboard: React.FC = () => {
                     style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 20px', fontWeight: 600 }}
                   >
                     <Plus size={18} />
-                    CREATE COUPON
+                    Create Coupon
                   </Button>
                 </div>
 
@@ -5519,7 +5521,7 @@ export const AdminDashboard: React.FC = () => {
                 <div style={{ gridColumn: isMobileGrid ? 'span 2' : 'span 4', display: 'flex', justifyContent: 'flex-end', marginTop: '10px' }}>
                   <Button variant="gold" type="submit" glow disabled={isSavingStats} style={{ height: '42px', width: isMobileGrid ? '100%' : 'auto', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px' }}>
                     {isSavingStats ? <Loader2 size={18} className="animate-spin" /> : statsSavedSuccess ? <CheckCircle size={18} /> : <Save size={18} />}
-                    {isSavingStats ? 'Saving Stats...' : statsSavedSuccess ? 'Counter Stats Saved!' : 'Save Counter Stats'}
+                    {isSavingStats ? 'Saving...' : statsSavedSuccess ? 'Saved!' : 'Save Stats'}
                   </Button>
                 </div>
               </form>
@@ -6280,7 +6282,7 @@ export const AdminDashboard: React.FC = () => {
                     }}
                   >
                     <MessageSquare size={16} />
-                    Customer Testimonials ({testimonialsList.length})
+                    Testimonials ({testimonialsList.length})
                   </button>
                 </div>
 
@@ -6916,7 +6918,7 @@ export const AdminDashboard: React.FC = () => {
                                           transition: 'all 0.2s',
                                         }}
                                       >
-                                        <CheckCircle size={12} /> Approve (Product Only)
+                                        <CheckCircle size={12} /> Approve
                                       </button>
 
                                       {/* Option 2: Approve & Feature on Landing Page */}
@@ -6941,7 +6943,7 @@ export const AdminDashboard: React.FC = () => {
                                           transition: 'all 0.2s',
                                         }}
                                       >
-                                        <Star size={12} fill="var(--gold)" /> ★ Approve & Feature on Home
+                                        <Star size={12} fill="var(--gold)" /> ★ Approve & Feature
                                       </button>
                                     </>
                                   )}
@@ -6969,7 +6971,7 @@ export const AdminDashboard: React.FC = () => {
                                           transition: 'all 0.2s',
                                         }}
                                       >
-                                        Remove from Home
+                                        Unfeature
                                       </button>
                                     ) : (
                                       <button
@@ -7076,7 +7078,7 @@ export const AdminDashboard: React.FC = () => {
                     style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '10px 20px', fontWeight: 600, fontSize: '0.85rem', boxSizing: 'border-box', flex: isMobileGrid ? '1 1 100%' : '0 0 auto' }}
                   >
                     <Plus size={16} />
-                    Add Site Testimonial
+                    Add Testimonial
                   </Button>
                 </div>
 
@@ -7705,7 +7707,7 @@ export const AdminDashboard: React.FC = () => {
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '24px' }}>
                       <label style={{ fontSize: '0.8rem', color: 'var(--beige)', textTransform: 'uppercase', letterSpacing: '1px' }}>
-                        Atelier Address
+                        Store Address
                       </label>
                       <textarea
                         rows={2}
@@ -7745,7 +7747,7 @@ export const AdminDashboard: React.FC = () => {
                             <Loader2 size={16} className="animate-spin" /> Saving Details...
                           </>
                         ) : (
-                          'UPDATE CUSTOMER SUPPORT DETAILS'
+                          'Save Details'
                         )}
                       </Button>
                     </div>

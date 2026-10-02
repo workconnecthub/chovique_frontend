@@ -6,6 +6,7 @@ import { useApp } from '../../app/providers';
 import { Button } from '../../components/ui/Button';
 import { pageTransition, hoverLift } from '../../lib/framer';
 import type { Product } from '../../types';
+import { getImageUrl } from '../../utils/imageUrl';
 
 interface WishlistPageProps {
   isEmbedded?: boolean;
@@ -114,7 +115,7 @@ export const WishlistPage: React.FC<WishlistPageProps> = ({ isEmbedded = false }
           Your Wishlist is Empty
         </h2>
         <p style={{ color: 'rgba(255, 255, 255, 0.65)', marginBottom: '32px', maxWidth: '440px', fontSize: '0.95rem', lineHeight: 1.6 }}>
-          Discover our artisanal Belgian chocolates and save your favorites to purchase later.
+          Discover our handmade chocolates and save your favorites to buy later.
         </p>
         <Button variant="gold" size="lg" glow onClick={() => navigate('/shop')}>
           Start Exploring
@@ -169,7 +170,7 @@ export const WishlistPage: React.FC<WishlistPageProps> = ({ isEmbedded = false }
               ? product.description.length > 80
                 ? `${product.description.slice(0, 80)}...`
                 : product.description
-              : 'Artisanal Belgian handmade chocolate crafted with raw cacao.';
+              : 'Handmade Belgian chocolate.';
 
             return (
               <motion.div
@@ -197,7 +198,7 @@ export const WishlistPage: React.FC<WishlistPageProps> = ({ isEmbedded = false }
                   style={{ position: 'relative', aspectRatio: '1/1', cursor: 'pointer', overflow: 'hidden', background: '#000' }}
                 >
                   <img
-                    src={product.image}
+                    src={getImageUrl(product.image)}
                     alt={product.name}
                     style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.5s ease' }}
                     onError={(e) => {

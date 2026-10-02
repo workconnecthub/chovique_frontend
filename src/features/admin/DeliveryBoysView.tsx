@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -35,6 +35,8 @@ import type { DeliveryBoy } from '../../types';
 
 interface DeliveryBoysViewProps {
   addToast?: (message: string, type?: 'success' | 'error' | 'info') => void;
+  currentUserRole?: string;
+  isSuperAdmin?: boolean;
 }
 
 interface PolicyOption {
@@ -64,8 +66,26 @@ const DEFAULT_RADIUS_OPTIONS: PolicyOption[] = [
   { value: 30, label: '30 KM (Regional Perimeter)' },
 ];
 
-export const DeliveryBoysView: React.FC<DeliveryBoysViewProps> = ({ addToast }) => {
+export const DeliveryBoysView: React.FC<DeliveryBoysViewProps> = ({ addToast, currentUserRole, isSuperAdmin }) => {
   const navigate = useNavigate();
+
+  // Role resolution: Only superadmin has privileges for Open Delivery Console and View & Update Policies
+  const isSuper = useMemo(() => {
+    if (typeof isSuperAdmin === 'boolean') return isSuperAdmin;
+    if (currentUserRole) {
+      const r = currentUserRole.toLowerCase();
+      return r === 'superadmin' || r === 'super_admin';
+    }
+    const storedUser = localStorage.getItem('user') || localStorage.getItem('admin_user');
+    if (storedUser) {
+      try {
+        const parsed = JSON.parse(storedUser);
+        const r = (parsed.role || '').toLowerCase();
+        if (r === 'superadmin' || r === 'super_admin') return true;
+      } catch (e) {}
+    }
+    return false;
+  }, [isSuperAdmin, currentUserRole]);
   const [deliveryBoys, setDeliveryBoys] = useState<DeliveryBoy[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
@@ -448,54 +468,59 @@ export const DeliveryBoysView: React.FC<DeliveryBoysViewProps> = ({ addToast }) 
         </div>
 
         <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-          {/* Dedicated Button to Launch Delivery Console */}
-          <button
-            onClick={() => navigate('/delivery')}
-            title="Open Live Delivery Partner Console & Dashboard"
-            style={{
-              padding: '10px 16px',
-              borderRadius: '8px',
-              background: 'linear-gradient(135deg, rgba(201,168,76,0.2) 0%, rgba(26,18,11,0.9) 100%)',
-              border: '1px solid rgba(201,168,76,0.5)',
-              color: '#f5d77f',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '8px',
-              cursor: 'pointer',
-              fontWeight: 700,
-              fontSize: '0.84rem',
-              boxShadow: '0 4px 14px rgba(201,168,76,0.2)',
-              transition: 'all 0.2s ease',
-            }}
-          >
-            <Navigation size={15} color="#c9a84c" />
-            <span>Open Delivery Console</span>
-            <ExternalLink size={13} style={{ opacity: 0.7 }} />
-          </button>
+          {/* Dedicated Button to Launch Delivery Console — Super Admin only */}
+          {isSuper && (
+            <button
+              onClick={() => navigate('/delivery')}
+              title="Open Live Delivery Partner Console & Dashboard"
+              style={{
+                padding: '10px 16px',
+                borderRadius: '8px',
+                background: 'linear-gradient(135deg, rgba(201,168,76,0.2) 0%, rgba(26,18,11,0.9) 100%)',
+                border: '1px solid rgba(201,168,76,0.5)',
+                color: '#f5d77f',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
+                cursor: 'pointer',
+                fontWeight: 700,
+                fontSize: '0.84rem',
+                boxShadow: '0 4px 14px rgba(201,168,76,0.2)',
+                transition: 'all 0.2s ease',
+              }}
+            >
+              <Navigation size={15} color="#c9a84c" />
+              <span>Open Delivery Console</span>
+              <ExternalLink size={13} style={{ opacity: 0.7 }} />
+            </button>
+          )}
 
-          <button
-            onClick={() => {
-              setShowPolicySettings(!showPolicySettings);
-              if (isCreateOpen) setIsCreateOpen(false);
-            }}
-            style={{
-              padding: '10px 14px',
-              borderRadius: '8px',
-              background: showPolicySettings ? 'rgba(201,168,76,0.18)' : 'rgba(255,255,255,0.06)',
-              border: `1px solid ${showPolicySettings ? 'rgba(201,168,76,0.45)' : 'rgba(255,255,255,0.12)'}`,
-              color: showPolicySettings ? 'var(--gold)' : '#f5efe6',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              cursor: 'pointer',
-              fontWeight: 600,
-              fontSize: '0.84rem',
-              transition: 'all 0.2s ease',
-            }}
-          >
-            <SlidersHorizontal size={15} />
-            {showPolicySettings ? 'Close Policies' : 'View & Update Policies'}
-          </button>
+          {/* View & Update Policies — Super Admin only */}
+          {isSuper && (
+            <button
+              onClick={() => {
+                setShowPolicySettings(!showPolicySettings);
+                if (isCreateOpen) setIsCreateOpen(false);
+              }}
+              style={{
+                padding: '10px 14px',
+                borderRadius: '8px',
+                background: showPolicySettings ? 'rgba(201,168,76,0.18)' : 'rgba(255,255,255,0.06)',
+                border: `1px solid ${showPolicySettings ? 'rgba(201,168,76,0.45)' : 'rgba(255,255,255,0.12)'}`,
+                color: showPolicySettings ? 'var(--gold)' : '#f5efe6',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                cursor: 'pointer',
+                fontWeight: 600,
+                fontSize: '0.84rem',
+                transition: 'all 0.2s ease',
+              }}
+            >
+              <SlidersHorizontal size={15} />
+              {showPolicySettings ? 'Close Policies' : 'View & Update Policies'}
+            </button>
+          )}
 
           <button
             onClick={() => fetchBoys()}
@@ -778,9 +803,9 @@ export const DeliveryBoysView: React.FC<DeliveryBoysViewProps> = ({ addToast }) 
         )}
       </AnimatePresence>
 
-      {/* ─── Expandable Fleet Governance & Policies Panel ─────────────────── */}
+      {/* ─── Expandable Fleet Governance & Policies Panel (Super Admin only) ─── */}
       <AnimatePresence>
-        {showPolicySettings && (
+        {isSuper && showPolicySettings && (
           <motion.div
             initial={{ opacity: 0, height: 0, marginBottom: 0 }}
             animate={{ opacity: 1, height: 'auto', marginBottom: 24 }}

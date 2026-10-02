@@ -34,7 +34,7 @@ export const RefundPolicyPage: React.FC = () => {
             fontWeight: 600,
           }}
         >
-          <ArrowLeft size={16} /> Back to Boutique
+          <ArrowLeft size={16} /> Back to Shop
         </Link>
 
         {/* Page Header */}
@@ -248,7 +248,7 @@ export const RefundPolicyPage: React.FC = () => {
               <p><strong>Chovique Customer Care & Concierge</strong></p>
               <p>Email: <span style={{ color: 'var(--gold)' }}>support@chovique.com</span></p>
               <p>WhatsApp / Call: +91 83098 54870 (Mon &ndash; Sat, 9:00 AM &ndash; 8:00 PM IST)</p>
-              <p>Boutique Studio: Jubilee Hills, Hyderabad, Telangana, India</p>
+              <p>Store Studio: Jubilee Hills, Hyderabad, Telangana, India</p>
             </div>
           </section>
         </div>

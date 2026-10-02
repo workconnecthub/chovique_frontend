@@ -47,6 +47,7 @@ import { useApp } from '../../app/providers';
 import { deliveryService, DeliveryBoyProfile } from '../../services/deliveryService';
 import type { Order } from '../../types';
 import '../../styles/delivery.css';
+import { getImageUrl } from '../../utils/imageUrl';
 
 export type DeliveryTab = 'mission' | 'queue' | 'route' | 'history' | 'profile';
 
@@ -1337,7 +1338,7 @@ export const DeliveryDashboard: React.FC = () => {
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px', background: 'rgba(255,255,255,0.03)', borderRadius: '10px', border: '1px solid rgba(201,168,76,0.2)', marginBottom: '16px' }}>
                 <div style={{ width: '38px', height: '38px', borderRadius: '50%', border: '1px solid #c9a84c', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#1a110e', color: '#c9a84c', fontWeight: 800 }}>
                   {profile?.avatar_url ? (
-                    <img src={profile.avatar_url} alt="Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    <img src={getImageUrl(profile.avatar_url)} alt="Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                   ) : (
                     profile?.full_name?.charAt(0) || user?.name?.charAt(0) || 'D'
                   )}
@@ -1955,7 +1956,7 @@ export const DeliveryDashboard: React.FC = () => {
                   marginBottom: '2px',
                 }}
               >
-                <img src={profile.avatar_url} alt="Profile" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                <img src={getImageUrl(profile.avatar_url)} alt="Profile" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
               </div>
             ) : (
               <User size={21} />
@@ -2514,7 +2515,7 @@ export const DeliveryDashboard: React.FC = () => {
                           className="btn-maps"
                         >
                           <Navigation size={18} />
-                          Start GPS Navigation in Google Maps ↗
+                          Open Google Maps ↗
                         </a>
                       </div>
 
@@ -2576,7 +2577,7 @@ export const DeliveryDashboard: React.FC = () => {
                             onClick={() => handleAcceptOrder(activeMissionOrder.id)}
                           >
                             <CheckCircle size={18} />
-                            Accept Assigned Delivery
+                            Accept Order
                           </button>
                           <button
                             className="btn-reject"
@@ -2584,7 +2585,7 @@ export const DeliveryDashboard: React.FC = () => {
                             onClick={() => setRejectModalOrder(activeMissionOrder)}
                           >
                             <XCircle size={18} />
-                            Decline / Reject
+                            Decline
                           </button>
                         </div>
                       )}
@@ -2598,14 +2599,14 @@ export const DeliveryDashboard: React.FC = () => {
                             onClick={() => handleMarkPickedUp(activeMissionOrder.id)}
                           >
                             <Store size={18} />
-                            Confirm Picked Up from Store
+                            Confirm Pickup
                           </button>
                           <button
                             className="btn-reject"
                             style={{ padding: '14px 18px' }}
                             onClick={() => setRejectModalOrder(activeMissionOrder)}
                           >
-                            Cancel Assignment
+                            Cancel Order
                           </button>
                         </div>
                       )}
@@ -2622,7 +2623,7 @@ export const DeliveryDashboard: React.FC = () => {
                             onClick={() => handleMarkOutForDelivery(activeMissionOrder.id)}
                           >
                             <Truck size={20} />
-                            Mark Out for Delivery (Arrived / Reached)
+                            Out for Delivery
                           </button>
                         </div>
                       )}
@@ -2674,7 +2675,7 @@ export const DeliveryDashboard: React.FC = () => {
                             ) : (
                               <CheckCircle size={20} />
                             )}
-                            {isVerifyingOtp ? 'Verifying OTP...' : 'Verify OTP & Complete Delivery'}
+                            {isVerifyingOtp ? 'Verifying...' : 'Verify OTP & Deliver'}
                           </button>
                         </div>
                       )}
@@ -2745,7 +2746,7 @@ export const DeliveryDashboard: React.FC = () => {
                               gap: '6px',
                             }}
                           >
-                            <span>Open Queue Tab ({assignedOrders.length})</span>
+                            <span>View Queue ({assignedOrders.length})</span>
                             <ArrowRight size={14} />
                           </button>
                         </div>
@@ -2852,7 +2853,7 @@ export const DeliveryDashboard: React.FC = () => {
                               cursor: 'pointer',
                             }}
                           >
-                            Target Next Order (#{inProgressOrders[0]?.id})
+                            Start Next Order (#{inProgressOrders[0]?.id})
                           </button>
                           <button
                             onClick={() => setActiveTab('route')}
@@ -2866,7 +2867,7 @@ export const DeliveryDashboard: React.FC = () => {
                               cursor: 'pointer',
                             }}
                           >
-                            View Optimized Route Map
+                            View Route Map
                           </button>
                         </div>
                       </div>
@@ -3166,7 +3167,7 @@ export const DeliveryDashboard: React.FC = () => {
                                   }}
                                 >
                                   <Navigation size={14} />
-                                  {isCurrent ? 'Continue Mission' : 'Set as Active Mission'}
+                                  {isCurrent ? 'Continue Order' : 'Set as Active Order'}
                                 </button>
                               </div>
                             )}
@@ -3337,7 +3338,7 @@ export const DeliveryDashboard: React.FC = () => {
                     >
                       <span className="btn-near-me-radar" />
                       <MapPin size={15} />
-                      <span>Target Nearest Stop (Near Me)</span>
+                      <span>Find Nearest Stop</span>
                     </button>
                   </div>
                 )}
@@ -3742,7 +3743,7 @@ export const DeliveryDashboard: React.FC = () => {
                     >
                       {profile?.avatar_url ? (
                         <img
-                          src={profile.avatar_url}
+                          src={getImageUrl(profile.avatar_url)}
                           alt="Avatar"
                           style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                         />
@@ -3840,7 +3841,7 @@ export const DeliveryDashboard: React.FC = () => {
                         }}
                       >
                         <span className="status-dot-pulse" style={{ background: isOnDuty ? '#2ecc71' : '#e74c3c' }} />
-                        {isOnDuty ? 'Duty Active (Toggle Off)' : 'Duty Offline (Toggle On)'}
+                        {isOnDuty ? 'On Duty' : 'Off Duty'}
                       </button>
                     </div>
                   </div>
@@ -3924,7 +3925,7 @@ export const DeliveryDashboard: React.FC = () => {
                     }}
                   >
                     <LogOut size={15} />
-                    <span>Log Out of Delivery Portal</span>
+                    <span>Log Out</span>
                   </button>
                 </div>
               </div>
@@ -4077,7 +4078,7 @@ export const DeliveryDashboard: React.FC = () => {
                     >
                       <span className="btn-near-me-radar" />
                       <Navigation size={18} />
-                      <span>Deliver Next Nearest Order ({remainingOrders.length} Remaining)</span>
+                      <span>Deliver Next Order ({remainingOrders.length})</span>
                     </button>
                   ) : (
                     <div style={{ color: '#2ecc71', fontWeight: 800, fontSize: '1rem', margin: '10px 0' }}>
@@ -4102,7 +4103,7 @@ export const DeliveryDashboard: React.FC = () => {
                       setActiveTab('route');
                     }}
                   >
-                    View Multi-Stop Route Circuit
+                    View Route Map
                   </button>
                 </div>
               );

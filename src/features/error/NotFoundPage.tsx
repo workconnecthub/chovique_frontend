@@ -84,14 +84,14 @@ export const NotFoundPage: React.FC = () => {
             marginBottom: '15px',
           }}
         >
-          Creation Not Found
+          Page Not Found
         </h2>
         <p style={{ color: 'var(--beige)', lineHeight: 1.6, marginBottom: '35px', fontSize: '0.95rem' }}>
-          It seems the flavor combination or cabinet drawer you're seeking does not exist. Let's return you to our primary artisan collection.
+          The page you're looking for doesn't exist or has been moved. Let's get you back to our chocolate shop.
         </p>
 
         <Button variant="gold" size="lg" onClick={() => navigate('/')} glow>
-          Return to Boutique
+          Back to Home
         </Button>
       </div>
     </motion.div>
