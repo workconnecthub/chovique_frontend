@@ -84,8 +84,9 @@ export const WishlistPage: React.FC<WishlistPageProps> = ({ isEmbedded = false }
         initial="initial"
         animate="animate"
         exit="exit"
+        className={isEmbedded ? '' : 'wishlist-page wishlist-empty-state'}
         style={{
-          paddingTop: isEmbedded ? '20px' : '85px',
+          paddingTop: isEmbedded ? '20px' : undefined,
           minHeight: isEmbedded ? '400px' : '70vh',
           display: 'flex',
           flexDirection: 'column',
@@ -345,8 +346,8 @@ export const WishlistPage: React.FC<WishlistPageProps> = ({ isEmbedded = false }
       initial="initial"
       animate="animate"
       exit="exit"
+      className="wishlist-page"
       style={{
-        paddingTop: '85px',
         minHeight: '80vh',
         background: 'var(--gradient-hero)',
       }}

@@ -993,7 +993,18 @@ const ReviewsTabSection: React.FC<ReviewsTabSectionProps> = ({ productId, user, 
       >
         {/* Big Rating Score */}
         <div style={{ textAlign: 'center', borderRight: '1px solid rgba(255,255,255,0.08)', paddingRight: '20px' }}>
-          <span style={{ fontFamily: 'var(--font-display)', fontSize: '3.4rem', fontWeight: 800, color: 'var(--gold)', lineHeight: 1 }}>
+          <span
+            className="font-number"
+            data-number="true"
+            style={{
+              fontFamily: 'var(--font-number, var(--font-body))',
+              fontSize: '3.4rem',
+              fontWeight: 800,
+              color: 'var(--gold)',
+              lineHeight: 1,
+              fontVariantNumeric: 'tabular-nums',
+            }}
+          >
             {total_reviews > 0 ? average_rating.toFixed(1) : (productRating ? Number(productRating).toFixed(1) : '4.8')}
           </span>
           <div style={{ display: 'flex', justifyContent: 'center', gap: '5px', color: 'var(--gold)', margin: '10px 0' }}>

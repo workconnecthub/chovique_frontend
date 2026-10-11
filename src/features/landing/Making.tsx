@@ -126,12 +126,15 @@ export const Making: React.FC = () => {
               {steps.map((step) => (
                 <div key={step.num} style={{ display: 'flex', gap: '20px' }}>
                   <span
+                    className="font-number"
+                    data-number="true"
                     style={{
-                      fontFamily: 'var(--font-display)',
+                      fontFamily: 'var(--font-number, var(--font-body))',
                       fontSize: '1.8rem',
                       fontWeight: 700,
                       color: 'var(--gold)',
                       lineHeight: 1,
+                      fontVariantNumeric: 'tabular-nums',
                     }}
                   >
                     {step.num}

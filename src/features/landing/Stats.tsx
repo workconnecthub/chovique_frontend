@@ -39,7 +39,17 @@ const Counter: React.FC<CounterProps> = ({ target, suffix = '+' }) => {
   }, [isInView, target]);
 
   return (
-    <span ref={ref} className="gold" style={{ fontSize: 'clamp(2.5rem, 5vw, 4rem)', fontWeight: 800, fontFamily: 'var(--font-display)' }}>
+    <span
+      ref={ref}
+      className="gold font-number stat-number counter"
+      data-number="true"
+      style={{
+        fontSize: 'clamp(2.5rem, 5vw, 4rem)',
+        fontWeight: 800,
+        fontFamily: 'var(--font-number, var(--font-body))',
+        fontVariantNumeric: 'tabular-nums',
+      }}
+    >
       {count.toLocaleString()}{suffix}
     </span>
   );
@@ -111,6 +121,7 @@ export const Stats: React.FC = () => {
                   letterSpacing: '2px',
                   color: 'var(--beige)',
                   fontWeight: 500,
+                  fontFamily: 'var(--font-body)',
                 }}
               >
                 {stat.label}

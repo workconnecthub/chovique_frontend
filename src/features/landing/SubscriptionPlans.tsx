@@ -148,7 +148,17 @@ export const SubscriptionPlans: React.FC = () => {
 
                 {/* Price */}
                 <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px', marginBottom: '16px' }}>
-                  <span style={{ fontSize: '2.2rem', fontWeight: 800, color: 'var(--gold)', fontFamily: 'var(--font-display)' }}>
+                  <span
+                    className="font-number"
+                    data-number="true"
+                    style={{
+                      fontSize: '2.2rem',
+                      fontWeight: 800,
+                      color: 'var(--gold)',
+                      fontFamily: 'var(--font-number, var(--font-body))',
+                      fontVariantNumeric: 'tabular-nums',
+                    }}
+                  >
                     {plan.price}
                   </span>
                   <span style={{ color: 'var(--grey-light)', fontSize: '0.85rem' }}>

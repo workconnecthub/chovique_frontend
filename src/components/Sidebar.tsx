@@ -118,6 +118,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, onReq
     { id: 'reports', label: 'Reports & Analytics', icon: FileSpreadsheet },
     { id: 'admin-mgmt', label: 'Admin Management', icon: Users },
     { id: 'customers', label: 'Customer Directory', icon: Users },
+    { id: 'coupons', label: 'Coupons & Discounts', icon: Tag },
+    { id: 'reward-settings', label: 'Reward Coins System', icon: Coins },
     { id: 'delivery-boys', label: 'Delivery Management', icon: Bike },
     { id: 'logistics', label: 'Logistics & Hubs', icon: Store },
     { id: 'audit-logs', label: 'Audit Logs', icon: FileClock },
@@ -157,6 +159,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, onReq
   const superadminRemainingItems = [
     { id: 'admin-mgmt', label: 'Admins Management', icon: Users },
     { id: 'customers', label: 'Customer Directory', icon: Users },
+    { id: 'coupons', label: 'Coupons & Discounts', icon: Tag },
+    { id: 'reward-settings', label: 'Reward Coins System', icon: Coins },
     { id: 'delivery-boys', label: 'Delivery Management', icon: Bike },
     { id: 'logistics', label: 'Logistics & Hubs', icon: Store },
     { id: 'audit-logs', label: 'Audit Logs', icon: FileClock },

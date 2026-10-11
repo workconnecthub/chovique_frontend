@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Activity, Loader2, AlertTriangle } from 'lucide-react';
+import { X, Activity, Loader2, AlertTriangle, Trash2 } from 'lucide-react';
 import { SuperadminAuditLogRecord, adminService } from '../services/adminService';
 
 interface AuditLogDetailModalProps {
   logId: string | null;
   initialLog?: SuperadminAuditLogRecord | null;
   onClose: () => void;
+  onDelete?: (logId: string) => void;
   role?: 'superadmin' | 'admin';
 }
 
@@ -99,6 +100,7 @@ export const AuditLogDetailModal: React.FC<AuditLogDetailModalProps> = ({
   logId,
   initialLog,
   onClose,
+  onDelete,
   role = 'superadmin',
 }) => {
   const [log, setLog] = useState<SuperadminAuditLogRecord | null>(initialLog || null);
@@ -362,6 +364,34 @@ export const AuditLogDetailModal: React.FC<AuditLogDetailModalProps> = ({
                     {formatDetailsText(log.description, log.details, log.metadata, log.user_name, log.action)}
                   </div>
                 </div>
+
+                {onDelete && (
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '12px', paddingTop: '16px', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+                    <button
+                      onClick={() => {
+                        onDelete(log.id);
+                        onClose();
+                      }}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        background: 'rgba(231, 76, 60, 0.15)',
+                        border: '1px solid rgba(231, 76, 60, 0.4)',
+                        color: '#e74c3c',
+                        padding: '8px 16px',
+                        borderRadius: '6px',
+                        fontSize: '0.82rem',
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease',
+                      }}
+                    >
+                      <Trash2 size={14} />
+                      Delete Audit Record
+                    </button>
+                  </div>
+                )}
               </>
             ) : null}
           </div>

@@ -42,10 +42,27 @@
   --glass-border: rgba(var(--gold-dark), 0.15);
   --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
 
+  /* Granular Component Theming Tokens (Managed by Superadmin Theme Management) */
+  --button-bg: var(--chocolate-brown, #5A3825);
+  --button-text: #FFFFFF;
+  --button-secondary: var(--gold, #D4AF37);
+  --cart-color: var(--gold, #D4AF37);
+  --cart-text: #0D090A;
+  --product-card-bg: rgba(26, 23, 22, 0.85);
+  --product-card-border: rgba(212, 175, 55, 0.3);
+  --product-card-text: #F7F7F7;
+  --navbar-bg: rgba(13, 9, 10, 0.9);
+  --navbar-text: #F7F7F7;
+  --footer-bg: #0A0A0A;
+  --footer-text: #F7F7F7;
+  --bg-color: #0D090A;
+  --surface-color: #1A1716;
+
   /* Typography */
   --font-display: 'Playfair Display', Georgia, serif;
   --font-elegant: 'Cormorant Garamond', Georgia, serif;
   --font-body: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-number: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
 
   /* Spacing */
   --section-padding: clamp(36px, 4.5vw, 60px);

@@ -1002,6 +1002,12 @@ export const adminService = {
   getSuperadminAuditLogById: (logId: string): Promise<SuperadminAuditLogRecord> =>
     apiGet<SuperadminAuditLogRecord>(`/superadmin/audit-logs/${logId}`),
 
+  deleteSuperadminAuditLog: (logId: string): Promise<{ success: boolean; message: string }> =>
+    apiDelete<{ success: boolean; message: string }>(`/superadmin/audit-logs/${logId}`),
+
+  bulkDeleteSuperadminAuditLogs: (logIds: string[]): Promise<{ success: boolean; deleted_count: number; message: string }> =>
+    apiPost<{ success: boolean; deleted_count: number; message: string }>('/superadmin/audit-logs/bulk-delete', { log_ids: logIds }),
+
   getAdminAuditLogById: (logId: string): Promise<SuperadminAuditLogRecord> =>
     apiGet<SuperadminAuditLogRecord>(`/superadmin/audit-logs/${logId}`),
 
@@ -1063,6 +1069,9 @@ export const adminService = {
 
   deleteSuperadminTheme: (themeId: string): Promise<{ message: string }> =>
     apiDelete<{ message: string }>(`/superadmin/themes/${themeId}`),
+
+  getActiveSuperadminTheme: (): Promise<SuperadminThemeRecord> =>
+    apiGet<SuperadminThemeRecord>('/superadmin/themes/active'),
 };
 
 export interface KPICardData {
@@ -1367,6 +1376,26 @@ export interface SuperadminThemeRecord {
   secondary_accent_color: string;
   text_color: string;
   surface_color: string;
+
+  // Granular Component Colors
+  button_color?: string;
+  button_text_color?: string;
+  secondary_button_color?: string;
+  cart_color?: string;
+  cart_text_color?: string;
+  product_card_color?: string;
+  product_card_border_color?: string;
+  product_card_text_color?: string;
+  navbar_color?: string;
+  navbar_text_color?: string;
+  footer_color?: string;
+  footer_text_color?: string;
+
+  // Typography & Number Fonts
+  font_family?: string;
+  heading_font_family?: string;
+  number_font_family?: string;
+
   is_active: boolean;
   is_preset: boolean;
   created_at: string;
@@ -1388,6 +1417,23 @@ export interface ThemeCreatePayload {
   secondary_accent_color: string;
   text_color: string;
   surface_color: string;
+
+  button_color?: string;
+  button_text_color?: string;
+  secondary_button_color?: string;
+  cart_color?: string;
+  cart_text_color?: string;
+  product_card_color?: string;
+  product_card_border_color?: string;
+  product_card_text_color?: string;
+  navbar_color?: string;
+  navbar_text_color?: string;
+  footer_color?: string;
+  footer_text_color?: string;
+
+  font_family?: string;
+  heading_font_family?: string;
+  number_font_family?: string;
 }
 
 export interface ThemeUpdatePayload {
@@ -1399,6 +1445,23 @@ export interface ThemeUpdatePayload {
   secondary_accent_color: string;
   text_color: string;
   surface_color: string;
+
+  button_color?: string;
+  button_text_color?: string;
+  secondary_button_color?: string;
+  cart_color?: string;
+  cart_text_color?: string;
+  product_card_color?: string;
+  product_card_border_color?: string;
+  product_card_text_color?: string;
+  navbar_color?: string;
+  navbar_text_color?: string;
+  footer_color?: string;
+  footer_text_color?: string;
+
+  font_family?: string;
+  heading_font_family?: string;
+  number_font_family?: string;
 }
 
 

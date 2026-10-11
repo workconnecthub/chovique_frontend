@@ -129,6 +129,7 @@ export const OurStoryPage: React.FC = () => {
     <div style={{ background: 'var(--black)', color: 'var(--cream)', minHeight: '100vh', overflowX: 'hidden' }}>
       {/* Hero Header */}
       <section
+        className="our-story-hero"
         style={{
           position: 'relative',
           padding: '105px 0 45px 0',

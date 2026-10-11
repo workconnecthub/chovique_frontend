@@ -99,7 +99,11 @@ const parseJsonResponse = async <T>(response: Response): Promise<T> => {
   }
 };
 
-/** Parse error response from FastAPI */
+import { formatApiErrorMessage, getStatusFallback } from '../utils/errorUtils';
+
+export { formatApiErrorMessage };
+
+/** Parse error response from FastAPI into human-friendly ApiError */
 const parseError = async (response: Response): Promise<ApiError> => {
   try {
     const text = await response.text();
@@ -111,13 +115,16 @@ const parseError = async (response: Response): Promise<ApiError> => {
       );
     }
     const data = JSON.parse(text);
-    const detail =
-      typeof data.detail === 'string'
-        ? data.detail
-        : JSON.stringify(data.detail) || 'An unexpected error occurred';
+    const detail = formatApiErrorMessage(
+      data.detail !== undefined ? data.detail : data,
+      getStatusFallback(response.status)
+    );
     return new ApiError(response.status, detail);
   } catch {
-    return new ApiError(response.status, response.statusText || 'An unexpected error occurred');
+    return new ApiError(
+      response.status,
+      getStatusFallback(response.status, response.statusText || 'An unexpected error occurred')
+    );
   }
 };
 

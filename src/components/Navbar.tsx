@@ -240,7 +240,7 @@ export const Navbar: React.FC = () => {
                         height: '28px',
                         borderRadius: '50%',
                         objectFit: 'cover',
-                        border: '1.5px solid #c9a84c',
+                        border: '1.5px solid var(--gold)',
                       }}
                     />
                   ) : (
@@ -249,14 +249,14 @@ export const Navbar: React.FC = () => {
                         width: '28px',
                         height: '28px',
                         borderRadius: '50%',
-                        background: 'linear-gradient(135deg, #c9a84c 0%, #e5c875 100%)',
-                        color: '#0f0c0a',
+                        background: 'var(--gradient-gold)',
+                        color: 'var(--black)',
                         fontWeight: 800,
                         fontSize: '0.82rem',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        boxShadow: '0 0 10px rgba(201, 168, 76, 0.3)',
+                        boxShadow: '0 0 10px rgba(var(--gold-rgb), 0.3)',
                       }}
                     >
                       {user?.name ? user.name.charAt(0).toUpperCase() : <User size={16} />}

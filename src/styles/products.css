@@ -255,3 +255,18 @@
     gap: 15px;
   }
 }
+
+@media (max-width: 768px) {
+  body.customer-mobile-active .details-page,
+  .details-page {
+    padding-top: 12px !important;
+    padding-bottom: 85px !important;
+  }
+
+  body.customer-mobile-active .details-info-column h1,
+  .details-info-column h1 {
+    font-size: 1.45rem !important;
+    line-height: 1.25 !important;
+    margin-bottom: 8px !important;
+  }
+}

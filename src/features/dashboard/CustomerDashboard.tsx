@@ -1250,7 +1250,7 @@ export const CustomerDashboard: React.FC = () => {
           <div className="sidebar-close-btn" style={{ textAlign: 'right', marginBottom: '10px' }}>
             <button
               onClick={() => setIsSidebarOpen(false)}
-              style={{ background: 'none', border: 'none', color: '#c9a84c', display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '0.8rem', fontWeight: 700 }}
+              style={{ background: 'none', border: 'none', color: 'var(--gold)', display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '0.8rem', fontWeight: 700 }}
             >
               <X size={18} /> CLOSE
             </button>
@@ -1302,7 +1302,7 @@ export const CustomerDashboard: React.FC = () => {
           ))}
 
           {/* Session & Logout Group */}
-          <div style={{ marginTop: 'auto', paddingTop: '16px', borderTop: '1px solid rgba(201, 168, 76, 0.2)' }}>
+          <div style={{ marginTop: 'auto', paddingTop: '16px', borderTop: '1px solid rgba(var(--gold-rgb),  0.2)' }}>
             <div className="sidebar-group-title" style={{ marginTop: 0 }}>SESSION</div>
             <button
               onClick={() => {
@@ -1340,12 +1340,12 @@ export const CustomerDashboard: React.FC = () => {
           {activeTab === 'overview' && (
             <div>
               {/* Welcome Title Banner */}
-              <div style={{ marginBottom: '28px', marginTop: isMobileGrid ? '-12px' : '0' }}>
+              <div style={{ marginBottom: isMobileGrid ? '14px' : '28px', marginTop: 0 }}>
                 <h1 style={{ 
                   fontFamily: 'var(--font-display)', 
-                  fontSize: isMobileGrid ? '1.8rem' : '2.1rem', 
-                  color: '#f5efe6', 
-                  margin: '0 0 6px 0', 
+                  fontSize: isMobileGrid ? '1.35rem' : '2.1rem', 
+                  color: 'var(--cream)', 
+                  margin: '0 0 4px 0', 
                   fontWeight: 700,
                   whiteSpace: 'nowrap',
                   overflow: 'hidden',
@@ -1356,7 +1356,7 @@ export const CustomerDashboard: React.FC = () => {
                     : `Welcome back, ${user.name ? user.name.split(' ')[0] : ''}!`
                   }
                 </h1>
-                <p style={{ color: 'rgba(255, 255, 255, 0.6)', fontSize: '0.92rem', margin: 0 }}>
+                <p style={{ color: 'rgba(255, 255, 255, 0.6)', fontSize: isMobileGrid ? '0.82rem' : '0.92rem', margin: 0 }}>
                   Here's what's happening with your account today.
                 </p>
               </div>
@@ -1367,8 +1367,8 @@ export const CustomerDashboard: React.FC = () => {
                   key={t.id}
                   style={{
                     padding: '16px 20px',
-                    border: '1px solid #c9a84c',
-                    background: 'rgba(201, 168, 76, 0.1)',
+                    border: '1px solid var(--gold)',
+                    background: 'rgba(var(--gold-rgb),  0.1)',
                     borderRadius: '10px',
                     marginBottom: '24px',
                     display: 'flex',
@@ -1377,10 +1377,10 @@ export const CustomerDashboard: React.FC = () => {
                   }}
                 >
                   <div style={{ flex: 1, marginRight: '15px' }}>
-                    <span style={{ fontWeight: 700, color: '#c9a84c', display: 'block', fontSize: '0.9rem' }}>
+                    <span style={{ fontWeight: 700, color: 'var(--gold)', display: 'block', fontSize: '0.9rem' }}>
                       Support Complaint Resolved ({t.id})
                     </span>
-                    <p style={{ margin: '4px 0 0 0', fontSize: '0.85rem', color: '#f5efe6' }}>
+                    <p style={{ margin: '4px 0 0 0', fontSize: '0.85rem', color: 'var(--cream)' }}>
                       Category: <strong>{t.category}</strong>. Admin has marked this issue as resolved.
                     </p>
                   </div>
@@ -1443,13 +1443,13 @@ export const CustomerDashboard: React.FC = () => {
                 <div
                   style={{
                     background: 'rgba(18, 14, 11, 0.95)',
-                    border: '1px solid rgba(201, 168, 76, 0.25)',
+                    border: '1px solid rgba(var(--gold-rgb),  0.25)',
                     borderRadius: '12px',
                     padding: '24px',
                   }}
                 >
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '8px' }}>
-                    <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1.25rem', color: '#f5efe6', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1.25rem', color: 'var(--cream)', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
                       Recent Orders
                     </h3>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -1458,9 +1458,9 @@ export const CustomerDashboard: React.FC = () => {
                         onClick={() => fetchOrdersData(false)}
                         title="Refresh recent orders"
                         style={{
-                          background: 'rgba(201, 168, 76, 0.1)',
-                          border: '1px solid rgba(201, 168, 76, 0.3)',
-                          color: '#c9a84c',
+                          background: 'rgba(var(--gold-rgb),  0.1)',
+                          border: '1px solid rgba(var(--gold-rgb),  0.3)',
+                          color: 'var(--gold)',
                           padding: '4px 10px',
                           borderRadius: '6px',
                           fontSize: '0.75rem',
@@ -1476,7 +1476,7 @@ export const CustomerDashboard: React.FC = () => {
                       </button>
                       <button
                         onClick={() => setActiveTab('orders')}
-                        style={{ background: 'none', border: 'none', color: '#c9a84c', fontSize: '0.82rem', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                        style={{ background: 'none', border: 'none', color: 'var(--gold)', fontSize: '0.82rem', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
                       >
                         View All Orders →
                       </button>
@@ -1519,12 +1519,12 @@ export const CustomerDashboard: React.FC = () => {
                             style={{
                               padding: isMobileGrid ? '12px' : '14px 16px',
                               background: 'rgba(0,0,0,0.35)',
-                              border: isOutForDelivery ? '1.5px solid rgba(201, 168, 76, 0.45)' : '1px solid rgba(255,255,255,0.08)',
+                              border: isOutForDelivery ? '1.5px solid rgba(var(--gold-rgb),  0.45)' : '1px solid rgba(255,255,255,0.08)',
                               borderRadius: '10px',
                               display: 'flex',
                               flexDirection: 'column',
                               gap: '12px',
-                              boxShadow: isOutForDelivery ? '0 4px 20px rgba(201, 168, 76, 0.15)' : 'none',
+                              boxShadow: isOutForDelivery ? '0 4px 20px rgba(var(--gold-rgb),  0.15)' : 'none',
                             }}
                           >
                             {/* 1. PRODUCT IMAGES ROW (ALL PRODUCTS VISIBLE WITH QUANTITIES) */}
@@ -1548,7 +1548,7 @@ export const CustomerDashboard: React.FC = () => {
                                           height: '100%',
                                           borderRadius: '8px',
                                           objectFit: 'cover',
-                                          border: '1px solid rgba(201,168,76,0.3)',
+                                          border: '1px solid rgba(var(--gold-rgb), 0.3)',
                                           background: 'rgba(255,255,255,0.02)',
                                         }}
                                       />
@@ -1558,8 +1558,8 @@ export const CustomerDashboard: React.FC = () => {
                                             position: 'absolute',
                                             bottom: '-4px',
                                             right: '-4px',
-                                            background: '#c9a84c',
-                                            color: '#0f0c0a',
+                                            background: 'var(--gold)',
+                                            color: 'var(--black)',
                                             fontSize: '0.68rem',
                                             fontWeight: 800,
                                             padding: '1px 6px',
@@ -1574,11 +1574,11 @@ export const CustomerDashboard: React.FC = () => {
                                       )}
                                     </div>
                                     <div style={{ minWidth: 0, flex: 1 }}>
-                                      <span style={{ fontWeight: 700, color: '#f5efe6', fontSize: '0.86rem', display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                      <span style={{ fontWeight: 700, color: 'var(--cream)', fontSize: '0.86rem', display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                                         {singleName} {singleQty > 1 ? `(×${singleQty})` : ''}
                                       </span>
                                       <div style={{ fontSize: '0.74rem', color: 'rgba(255,255,255,0.5)', marginTop: '2px', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-                                        <span style={{ color: '#c9a84c', fontWeight: 600 }}>{ord.id}</span>
+                                        <span style={{ color: 'var(--gold)', fontWeight: 600 }}>{ord.id}</span>
                                         <span>·</span>
                                         <span>{ord.date}</span>
                                       </div>
@@ -1609,7 +1609,7 @@ export const CustomerDashboard: React.FC = () => {
                                             height: '100%',
                                             borderRadius: '7px',
                                             objectFit: 'cover',
-                                            border: '1px solid rgba(201,168,76,0.3)',
+                                            border: '1px solid rgba(var(--gold-rgb), 0.3)',
                                             background: 'rgba(255,255,255,0.02)',
                                           }}
                                         />
@@ -1619,8 +1619,8 @@ export const CustomerDashboard: React.FC = () => {
                                               position: 'absolute',
                                               bottom: '-4px',
                                               right: '-4px',
-                                              background: '#c9a84c',
-                                              color: '#0f0c0a',
+                                              background: 'var(--gold)',
+                                              color: 'var(--black)',
                                               fontSize: '0.64rem',
                                               fontWeight: 800,
                                               padding: '1px 5px',
@@ -1638,7 +1638,7 @@ export const CustomerDashboard: React.FC = () => {
                                   })}
                                 </div>
                                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px', flexWrap: 'wrap' }}>
-                                  <span style={{ fontWeight: 700, color: '#c9a84c', fontSize: '0.8rem' }}>{ord.id}</span>
+                                  <span style={{ fontWeight: 700, color: 'var(--gold)', fontSize: '0.8rem' }}>{ord.id}</span>
                                   <span style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.5)' }}>
                                     {ord.date} · {ord.items.length} Products ({totalQty} Total Items)
                                   </span>
@@ -1650,8 +1650,8 @@ export const CustomerDashboard: React.FC = () => {
                             {isOutForDelivery && (
                               <div
                                 style={{
-                                  background: 'linear-gradient(135deg, rgba(201, 168, 76, 0.15) 0%, rgba(30, 20, 14, 0.7) 100%)',
-                                  border: '1px solid rgba(201, 168, 76, 0.45)',
+                                  background: 'linear-gradient(135deg, rgba(var(--gold-rgb),  0.15) 0%, rgba(30, 20, 14, 0.7) 100%)',
+                                  border: '1px solid rgba(var(--gold-rgb),  0.45)',
                                   borderRadius: '8px',
                                   padding: '8px 12px',
                                   display: 'flex',
@@ -1662,13 +1662,13 @@ export const CustomerDashboard: React.FC = () => {
                                 }}
                               >
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                  <Truck size={16} style={{ color: '#c9a84c', flexShrink: 0 }} />
+                                  <Truck size={16} style={{ color: 'var(--gold)', flexShrink: 0 }} />
                                   <div>
-                                    <span style={{ fontSize: '0.7rem', fontWeight: 800, color: '#c9a84c', textTransform: 'uppercase', letterSpacing: '0.5px', display: 'block' }}>
+                                    <span style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--gold)', textTransform: 'uppercase', letterSpacing: '0.5px', display: 'block' }}>
                                       Out for Delivery
                                     </span>
                                     {deliveryBoyName && (
-                                      <span style={{ fontSize: '0.75rem', color: '#f5efe6' }}>
+                                      <span style={{ fontSize: '0.75rem', color: 'var(--cream)' }}>
                                         Partner: <strong>{deliveryBoyName}</strong>{deliveryBoyPhone ? ` (${deliveryBoyPhone})` : ''}
                                       </span>
                                     )}
@@ -1683,11 +1683,11 @@ export const CustomerDashboard: React.FC = () => {
                                         fontWeight: 900,
                                         fontSize: '0.98rem',
                                         letterSpacing: '2px',
-                                        color: '#0f0c0a',
-                                        background: '#c9a84c',
+                                        color: 'var(--black)',
+                                        background: 'var(--gold)',
                                         padding: '2px 8px',
                                         borderRadius: '5px',
-                                        boxShadow: '0 2px 6px rgba(201, 168, 76, 0.3)',
+                                        boxShadow: '0 2px 6px rgba(var(--gold-rgb),  0.3)',
                                       }}
                                     >
                                       {ord.delivery_otp}
@@ -1696,7 +1696,7 @@ export const CustomerDashboard: React.FC = () => {
                                       type="button"
                                       onClick={(e) => { e.stopPropagation(); copyToClipboard(String(ord.delivery_otp)); }}
                                       title="Copy OTP"
-                                      style={{ background: 'none', border: 'none', color: '#c9a84c', cursor: 'pointer', padding: '2px', display: 'flex', alignItems: 'center' }}
+                                      style={{ background: 'none', border: 'none', color: 'var(--gold)', cursor: 'pointer', padding: '2px', display: 'flex', alignItems: 'center' }}
                                     >
                                       {copiedCode === String(ord.delivery_otp) ? <Check size={14} /> : <Copy size={14} />}
                                     </button>
@@ -1731,7 +1731,7 @@ export const CustomerDashboard: React.FC = () => {
                             {/* 4. BOTTOM ROW: amount, status, button */}
                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
                               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                                <span style={{ fontWeight: 700, color: '#f5efe6', fontSize: '0.88rem', whiteSpace: 'nowrap' }}>
+                                <span style={{ fontWeight: 700, color: 'var(--cream)', fontSize: '0.88rem', whiteSpace: 'nowrap' }}>
                                   ₹{ord.total.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                 </span>
                                 <span
@@ -1758,8 +1758,8 @@ export const CustomerDashboard: React.FC = () => {
                                 style={{
                                   padding: '7px 12px',
                                   background: 'transparent',
-                                  border: '1px solid rgba(201, 168, 76, 0.4)',
-                                  color: '#c9a84c',
+                                  border: '1px solid rgba(var(--gold-rgb),  0.4)',
+                                  color: 'var(--gold)',
                                   borderRadius: '6px',
                                   fontSize: '0.75rem',
                                   fontWeight: 700,
@@ -1768,12 +1768,12 @@ export const CustomerDashboard: React.FC = () => {
                                   transition: 'border-color 0.2s, background 0.2s',
                                 }}
                                 onMouseEnter={(e) => {
-                                  (e.currentTarget as HTMLButtonElement).style.background = 'rgba(201,168,76,0.1)';
-                                  (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(201,168,76,0.7)';
+                                  (e.currentTarget as HTMLButtonElement).style.background = 'rgba(var(--gold-rgb), 0.1)';
+                                  (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(var(--gold-rgb), 0.7)';
                                 }}
                                 onMouseLeave={(e) => {
                                   (e.currentTarget as HTMLButtonElement).style.background = 'transparent';
-                                  (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(201,168,76,0.4)';
+                                  (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(var(--gold-rgb), 0.4)';
                                 }}
                               >
                                 View Details
@@ -1790,18 +1790,18 @@ export const CustomerDashboard: React.FC = () => {
                 <div
                   style={{
                     background: 'rgba(18, 14, 11, 0.95)',
-                    border: '1px solid rgba(201, 168, 76, 0.25)',
+                    border: '1px solid rgba(var(--gold-rgb),  0.25)',
                     borderRadius: '12px',
                     padding: '24px',
                   }}
                 >
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                    <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1.25rem', color: '#f5efe6', margin: 0 }}>
+                    <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1.25rem', color: 'var(--cream)', margin: 0 }}>
                       Available Coupons
                     </h3>
                     <button
                       onClick={() => setActiveTab('coupons')}
-                      style={{ background: 'none', border: 'none', color: '#c9a84c', fontSize: '0.82rem', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                      style={{ background: 'none', border: 'none', color: 'var(--gold)', fontSize: '0.82rem', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
                     >
                       View All Coupons →
                     </button>
@@ -1816,8 +1816,8 @@ export const CustomerDashboard: React.FC = () => {
                           style={{
                             height: '72px',
                             borderRadius: '8px',
-                            background: 'rgba(201,168,76,0.06)',
-                            border: '1px solid rgba(201,168,76,0.12)',
+                            background: 'rgba(var(--gold-rgb), 0.06)',
+                            border: '1px solid rgba(var(--gold-rgb), 0.12)',
                             animation: 'pulse 1.5s ease-in-out infinite',
                           }}
                         />
@@ -1877,7 +1877,7 @@ export const CustomerDashboard: React.FC = () => {
                             <div className="coupon-ticket-right">
                               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                                 <div>
-                                  <h4 style={{ color: '#f5efe6', margin: '0 0 4px 0', fontSize: '0.9rem', fontWeight: 700 }}>
+                                  <h4 style={{ color: 'var(--cream)', margin: '0 0 4px 0', fontSize: '0.9rem', fontWeight: 700 }}>
                                     {coupon.name || coupon.code}
                                   </h4>
                                   <p style={{ color: 'rgba(255,255,255,0.6)', margin: 0, fontSize: '0.78rem' }}>
@@ -1909,11 +1909,11 @@ export const CustomerDashboard: React.FC = () => {
             {/* PROFILE PANEL */}
             {activeTab === 'profile' && (
               <div>
-                <div style={{ marginBottom: '28px' }}>
-                  <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.8rem', color: '#f5efe6', margin: '0 0 6px 0', fontWeight: 700 }}>
+                <div style={{ marginBottom: isMobile ? '14px' : '28px' }}>
+                  <h2 style={{ fontFamily: 'var(--font-display)', fontSize: isMobile ? '1.35rem' : '1.8rem', color: 'var(--cream)', margin: '0 0 4px 0', fontWeight: 700 }}>
                     My Profile Details
                   </h2>
-                  <p style={{ color: 'rgba(255, 255, 255, 0.6)', fontSize: '0.9rem', margin: 0 }}>
+                  <p style={{ color: 'rgba(255, 255, 255, 0.6)', fontSize: isMobile ? '0.8rem' : '0.9rem', margin: 0 }}>
                     Manage your personal information and profile details.
                   </p>
                 </div>
@@ -1942,8 +1942,8 @@ export const CustomerDashboard: React.FC = () => {
                             height: '120px',
                             borderRadius: '50%',
                             objectFit: 'cover',
-                            border: '2px solid #c9a84c',
-                            boxShadow: '0 0 20px rgba(201, 168, 76, 0.3)',
+                            border: '2px solid var(--gold)',
+                            boxShadow: '0 0 20px rgba(var(--gold-rgb),  0.3)',
                           }}
                         />
                       ) : (
@@ -1952,14 +1952,14 @@ export const CustomerDashboard: React.FC = () => {
                             width: '120px',
                             height: '120px',
                             borderRadius: '50%',
-                            background: 'linear-gradient(135deg, #c9a84c 0%, #e5c875 100%)',
-                            color: '#0f0c0a',
+                            background: 'var(--gradient-gold)',
+                            color: 'var(--black)',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
                             fontSize: '2.5rem',
                             fontWeight: 800,
-                            boxShadow: '0 0 20px rgba(201, 168, 76, 0.35)',
+                            boxShadow: '0 0 20px rgba(var(--gold-rgb),  0.35)',
                           }}
                         >
                           {user.name.charAt(0).toUpperCase()}
@@ -2002,8 +2002,8 @@ export const CustomerDashboard: React.FC = () => {
                         alignItems: 'center',
                         gap: '8px',
                         background: 'transparent',
-                        color: '#c9a84c',
-                        border: '1px solid rgba(201, 168, 76, 0.4)',
+                        color: 'var(--gold)',
+                        border: '1px solid rgba(var(--gold-rgb),  0.4)',
                         padding: '8px 16px',
                         borderRadius: '6px',
                         fontSize: '0.82rem',
@@ -2033,8 +2033,8 @@ export const CustomerDashboard: React.FC = () => {
                   <form onSubmit={handleProfileSave} style={{ display: 'flex', flexDirection: 'column', gap: '20px', maxWidth: '580px' }}>
                     {/* Full Name */}
                     <div>
-                      <label style={{ display: 'block', fontSize: '0.88rem', color: '#f5efe6', fontWeight: 600, marginBottom: '8px' }}>
-                        Full Name <span style={{ color: '#c9a84c' }}>*</span>
+                      <label style={{ display: 'block', fontSize: '0.88rem', color: 'var(--cream)', fontWeight: 600, marginBottom: '8px' }}>
+                        Full Name <span style={{ color: 'var(--gold)' }}>*</span>
                       </label>
                       <input
                         type="text"
@@ -2048,8 +2048,8 @@ export const CustomerDashboard: React.FC = () => {
                           padding: '12px 14px',
                           borderRadius: '6px',
                           background: 'rgba(0, 0, 0, 0.4)',
-                          border: '1px solid rgba(201, 168, 76, 0.3)',
-                          color: '#f5efe6',
+                          border: '1px solid rgba(var(--gold-rgb),  0.3)',
+                          color: 'var(--cream)',
                           fontSize: '0.9rem',
                           outline: 'none',
                           boxSizing: 'border-box',
@@ -2060,8 +2060,8 @@ export const CustomerDashboard: React.FC = () => {
 
                     {/* Email Address */}
                     <div>
-                      <label style={{ display: 'block', fontSize: '0.88rem', color: '#f5efe6', fontWeight: 600, marginBottom: '8px' }}>
-                        Email Address <span style={{ color: '#c9a84c' }}>*</span>
+                      <label style={{ display: 'block', fontSize: '0.88rem', color: 'var(--cream)', fontWeight: 600, marginBottom: '8px' }}>
+                        Email Address <span style={{ color: 'var(--gold)' }}>*</span>
                       </label>
                       <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
                         <input
@@ -2106,7 +2106,7 @@ export const CustomerDashboard: React.FC = () => {
 
                     {/* Phone Number */}
                     <div>
-                      <label style={{ display: 'block', fontSize: '0.88rem', color: '#f5efe6', fontWeight: 600, marginBottom: '8px' }}>
+                      <label style={{ display: 'block', fontSize: '0.88rem', color: 'var(--cream)', fontWeight: 600, marginBottom: '8px' }}>
                         Phone Number
                       </label>
                       <input
@@ -2121,8 +2121,8 @@ export const CustomerDashboard: React.FC = () => {
                           padding: '12px 14px',
                           borderRadius: '6px',
                           background: 'rgba(0, 0, 0, 0.4)',
-                          border: '1px solid rgba(201, 168, 76, 0.3)',
-                          color: '#f5efe6',
+                          border: '1px solid rgba(var(--gold-rgb),  0.3)',
+                          color: 'var(--cream)',
                           fontSize: '0.9rem',
                           outline: 'none',
                           boxSizing: 'border-box',
@@ -2132,11 +2132,11 @@ export const CustomerDashboard: React.FC = () => {
                     </div>
 
                     {/* ── Personal Information ── */}
-                    <div style={{ paddingTop: '8px', borderTop: '1px solid rgba(201,168,76,0.15)', marginTop: '4px' }}>
+                    <div style={{ paddingTop: '8px', borderTop: '1px solid rgba(var(--gold-rgb), 0.15)', marginTop: '4px' }}>
                       <h4 style={{
                         fontFamily: 'var(--font-display)',
                         fontSize: '1rem',
-                        color: '#c9a84c',
+                        color: 'var(--gold)',
                         fontWeight: 700,
                         margin: '0 0 18px 0',
                         letterSpacing: '0.3px',
@@ -2147,7 +2147,7 @@ export const CustomerDashboard: React.FC = () => {
                       <div style={{ display: 'grid', gridTemplateColumns: isMobileGrid ? '1fr' : '1fr 1fr', gap: '20px' }}>
                         {/* Date of Birth */}
                         <div>
-                          <label style={{ display: 'block', fontSize: '0.88rem', color: '#f5efe6', fontWeight: 600, marginBottom: '8px' }}>
+                          <label style={{ display: 'block', fontSize: '0.88rem', color: 'var(--cream)', fontWeight: 600, marginBottom: '8px' }}>
                             Date of Birth
                           </label>
                           <input
@@ -2164,8 +2164,8 @@ export const CustomerDashboard: React.FC = () => {
                               padding: '12px 14px',
                               borderRadius: '6px',
                               background: 'rgba(0, 0, 0, 0.4)',
-                              border: `1px solid ${profileForm.dob ? 'rgba(46,204,113,0.5)' : 'rgba(201,168,76,0.3)'}`,
-                              color: '#f5efe6',
+                              border: `1px solid ${profileForm.dob ? 'rgba(46,204,113,0.5)' : 'rgba(var(--gold-rgb), 0.3)'}`,
+                              color: 'var(--cream)',
                               fontSize: '0.9rem',
                               outline: 'none',
                               boxSizing: 'border-box',
@@ -2177,7 +2177,7 @@ export const CustomerDashboard: React.FC = () => {
 
                         {/* Gender */}
                         <div>
-                          <label style={{ display: 'block', fontSize: '0.88rem', color: '#f5efe6', fontWeight: 600, marginBottom: '8px' }}>
+                          <label style={{ display: 'block', fontSize: '0.88rem', color: 'var(--cream)', fontWeight: 600, marginBottom: '8px' }}>
                             Gender
                           </label>
                           <select
@@ -2191,7 +2191,7 @@ export const CustomerDashboard: React.FC = () => {
                               padding: '12px 14px',
                               borderRadius: '6px',
                               background: '#120e0b',
-                              border: `1px solid ${profileForm.gender ? 'rgba(46,204,113,0.5)' : 'rgba(201,168,76,0.3)'}`,
+                              border: `1px solid ${profileForm.gender ? 'rgba(46,204,113,0.5)' : 'rgba(var(--gold-rgb), 0.3)'}`,
                               color: profileForm.gender ? '#f5efe6' : 'rgba(255,255,255,0.45)',
                               fontSize: '0.9rem',
                               outline: 'none',
@@ -2201,10 +2201,10 @@ export const CustomerDashboard: React.FC = () => {
                             }}
                           >
                             <option value="" style={{ background: '#120e0b', color: 'rgba(255,255,255,0.45)' }}>Select Gender</option>
-                            <option value="Male" style={{ background: '#120e0b', color: '#f5efe6' }}>Male</option>
-                            <option value="Female" style={{ background: '#120e0b', color: '#f5efe6' }}>Female</option>
-                            <option value="Non-binary" style={{ background: '#120e0b', color: '#f5efe6' }}>Non-binary</option>
-                            <option value="Prefer not to say" style={{ background: '#120e0b', color: '#f5efe6' }}>Prefer not to say</option>
+                            <option value="Male" style={{ background: '#120e0b', color: 'var(--cream)' }}>Male</option>
+                            <option value="Female" style={{ background: '#120e0b', color: 'var(--cream)' }}>Female</option>
+                            <option value="Non-binary" style={{ background: '#120e0b', color: 'var(--cream)' }}>Non-binary</option>
+                            <option value="Prefer not to say" style={{ background: '#120e0b', color: 'var(--cream)' }}>Prefer not to say</option>
                           </select>
                         </div>
                       </div>
@@ -2255,14 +2255,14 @@ export const CustomerDashboard: React.FC = () => {
                         style={{
                           padding: '12px 28px',
                           borderRadius: '6px',
-                          background: 'linear-gradient(135deg, #c9a84c 0%, #e5c875 100%)',
-                          color: '#0f0c0a',
+                          background: 'var(--gradient-gold)',
+                          color: 'var(--black)',
                           border: 'none',
                           fontSize: '0.92rem',
                           fontWeight: 700,
                           cursor: isProfileSaving || isAvatarUploading ? 'not-allowed' : 'pointer',
                           opacity: isProfileSaving || isAvatarUploading ? 0.7 : 1,
-                          boxShadow: '0 4px 14px rgba(201, 168, 76, 0.35)',
+                          boxShadow: '0 4px 14px rgba(var(--gold-rgb),  0.35)',
                           display: 'inline-flex',
                           alignItems: 'center',
                           gap: '8px',
@@ -2295,14 +2295,14 @@ export const CustomerDashboard: React.FC = () => {
                       style={{
                         background: 'none',
                         border: 'none',
-                        color: '#c9a84c',
+                        color: 'var(--gold)',
                         fontSize: '0.9rem',
                         fontWeight: 700,
                         cursor: 'pointer',
                         display: 'inline-flex',
                         alignItems: 'center',
                         gap: '6px',
-                        marginBottom: '20px',
+                        marginBottom: isMobile ? '10px' : '20px',
                         padding: 0,
                       }}
                     >
@@ -2310,9 +2310,9 @@ export const CustomerDashboard: React.FC = () => {
                     </button>
 
                     {/* Order Title Header */}
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '14px', marginBottom: '12px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px', marginBottom: '10px' }}>
                       <div style={{ minWidth: 0, flex: 1 }}>
-                        <h2 style={{ fontFamily: 'var(--font-display, serif)', fontSize: 'clamp(1.4rem, 4vw, 2.1rem)', color: '#f5efe6', margin: '0 0 8px 0', fontWeight: 700, wordBreak: 'break-word', letterSpacing: '0.5px' }}>
+                        <h2 style={{ fontFamily: 'var(--font-display, serif)', fontSize: isMobile ? '1.35rem' : 'clamp(1.4rem, 4vw, 2.1rem)', color: 'var(--cream)', margin: '0 0 6px 0', fontWeight: 700, wordBreak: 'break-word', letterSpacing: '0.5px' }}>
                           Order #{selectedOrder.id}
                         </h2>
                         <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
@@ -2410,11 +2410,11 @@ export const CustomerDashboard: React.FC = () => {
 
                     <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap', color: 'rgba(255, 255, 255, 0.65)', fontSize: '0.86rem', margin: '0 0 24px 0' }}>
                       <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-                        <Calendar size={14} color="#c9a84c" /> Placed on {selectedOrder.date}
+                        <Calendar size={14} color="var(--gold)" /> Placed on {selectedOrder.date}
                       </span>
                       <span>•</span>
                       <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-                        <CreditCard size={14} color="#c9a84c" /> Payment Method: <strong style={{ color: '#f5efe6' }}>{selectedOrder.paymentMethod || 'Cash on Delivery'}</strong>
+                        <CreditCard size={14} color="var(--gold)" /> Payment Method: <strong style={{ color: 'var(--cream)' }}>{selectedOrder.paymentMethod || 'Cash on Delivery'}</strong>
                       </span>
                     </div>
 
@@ -2471,7 +2471,7 @@ export const CustomerDashboard: React.FC = () => {
                                           style={{
                                             background: step.isError ? '#e74c3c' : '#2ecc71',
                                             border: `2px solid ${step.isError ? '#e74c3c' : '#2ecc71'}`,
-                                            color: '#0f0c0a',
+                                            color: 'var(--black)',
                                             boxShadow: step.isError ? '0 0 16px rgba(231, 76, 60, 0.5)' : '0 0 12px rgba(46, 204, 113, 0.4)',
                                           }}
                                         >
@@ -2529,7 +2529,7 @@ export const CustomerDashboard: React.FC = () => {
                                           style={{
                                             background: isReturn ? '#9b59b6' : '#2ecc71',
                                             border: `2px solid ${isReturn ? '#9b59b6' : '#2ecc71'}`,
-                                            color: '#0f0c0a',
+                                            color: 'var(--black)',
                                             boxShadow: `0 0 14px ${isReturn ? 'rgba(155, 89, 182, 0.4)' : 'rgba(46, 204, 113, 0.4)'}`,
                                           }}
                                         >
@@ -2596,7 +2596,7 @@ export const CustomerDashboard: React.FC = () => {
                               </div>
 
                               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
-                                <span style={{ fontSize: '0.76rem', color: '#c9a84c', fontWeight: 700 }}>
+                                <span style={{ fontSize: '0.76rem', color: 'var(--gold)', fontWeight: 700 }}>
                                   {progressPct}% Completed
                                 </span>
                               </div>
@@ -2655,7 +2655,7 @@ export const CustomerDashboard: React.FC = () => {
                                             ? '2.5px solid #2ecc71'
                                             : '2px solid rgba(255, 255, 255, 0.18)',
                                           color: isDone
-                                            ? '#0f0c0a'
+                                            ? 'var(--black)'
                                             : isCurrent
                                             ? '#2ecc71'
                                             : 'rgba(255, 255, 255, 0.4)',
@@ -2705,7 +2705,7 @@ export const CustomerDashboard: React.FC = () => {
 
                             {/* Mobile Scroll Indicator */}
                             <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '4px' }}>
-                              <span style={{ fontSize: '0.72rem', color: 'rgba(201, 168, 76, 0.65)', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                              <span style={{ fontSize: '0.72rem', color: 'rgba(var(--gold-rgb),  0.65)', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
                                 ⇄ Scroll track to view timeline
                               </span>
                             </div>
@@ -2720,7 +2720,7 @@ export const CustomerDashboard: React.FC = () => {
                         className="customer-order-card"
                         style={{
                           background: 'linear-gradient(135deg, rgba(35, 27, 18, 0.95) 0%, rgba(20, 15, 11, 0.98) 100%)',
-                          border: '2px solid rgba(201, 168, 76, 0.5)',
+                          border: '2px solid rgba(var(--gold-rgb),  0.5)',
                           borderRadius: '16px',
                           padding: '24px',
                           marginBottom: '20px',
@@ -2736,7 +2736,7 @@ export const CustomerDashboard: React.FC = () => {
                             justifyContent: 'space-between',
                             flexWrap: 'wrap',
                             gap: '12px',
-                            borderBottom: '1px solid rgba(201, 168, 76, 0.2)',
+                            borderBottom: '1px solid rgba(var(--gold-rgb),  0.2)',
                             paddingBottom: '16px',
                             marginBottom: '18px',
                           }}
@@ -2747,9 +2747,9 @@ export const CustomerDashboard: React.FC = () => {
                                 width: '44px',
                                 height: '44px',
                                 borderRadius: '12px',
-                                background: 'rgba(201, 168, 76, 0.15)',
-                                border: '1px solid #c9a84c',
-                                color: '#c9a84c',
+                                background: 'rgba(var(--gold-rgb),  0.15)',
+                                border: '1px solid var(--gold)',
+                                color: 'var(--gold)',
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
@@ -2758,10 +2758,10 @@ export const CustomerDashboard: React.FC = () => {
                               <Truck size={24} />
                             </div>
                             <div>
-                              <div style={{ fontSize: '0.75rem', color: '#c9a84c', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.8px' }}>
+                              <div style={{ fontSize: '0.75rem', color: 'var(--gold)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.8px' }}>
                                 LIVE ORDER DELIVERY VERIFICATION
                               </div>
-                              <h4 style={{ margin: '2px 0 0', color: '#f5efe6', fontSize: '1.15rem', fontWeight: 700 }}>
+                              <h4 style={{ margin: '2px 0 0', color: 'var(--cream)', fontSize: '1.15rem', fontWeight: 700 }}>
                                 Your Chocolates Are Out For Delivery!
                               </h4>
                             </div>
@@ -2790,11 +2790,11 @@ export const CustomerDashboard: React.FC = () => {
                                 <a
                                   href={`tel:${selectedOrder.delivery_boy_phone || (selectedOrder as any).deliveryBoyPhone}`}
                                   style={{
-                                    background: 'rgba(201, 168, 76, 0.15)',
-                                    border: '1px solid rgba(201, 168, 76, 0.4)',
+                                    background: 'rgba(var(--gold-rgb),  0.15)',
+                                    border: '1px solid rgba(var(--gold-rgb),  0.4)',
                                     padding: '6px 14px',
                                     borderRadius: '20px',
-                                    color: '#c9a84c',
+                                    color: 'var(--gold)',
                                     fontSize: '0.8rem',
                                     fontWeight: 700,
                                     display: 'inline-flex',
@@ -2825,8 +2825,8 @@ export const CustomerDashboard: React.FC = () => {
                                   padding: '12px 20px',
                                   background: 'rgba(12, 9, 7, 0.85)',
                                   borderRadius: '14px',
-                                  border: '2px dashed #c9a84c',
-                                  boxShadow: '0 4px 20px rgba(201, 168, 76, 0.25)',
+                                  border: '2px dashed var(--gold)',
+                                  boxShadow: '0 4px 20px rgba(var(--gold-rgb),  0.25)',
                                 }}
                               >
                                 {String(selectedOrder.delivery_otp).split('').map((char: string, i: number) => (
@@ -2838,12 +2838,12 @@ export const CustomerDashboard: React.FC = () => {
                                       display: 'inline-flex',
                                       alignItems: 'center',
                                       justifyContent: 'center',
-                                      background: 'rgba(201, 168, 76, 0.15)',
-                                      color: '#f5efe6',
+                                      background: 'rgba(var(--gold-rgb),  0.15)',
+                                      color: 'var(--cream)',
                                       fontSize: '1.6rem',
                                       fontWeight: 900,
                                       borderRadius: '8px',
-                                      border: '1px solid rgba(201, 168, 76, 0.3)',
+                                      border: '1px solid rgba(var(--gold-rgb),  0.3)',
                                       letterSpacing: '1px',
                                     }}
                                   >
@@ -2857,8 +2857,8 @@ export const CustomerDashboard: React.FC = () => {
                                 style={{
                                   padding: '10px 18px',
                                   borderRadius: '8px',
-                                  background: copiedCode === String(selectedOrder.delivery_otp) ? '#2ecc71' : '#c9a84c',
-                                  color: '#0f0c0a',
+                                  background: copiedCode === String(selectedOrder.delivery_otp) ? '#2ecc71' : 'var(--gold)',
+                                  color: 'var(--black)',
                                   fontWeight: 800,
                                   fontSize: '0.85rem',
                                   border: 'none',
@@ -2881,7 +2881,7 @@ export const CustomerDashboard: React.FC = () => {
                                 )}
                               </button>
                             </div>
-                            <div style={{ fontSize: '0.78rem', color: 'rgba(201, 168, 76, 0.8)', marginTop: '14px' }}>
+                            <div style={{ fontSize: '0.78rem', color: 'rgba(var(--gold-rgb),  0.8)', marginTop: '14px' }}>
                               🔒 For security, only share this code when you receive your chilled Chovique packaging.
                             </div>
                           </div>
@@ -2932,7 +2932,7 @@ export const CustomerDashboard: React.FC = () => {
                             <div style={{ fontSize: '0.72rem', color: '#2ecc71', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.8px' }}>
                               DELIVERY PARTNER ASSIGNED & ACCEPTED
                             </div>
-                            <div style={{ color: '#f5efe6', fontSize: '0.95rem', fontWeight: 700, marginTop: '2px' }}>
+                            <div style={{ color: 'var(--cream)', fontSize: '0.95rem', fontWeight: 700, marginTop: '2px' }}>
                               Executive: {selectedOrder.delivery_boy_name}
                             </div>
                             <div style={{ fontSize: '0.78rem', color: 'rgba(255, 255, 255, 0.6)', marginTop: '2px' }}>
@@ -2968,10 +2968,10 @@ export const CustomerDashboard: React.FC = () => {
                     <div className="customer-order-card">
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '18px', flexWrap: 'wrap', gap: '10px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                          <h3 style={{ fontFamily: 'var(--font-display, serif)', fontSize: '1.25rem', color: '#f5efe6', margin: 0, fontWeight: 700 }}>
+                          <h3 style={{ fontFamily: 'var(--font-display, serif)', fontSize: '1.25rem', color: 'var(--cream)', margin: 0, fontWeight: 700 }}>
                             Order Items
                           </h3>
-                          <span style={{ fontSize: '0.75rem', fontWeight: 700, padding: '2px 8px', borderRadius: '12px', background: 'rgba(201, 168, 76, 0.15)', color: '#c9a84c', border: '1px solid rgba(201, 168, 76, 0.3)' }}>
+                          <span style={{ fontSize: '0.75rem', fontWeight: 700, padding: '2px 8px', borderRadius: '12px', background: 'rgba(var(--gold-rgb),  0.15)', color: 'var(--gold)', border: '1px solid rgba(var(--gold-rgb),  0.3)' }}>
                             {selectedOrder.items?.length || 0} {selectedOrder.items?.length === 1 ? 'Item' : 'Items'}
                           </span>
                         </div>
@@ -2986,7 +2986,7 @@ export const CustomerDashboard: React.FC = () => {
                           <col style={{ width: '20%' }} />
                         </colgroup>
                         <thead>
-                          <tr style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.12)', color: 'rgba(201, 168, 76, 0.9)', textTransform: 'uppercase', fontSize: '0.74rem', letterSpacing: '0.8px', fontWeight: 700 }}>
+                          <tr style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.12)', color: 'rgba(var(--gold-rgb),  0.9)', textTransform: 'uppercase', fontSize: '0.74rem', letterSpacing: '0.8px', fontWeight: 700 }}>
                             <th style={{ padding: '12px 14px 14px 0', textAlign: 'left' }}>PRODUCT</th>
                             <th style={{ padding: '12px 14px 14px 14px', textAlign: 'right' }}>PRICE</th>
                             <th style={{ padding: '12px 14px 14px 14px', textAlign: 'center' }}>QTY</th>
@@ -3013,10 +3013,10 @@ export const CustomerDashboard: React.FC = () => {
                                       onError={(e) => {
                                         (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1549007994-cb92caebd54b?auto=format&fit=crop&w=120&q=80';
                                       }}
-                                      style={{ width: '54px', height: '54px', borderRadius: '10px', objectFit: 'cover', border: '1px solid rgba(201, 168, 76, 0.3)', flexShrink: 0 }}
+                                      style={{ width: '54px', height: '54px', borderRadius: '10px', objectFit: 'cover', border: '1px solid rgba(var(--gold-rgb),  0.3)', flexShrink: 0 }}
                                     />
                                     <div style={{ minWidth: 0 }}>
-                                      <h4 style={{ color: '#f5efe6', margin: '0 0 4px 0', fontSize: '0.92rem', fontWeight: 700, wordBreak: 'break-word' }}>
+                                      <h4 style={{ color: 'var(--cream)', margin: '0 0 4px 0', fontSize: '0.92rem', fontWeight: 700, wordBreak: 'break-word' }}>
                                         {prodName}
                                       </h4>
                                       <span style={{ display: 'inline-block', color: 'rgba(255, 255, 255, 0.45)', fontSize: '0.76rem', background: 'rgba(255, 255, 255, 0.05)', padding: '1px 6px', borderRadius: '4px' }}>
@@ -3025,15 +3025,15 @@ export const CustomerDashboard: React.FC = () => {
                                     </div>
                                   </div>
                                 </td>
-                                <td style={{ padding: '16px 14px', textAlign: 'right', color: '#f5efe6', fontWeight: 600, fontSize: '0.9rem', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
+                                <td style={{ padding: '16px 14px', textAlign: 'right', color: 'var(--cream)', fontWeight: 600, fontSize: '0.9rem', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
                                   ₹{price.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                 </td>
                                 <td style={{ padding: '16px 14px', textAlign: 'center', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
-                                  <span style={{ display: 'inline-block', padding: '3px 10px', borderRadius: '14px', background: 'rgba(201, 168, 76, 0.12)', border: '1px solid rgba(201, 168, 76, 0.3)', color: '#c9a84c', fontWeight: 700, fontSize: '0.85rem' }}>
+                                  <span style={{ display: 'inline-block', padding: '3px 10px', borderRadius: '14px', background: 'rgba(var(--gold-rgb),  0.12)', border: '1px solid rgba(var(--gold-rgb),  0.3)', color: 'var(--gold)', fontWeight: 700, fontSize: '0.85rem' }}>
                                     {qty}
                                   </span>
                                 </td>
-                                <td style={{ padding: '16px 0 16px 14px', textAlign: 'right', color: '#c9a84c', fontWeight: 800, fontSize: '0.98rem', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
+                                <td style={{ padding: '16px 0 16px 14px', textAlign: 'right', color: 'var(--gold)', fontWeight: 800, fontSize: '0.98rem', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
                                   ₹{lineTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                 </td>
                               </tr>
@@ -3058,7 +3058,7 @@ export const CustomerDashboard: React.FC = () => {
                               key={item.product?.id || idx}
                               style={{
                                 background: 'rgba(26, 20, 15, 0.7)',
-                                border: '1px solid rgba(201, 168, 76, 0.2)',
+                                border: '1px solid rgba(var(--gold-rgb),  0.2)',
                                 borderRadius: '12px',
                                 padding: '14px',
                                 display: 'flex',
@@ -3077,16 +3077,16 @@ export const CustomerDashboard: React.FC = () => {
                                   height: '60px',
                                   borderRadius: '10px',
                                   objectFit: 'cover',
-                                  border: '1px solid rgba(201, 168, 76, 0.3)',
+                                  border: '1px solid rgba(var(--gold-rgb),  0.3)',
                                   flexShrink: 0,
                                 }}
                               />
                               <div style={{ minWidth: 0, flex: 1 }}>
                                 <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '8px', marginBottom: '4px' }}>
-                                  <h4 style={{ color: '#f5efe6', margin: 0, fontSize: '0.9rem', fontWeight: 700, wordBreak: 'break-word', lineHeight: 1.3 }}>
+                                  <h4 style={{ color: 'var(--cream)', margin: 0, fontSize: '0.9rem', fontWeight: 700, wordBreak: 'break-word', lineHeight: 1.3 }}>
                                     {prodName}
                                   </h4>
-                                  <span style={{ color: '#c9a84c', fontWeight: 800, fontSize: '0.95rem', whiteSpace: 'nowrap' }}>
+                                  <span style={{ color: 'var(--gold)', fontWeight: 800, fontSize: '0.95rem', whiteSpace: 'nowrap' }}>
                                     ₹{lineTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                   </span>
                                 </div>
@@ -3094,7 +3094,7 @@ export const CustomerDashboard: React.FC = () => {
                                   <span style={{ color: 'rgba(255, 255, 255, 0.45)', fontSize: '0.74rem' }}>
                                     SKU: {sku}
                                   </span>
-                                  <span style={{ fontSize: '0.76rem', color: '#f5efe6', background: 'rgba(201, 168, 76, 0.12)', border: '1px solid rgba(201, 168, 76, 0.25)', padding: '2px 8px', borderRadius: '6px' }}>
+                                  <span style={{ fontSize: '0.76rem', color: 'var(--cream)', background: 'rgba(var(--gold-rgb),  0.12)', border: '1px solid rgba(var(--gold-rgb),  0.25)', padding: '2px 8px', borderRadius: '6px' }}>
                                     ₹{price.toLocaleString('en-IN', { minimumFractionDigits: 0 })} × {qty} qty
                                   </span>
                                 </div>
@@ -3110,13 +3110,13 @@ export const CustomerDashboard: React.FC = () => {
                       {/* Card 1: Shipping & Billing Address */}
                       <div className="customer-order-card" style={{ marginBottom: 0 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px' }}>
-                          <MapPin size={18} color="#c9a84c" />
-                          <h4 style={{ color: '#f5efe6', margin: 0, fontSize: '1rem', fontWeight: 700 }}>
+                          <MapPin size={18} color="var(--gold)" />
+                          <h4 style={{ color: 'var(--cream)', margin: 0, fontSize: '1rem', fontWeight: 700 }}>
                             Shipping & Billing Address
                           </h4>
                         </div>
                         <div style={{ color: 'rgba(255, 255, 255, 0.75)', fontSize: '0.88rem', lineHeight: 1.6 }}>
-                          <p style={{ margin: '0 0 4px 0', fontWeight: 700, color: '#f5efe6' }}>
+                          <p style={{ margin: '0 0 4px 0', fontWeight: 700, color: 'var(--cream)' }}>
                             {selectedOrder.shippingAddress?.name || user.name}
                           </p>
                           <div>{selectedOrder.shippingAddress?.street || '12-34, MG Road, Block A'}</div>
@@ -3125,7 +3125,7 @@ export const CustomerDashboard: React.FC = () => {
                           </div>
                           <div>India</div>
                           <div style={{ marginTop: '8px', color: 'rgba(255, 255, 255, 0.6)', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            <Phone size={13} color="#c9a84c" /> {selectedOrder.shippingAddress?.phone || '+91 83098 54870'}
+                            <Phone size={13} color="var(--gold)" /> {selectedOrder.shippingAddress?.phone || '+91 83098 54870'}
                           </div>
                         </div>
                       </div>
@@ -3133,15 +3133,15 @@ export const CustomerDashboard: React.FC = () => {
                       {/* Card 2: Order Summary */}
                       <div className="customer-order-card" style={{ marginBottom: 0 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px' }}>
-                          <FileText size={18} color="#c9a84c" />
-                          <h4 style={{ color: '#f5efe6', margin: 0, fontSize: '1rem', fontWeight: 700 }}>
+                          <FileText size={18} color="var(--gold)" />
+                          <h4 style={{ color: 'var(--cream)', margin: 0, fontSize: '1rem', fontWeight: 700 }}>
                             Order Summary
                           </h4>
                         </div>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '0.88rem' }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', color: 'rgba(255, 255, 255, 0.7)' }}>
                             <span>Subtotal</span>
-                            <span style={{ color: '#f5efe6', fontWeight: 600 }}>
+                            <span style={{ color: 'var(--cream)', fontWeight: 600 }}>
                               ₹{(selectedOrder.subtotal || selectedOrder.total).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                             </span>
                           </div>
@@ -3153,27 +3153,27 @@ export const CustomerDashboard: React.FC = () => {
                           </div>
                           <div style={{ display: 'flex', justifyContent: 'space-between', color: 'rgba(255, 255, 255, 0.7)' }}>
                             <span>Shipping</span>
-                            <span style={{ color: '#f5efe6', fontWeight: 600 }}>
+                            <span style={{ color: 'var(--cream)', fontWeight: 600 }}>
                               ₹{(selectedOrder.shipping || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                             </span>
                           </div>
                           {(selectedOrder.tax || 0) > 0 && (
                             <div style={{ display: 'flex', justifyContent: 'space-between', color: 'rgba(255, 255, 255, 0.7)' }}>
                               <span>Tax (GST)</span>
-                              <span style={{ color: '#f5efe6', fontWeight: 600 }}>
+                              <span style={{ color: 'var(--cream)', fontWeight: 600 }}>
                                 ₹{(selectedOrder.tax || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                               </span>
                             </div>
                           )}
                           <div style={{ borderTop: '1px solid rgba(255, 255, 255, 0.1)', paddingTop: '12px', marginTop: '4px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
                             <div>
-                              <span style={{ fontSize: '1rem', fontWeight: 700, color: '#f5efe6' }}>Total</span>
+                              <span style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--cream)' }}>Total</span>
                               <span style={{ display: 'block', fontSize: '0.74rem', color: '#2ecc71', fontWeight: 700, marginTop: '2px' }}>
                                 Payment: {selectedOrder.payment_status || 'Paid'}
                               </span>
                             </div>
                             <div style={{ textAlign: 'right' }}>
-                              <span style={{ fontSize: '1.28rem', fontWeight: 800, color: '#c9a84c' }}>
+                              <span style={{ fontSize: '1.28rem', fontWeight: 800, color: 'var(--gold)' }}>
                                 ₹{selectedOrder.total.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                               </span>
                             </div>
@@ -3262,8 +3262,8 @@ export const CustomerDashboard: React.FC = () => {
                           padding: '11px 22px',
                           borderRadius: '8px',
                           background: 'transparent',
-                          border: '1px solid rgba(201, 168, 76, 0.5)',
-                          color: '#f5efe6',
+                          border: '1px solid rgba(var(--gold-rgb),  0.5)',
+                          color: 'var(--cream)',
                           fontSize: '0.9rem',
                           fontWeight: 700,
                           cursor: 'pointer',
@@ -3281,14 +3281,14 @@ export const CustomerDashboard: React.FC = () => {
                         style={{
                           padding: '11px 24px',
                           borderRadius: '8px',
-                          background: 'linear-gradient(135deg, #c9a84c 0%, #e5c875 100%)',
-                          color: '#0f0c0a',
+                          background: 'var(--gradient-gold)',
+                          color: 'var(--black)',
                           border: 'none',
                           fontSize: '0.9rem',
                           fontWeight: 700,
                           cursor: isPdfDownloading ? 'not-allowed' : 'pointer',
                           opacity: isPdfDownloading ? 0.7 : 1,
-                          boxShadow: '0 4px 14px rgba(201, 168, 76, 0.35)',
+                          boxShadow: '0 4px 14px rgba(var(--gold-rgb),  0.35)',
                           display: 'inline-flex',
                           alignItems: 'center',
                           gap: '8px',
@@ -3314,7 +3314,7 @@ export const CustomerDashboard: React.FC = () => {
                       style={{
                         background: 'none',
                         border: 'none',
-                        color: '#c9a84c',
+                        color: 'var(--gold)',
                         fontSize: '0.9rem',
                         fontWeight: 700,
                         cursor: 'pointer',
@@ -3328,7 +3328,7 @@ export const CustomerDashboard: React.FC = () => {
                       <ArrowLeft size={16} /> Back to Orders
                     </button>
 
-                    <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.8rem', color: '#f5efe6', margin: '0 0 24px 0', fontWeight: 700 }}>
+                    <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.8rem', color: 'var(--cream)', margin: '0 0 24px 0', fontWeight: 700 }}>
                       Invoice Preview
                     </h2>
 
@@ -3347,12 +3347,12 @@ export const CustomerDashboard: React.FC = () => {
                         }}
                       >
                         {/* Brand & Invoice Header */}
-                        <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '2px solid #c9a84c', paddingBottom: '20px', marginBottom: '24px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '2px solid var(--gold)', paddingBottom: '20px', marginBottom: '24px' }}>
                           <div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '6px' }}>
                               <span style={{ fontSize: '1.8rem', fontWeight: 800, letterSpacing: '2px', color: '#1a0d00' }}>CHOVIQUE</span>
                             </div>
-                            <span style={{ fontSize: '0.75rem', color: '#c9a84c', letterSpacing: '2px', fontWeight: 700, textTransform: 'uppercase', display: 'block', marginBottom: '10px' }}>
+                            <span style={{ fontSize: '0.75rem', color: 'var(--gold)', letterSpacing: '2px', fontWeight: 700, textTransform: 'uppercase', display: 'block', marginBottom: '10px' }}>
                               PREMIUM HANDMADE CHOCOLATES
                             </span>
                             <div style={{ fontSize: '0.8rem', color: '#555', lineHeight: 1.5 }}>
@@ -3379,7 +3379,7 @@ export const CustomerDashboard: React.FC = () => {
 
                         {/* Bill To & Ship To Box */}
                         <div style={{ marginBottom: '28px', background: '#ffffff', padding: '16px', borderRadius: '8px', border: '1px solid #e5dccb' }}>
-                          <span style={{ fontSize: '0.78rem', fontWeight: 800, color: '#c9a84c', textTransform: 'uppercase', letterSpacing: '1px', display: 'block', marginBottom: '6px' }}>BILL & SHIP TO</span>
+                          <span style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--gold)', textTransform: 'uppercase', letterSpacing: '1px', display: 'block', marginBottom: '6px' }}>BILL & SHIP TO</span>
                           <div style={{ fontSize: '0.85rem', color: '#333', lineHeight: 1.5 }}>
                             <strong>{selectedOrder.shippingAddress?.name || user.name}</strong>
                             <div>{user.email}</div>
@@ -3393,7 +3393,7 @@ export const CustomerDashboard: React.FC = () => {
                         {/* Invoice Table */}
                         <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '24px', fontSize: '0.85rem' }}>
                           <thead>
-                            <tr style={{ background: '#120e0b', color: '#f5efe6', textTransform: 'uppercase', fontSize: '0.75rem', letterSpacing: '0.5px' }}>
+                            <tr style={{ background: '#120e0b', color: 'var(--cream)', textTransform: 'uppercase', fontSize: '0.75rem', letterSpacing: '0.5px' }}>
                               <th style={{ padding: '10px', textAlign: 'left' }}>#</th>
                               <th style={{ padding: '10px', textAlign: 'left' }}>PRODUCT</th>
                               <th style={{ padding: '10px', textAlign: 'left' }}>SKU</th>
@@ -3483,13 +3483,13 @@ export const CustomerDashboard: React.FC = () => {
                       <div
                         style={{
                           background: 'rgba(18, 14, 11, 0.95)',
-                          border: '1px solid rgba(201, 168, 76, 0.25)',
+                          border: '1px solid rgba(var(--gold-rgb),  0.25)',
                           borderRadius: '14px',
                           padding: '24px',
                           boxShadow: '0 8px 30px rgba(0, 0, 0, 0.7)',
                         }}
                       >
-                        <h4 style={{ color: '#f5efe6', margin: '0 0 18px 0', fontSize: '1.1rem', fontWeight: 700 }}>
+                        <h4 style={{ color: 'var(--cream)', margin: '0 0 18px 0', fontSize: '1.1rem', fontWeight: 700 }}>
                           Invoice Actions
                         </h4>
 
@@ -3502,13 +3502,13 @@ export const CustomerDashboard: React.FC = () => {
                               width: '100%',
                               padding: '12px 18px',
                               borderRadius: '8px',
-                              background: 'linear-gradient(135deg, #c9a84c 0%, #e5c875 100%)',
-                              color: '#0f0c0a',
+                              background: 'var(--gradient-gold)',
+                              color: 'var(--black)',
                               border: 'none',
                               fontSize: '0.92rem',
                               fontWeight: 700,
                               cursor: isPdfDownloading ? 'not-allowed' : 'pointer',
-                              boxShadow: '0 4px 14px rgba(201, 168, 76, 0.35)',
+                              boxShadow: '0 4px 14px rgba(var(--gold-rgb),  0.35)',
                               display: 'flex',
                               alignItems: 'center',
                               justifyContent: 'center',
@@ -3530,8 +3530,8 @@ export const CustomerDashboard: React.FC = () => {
                               padding: '12px 18px',
                               borderRadius: '8px',
                               background: 'transparent',
-                              border: '1px solid rgba(201, 168, 76, 0.5)',
-                              color: '#c9a84c',
+                              border: '1px solid rgba(var(--gold-rgb),  0.5)',
+                              color: 'var(--gold)',
                               fontSize: '0.92rem',
                               fontWeight: 700,
                               cursor: 'pointer',
@@ -3596,12 +3596,12 @@ export const CustomerDashboard: React.FC = () => {
                 {(!selectedOrder || orderSubView === 'list') && (
                   <div>
                     {/* Header */}
-                    <div style={{ marginBottom: '24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '14px' }}>
+                    <div style={{ marginBottom: isMobile ? '12px' : '24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
                       <div>
-                        <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.8rem', color: '#f5efe6', margin: '0 0 6px 0', fontWeight: 700 }}>
+                        <h2 style={{ fontFamily: 'var(--font-display)', fontSize: isMobile ? '1.35rem' : '1.8rem', color: 'var(--cream)', margin: '0 0 4px 0', fontWeight: 700 }}>
                           Order History
                         </h2>
-                        <p style={{ color: 'rgba(255, 255, 255, 0.6)', fontSize: '0.9rem', margin: 0 }}>
+                        <p style={{ color: 'rgba(255, 255, 255, 0.6)', fontSize: isMobile ? '0.8rem' : '0.9rem', margin: 0 }}>
                           Track and manage all your orders in one place with real-time updates.
                         </p>
                       </div>
@@ -3610,28 +3610,28 @@ export const CustomerDashboard: React.FC = () => {
                         onClick={handleManualRefreshOrders}
                         disabled={isRefreshingOrders || isOrdersLoading}
                         style={{
-                          padding: '8px 18px',
+                          padding: isMobile ? '6px 14px' : '8px 18px',
                           borderRadius: '8px',
-                          background: isRefreshingOrders ? 'rgba(201, 168, 76, 0.25)' : 'rgba(201, 168, 76, 0.12)',
-                          border: '1px solid rgba(201, 168, 76, 0.4)',
-                          color: '#c9a84c',
-                          fontSize: '0.84rem',
+                          background: isRefreshingOrders ? 'rgba(var(--gold-rgb),  0.25)' : 'rgba(var(--gold-rgb),  0.12)',
+                          border: '1px solid rgba(var(--gold-rgb),  0.4)',
+                          color: 'var(--gold)',
+                          fontSize: isMobile ? '0.78rem' : '0.84rem',
                           fontWeight: 700,
                           cursor: isRefreshingOrders || isOrdersLoading ? 'not-allowed' : 'pointer',
                           display: 'inline-flex',
                           alignItems: 'center',
-                          gap: '8px',
+                          gap: '6px',
                           transition: 'all 0.2s',
-                          boxShadow: isRefreshingOrders ? '0 0 12px rgba(201, 168, 76, 0.3)' : 'none',
+                          boxShadow: isRefreshingOrders ? '0 0 12px rgba(var(--gold-rgb),  0.3)' : 'none',
                         }}
                       >
-                        <RefreshCw size={15} style={{ animation: (isRefreshingOrders || isOrdersLoading) ? 'spin 1s linear infinite' : 'none' }} />
+                        <RefreshCw size={14} style={{ animation: (isRefreshingOrders || isOrdersLoading) ? 'spin 1s linear infinite' : 'none' }} />
                         <span>{(isRefreshingOrders || isOrdersLoading) ? 'Refreshing...' : 'Refresh Orders'}</span>
                       </button>
                     </div>
 
                     {/* Filter Tabs & Search Row */}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '28px' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? '10px' : '16px', marginBottom: isMobile ? '16px' : '28px' }}>
                       {!isMobileGrid ? (
                         <>
                           {/* Desktop: Status Filters Buttons */}
@@ -3649,9 +3649,9 @@ export const CustomerDashboard: React.FC = () => {
                                     borderRadius: '8px',
                                     fontSize: '0.85rem',
                                     fontWeight: 700,
-                                    border: isActive ? '1px solid #c9a84c' : '1px solid rgba(201, 168, 76, 0.2)',
-                                    background: isActive ? '#c9a84c' : 'rgba(18, 14, 11, 0.95)',
-                                    color: isActive ? '#0f0c0a' : 'rgba(255, 255, 255, 0.8)',
+                                    border: isActive ? '1px solid var(--gold)' : '1px solid rgba(var(--gold-rgb),  0.2)',
+                                    background: isActive ? 'var(--gold)' : 'rgba(18, 14, 11, 0.95)',
+                                    color: isActive ? 'var(--black)' : 'rgba(255, 255, 255, 0.8)',
                                     cursor: 'pointer',
                                     transition: 'all 0.2s ease',
                                   }}
@@ -3676,8 +3676,8 @@ export const CustomerDashboard: React.FC = () => {
                                   padding: '10px 14px 10px 38px',
                                   borderRadius: '8px',
                                   background: 'rgba(18, 14, 11, 0.95)',
-                                  border: '1px solid rgba(201, 168, 76, 0.3)',
-                                  color: '#f5efe6',
+                                  border: '1px solid rgba(var(--gold-rgb),  0.3)',
+                                  color: 'var(--cream)',
                                   fontSize: '0.88rem',
                                   outline: 'none',
                                   boxSizing: 'border-box',
@@ -3691,8 +3691,8 @@ export const CustomerDashboard: React.FC = () => {
                                 padding: '10px 16px',
                                 borderRadius: '8px',
                                 background: '#120e0b',
-                                border: '1px solid rgba(201, 168, 76, 0.3)',
-                                color: '#f5efe6',
+                                border: '1px solid rgba(var(--gold-rgb),  0.3)',
+                                color: 'var(--cream)',
                                 fontSize: '0.88rem',
                                 outline: 'none',
                                 cursor: 'pointer',
@@ -3718,8 +3718,8 @@ export const CustomerDashboard: React.FC = () => {
                                 padding: '10px 14px 10px 38px',
                                 borderRadius: '8px',
                                 background: 'rgba(18, 14, 11, 0.95)',
-                                border: '1px solid rgba(201, 168, 76, 0.3)',
-                                color: '#f5efe6',
+                                border: '1px solid rgba(var(--gold-rgb),  0.3)',
+                                color: 'var(--cream)',
                                 fontSize: '0.88rem',
                                 outline: 'none',
                                 boxSizing: 'border-box',
@@ -3739,8 +3739,8 @@ export const CustomerDashboard: React.FC = () => {
                                 padding: '10px 12px',
                                 borderRadius: '8px',
                                 background: '#120e0b',
-                                border: '1px solid rgba(201, 168, 76, 0.3)',
-                                color: '#f5efe6',
+                                border: '1px solid rgba(var(--gold-rgb),  0.3)',
+                                color: 'var(--cream)',
                                 fontSize: '0.85rem',
                                 outline: 'none',
                                 cursor: 'pointer',
@@ -3761,8 +3761,8 @@ export const CustomerDashboard: React.FC = () => {
                                 padding: '10px 12px',
                                 borderRadius: '8px',
                                 background: '#120e0b',
-                                border: '1px solid rgba(201, 168, 76, 0.3)',
-                                color: '#f5efe6',
+                                border: '1px solid rgba(var(--gold-rgb),  0.3)',
+                                color: 'var(--cream)',
                                 fontSize: '0.85rem',
                                 outline: 'none',
                                 cursor: 'pointer',
@@ -3779,7 +3779,7 @@ export const CustomerDashboard: React.FC = () => {
 
                     {/* Order Cards List */}
                     {isOrdersLoading ? (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#c9a84c', padding: '30px 0', justifyContent: 'center' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: 'var(--gold)', padding: '30px 0', justifyContent: 'center' }}>
                         <Loader2 size={22} style={{ animation: 'spin 1s linear infinite' }} />
                         <span>Loading order history...</span>
                       </div>
@@ -3840,9 +3840,9 @@ export const CustomerDashboard: React.FC = () => {
 
                         if (filteredList.length === 0) {
                           return (
-                            <div style={{ padding: '48px 24px', background: 'rgba(18, 14, 11, 0.95)', border: '1px dashed rgba(201, 168, 76, 0.3)', borderRadius: '14px', textAlign: 'center' }}>
-                              <ShoppingBag size={42} style={{ color: '#c9a84c', marginBottom: '12px', opacity: 0.8 }} />
-                              <h3 style={{ color: '#f5efe6', margin: '0 0 8px 0', fontSize: '1.2rem', fontWeight: 700 }}>No Orders Found</h3>
+                            <div style={{ padding: '48px 24px', background: 'rgba(18, 14, 11, 0.95)', border: '1px dashed rgba(var(--gold-rgb),  0.3)', borderRadius: '14px', textAlign: 'center' }}>
+                              <ShoppingBag size={42} style={{ color: 'var(--gold)', marginBottom: '12px', opacity: 0.8 }} />
+                              <h3 style={{ color: 'var(--cream)', margin: '0 0 8px 0', fontSize: '1.2rem', fontWeight: 700 }}>No Orders Found</h3>
                               <p style={{ color: 'rgba(255, 255, 255, 0.6)', margin: '0 0 20px 0', fontSize: '0.9rem' }}>
                                 {orderSearchQuery || orderStatusFilter !== 'All' ? 'No orders match your filter criteria.' : "You haven't placed any orders yet."}
                               </p>
@@ -3850,7 +3850,7 @@ export const CustomerDashboard: React.FC = () => {
                                 <button
                                   type="button"
                                   onClick={() => { setOrderStatusFilter('All'); setOrderSearchQuery(''); }}
-                                  style={{ padding: '10px 22px', borderRadius: '6px', background: 'transparent', border: '1px solid #c9a84c', color: '#c9a84c', fontSize: '0.88rem', fontWeight: 700, cursor: 'pointer' }}
+                                  style={{ padding: '10px 22px', borderRadius: '6px', background: 'transparent', border: '1px solid var(--gold)', color: 'var(--gold)', fontSize: '0.88rem', fontWeight: 700, cursor: 'pointer' }}
                                 >
                                   Clear Filters
                                 </button>
@@ -3912,10 +3912,10 @@ export const CustomerDashboard: React.FC = () => {
                                   key={ord.id}
                                   style={{
                                     background: 'rgba(18, 14, 11, 0.95)',
-                                    border: isOutForDelivery ? '1.5px solid rgba(201, 168, 76, 0.5)' : '1px solid rgba(201, 168, 76, 0.25)',
+                                    border: isOutForDelivery ? '1.5px solid rgba(var(--gold-rgb),  0.5)' : '1px solid rgba(var(--gold-rgb),  0.25)',
                                     borderRadius: '14px',
                                     padding: isMobileGrid ? '16px' : '22px',
-                                    boxShadow: isOutForDelivery ? '0 8px 30px rgba(201, 168, 76, 0.18)' : '0 8px 30px rgba(0, 0, 0, 0.7)',
+                                    boxShadow: isOutForDelivery ? '0 8px 30px rgba(var(--gold-rgb),  0.18)' : '0 8px 30px rgba(0, 0, 0, 0.7)',
                                     display: 'flex',
                                     flexDirection: 'column',
                                     gap: '16px',
@@ -3925,7 +3925,7 @@ export const CustomerDashboard: React.FC = () => {
                                   {/* 1. TOP HEADER ROW: Order ID, Date, Payment method, Status Badges */}
                                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '12px' }}>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-                                      <h3 style={{ color: '#f5efe6', margin: 0, fontSize: '1.15rem', fontWeight: 800, letterSpacing: '0.5px' }}>
+                                      <h3 style={{ color: 'var(--cream)', margin: 0, fontSize: '1.15rem', fontWeight: 800, letterSpacing: '0.5px' }}>
                                         {ord.id}
                                       </h3>
                                       <span style={{ fontSize: '0.8rem', color: 'rgba(255, 255, 255, 0.55)' }}>
@@ -3985,8 +3985,8 @@ export const CustomerDashboard: React.FC = () => {
                                   {isOutForDelivery && (
                                     <div
                                       style={{
-                                        background: 'linear-gradient(135deg, rgba(201, 168, 76, 0.18) 0%, rgba(30, 20, 14, 0.85) 100%)',
-                                        border: '1.5px solid rgba(201, 168, 76, 0.55)',
+                                        background: 'linear-gradient(135deg, rgba(var(--gold-rgb),  0.18) 0%, rgba(30, 20, 14, 0.85) 100%)',
+                                        border: '1.5px solid rgba(var(--gold-rgb),  0.55)',
                                         borderRadius: '10px',
                                         padding: '12px 16px',
                                         display: 'flex',
@@ -3994,7 +3994,7 @@ export const CustomerDashboard: React.FC = () => {
                                         justifyContent: 'space-between',
                                         flexWrap: 'wrap',
                                         gap: '12px',
-                                        boxShadow: '0 4px 18px rgba(201, 168, 76, 0.15)',
+                                        boxShadow: '0 4px 18px rgba(var(--gold-rgb),  0.15)',
                                       }}
                                     >
                                       <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -4003,9 +4003,9 @@ export const CustomerDashboard: React.FC = () => {
                                             width: '38px',
                                             height: '38px',
                                             borderRadius: '8px',
-                                            background: 'rgba(201, 168, 76, 0.2)',
-                                            border: '1px solid #c9a84c',
-                                            color: '#c9a84c',
+                                            background: 'rgba(var(--gold-rgb),  0.2)',
+                                            border: '1px solid var(--gold)',
+                                            color: 'var(--gold)',
                                             display: 'flex',
                                             alignItems: 'center',
                                             justifyContent: 'center',
@@ -4015,10 +4015,10 @@ export const CustomerDashboard: React.FC = () => {
                                           <Truck size={20} />
                                         </div>
                                         <div>
-                                          <div style={{ fontSize: '0.72rem', color: '#c9a84c', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.8px' }}>
+                                          <div style={{ fontSize: '0.72rem', color: 'var(--gold)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.8px' }}>
                                             OUT FOR DELIVERY — ARRIVING TODAY
                                           </div>
-                                          <div style={{ color: '#f5efe6', fontSize: '0.86rem', fontWeight: 700, marginTop: '2px' }}>
+                                          <div style={{ color: 'var(--cream)', fontSize: '0.86rem', fontWeight: 700, marginTop: '2px' }}>
                                             {deliveryBoyName ? (
                                               <span>
                                                 Partner: <strong style={{ color: '#fff' }}>{deliveryBoyName}</strong>
@@ -4031,16 +4031,16 @@ export const CustomerDashboard: React.FC = () => {
                                                 href={`tel:${deliveryBoyPhone}`}
                                                 style={{
                                                   marginLeft: '10px',
-                                                  color: '#c9a84c',
+                                                  color: 'var(--gold)',
                                                   fontSize: '0.78rem',
                                                   textDecoration: 'none',
                                                   display: 'inline-flex',
                                                   alignItems: 'center',
                                                   gap: '4px',
-                                                  background: 'rgba(201, 168, 76, 0.12)',
+                                                  background: 'rgba(var(--gold-rgb),  0.12)',
                                                   padding: '2px 8px',
                                                   borderRadius: '12px',
-                                                  border: '1px solid rgba(201, 168, 76, 0.3)',
+                                                  border: '1px solid rgba(var(--gold-rgb),  0.3)',
                                                 }}
                                               >
                                                 <Phone size={11} /> Call {deliveryBoyPhone}
@@ -4056,17 +4056,17 @@ export const CustomerDashboard: React.FC = () => {
                                             <span style={{ fontSize: '0.68rem', color: 'rgba(255,255,255,0.7)', textTransform: 'uppercase', letterSpacing: '0.5px', display: 'block' }}>
                                               Delivery OTP
                                             </span>
-                                            <span style={{ fontSize: '0.65rem', color: '#c9a84c' }}>Share with partner</span>
+                                            <span style={{ fontSize: '0.65rem', color: 'var(--gold)' }}>Share with partner</span>
                                           </div>
                                           <div
                                             style={{
                                               display: 'inline-flex',
                                               alignItems: 'center',
-                                              background: '#c9a84c',
+                                              background: 'var(--gold)',
                                               borderRadius: '8px',
                                               padding: '3px 8px 3px 12px',
                                               gap: '8px',
-                                              boxShadow: '0 2px 10px rgba(201, 168, 76, 0.35)',
+                                              boxShadow: '0 2px 10px rgba(var(--gold-rgb),  0.35)',
                                             }}
                                           >
                                             <span
@@ -4074,7 +4074,7 @@ export const CustomerDashboard: React.FC = () => {
                                                 fontFamily: 'monospace',
                                                 fontSize: '1.18rem',
                                                 fontWeight: 900,
-                                                color: '#0f0c0a',
+                                                color: 'var(--black)',
                                                 letterSpacing: '3px',
                                               }}
                                             >
@@ -4088,7 +4088,7 @@ export const CustomerDashboard: React.FC = () => {
                                                 background: 'rgba(15, 12, 10, 0.2)',
                                                 border: 'none',
                                                 borderRadius: '5px',
-                                                color: '#0f0c0a',
+                                                color: 'var(--black)',
                                                 padding: '4px',
                                                 cursor: 'pointer',
                                                 display: 'flex',
@@ -4126,7 +4126,7 @@ export const CustomerDashboard: React.FC = () => {
                                     >
                                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                         <Truck size={17} style={{ color: '#2ecc71', flexShrink: 0 }} />
-                                        <span style={{ fontSize: '0.82rem', color: '#f5efe6' }}>
+                                        <span style={{ fontSize: '0.82rem', color: 'var(--cream)' }}>
                                           Delivery Partner Assigned: <strong style={{ color: '#fff' }}>{deliveryBoyName}</strong> has accepted your order.
                                         </span>
                                       </div>
@@ -4196,7 +4196,7 @@ export const CustomerDashboard: React.FC = () => {
                                                   height: '100%',
                                                   borderRadius: '10px',
                                                   objectFit: 'cover',
-                                                  border: '1.5px solid rgba(201, 168, 76, 0.35)',
+                                                  border: '1.5px solid rgba(var(--gold-rgb),  0.35)',
                                                   background: 'rgba(255, 255, 255, 0.02)',
                                                   boxShadow: '0 2px 8px rgba(0, 0, 0, 0.5)',
                                                 }}
@@ -4207,8 +4207,8 @@ export const CustomerDashboard: React.FC = () => {
                                                     position: 'absolute',
                                                     bottom: '-4px',
                                                     right: '-4px',
-                                                    background: '#c9a84c',
-                                                    color: '#0f0c0a',
+                                                    background: 'var(--gold)',
+                                                    color: 'var(--black)',
                                                     fontSize: '0.68rem',
                                                     fontWeight: 800,
                                                     padding: '1px 6px',
@@ -4238,7 +4238,7 @@ export const CustomerDashboard: React.FC = () => {
                                               key={idx}
                                               style={{
                                                 fontSize: '0.84rem',
-                                                color: '#f5efe6',
+                                                color: 'var(--cream)',
                                                 display: 'flex',
                                                 alignItems: 'center',
                                                 justifyContent: 'space-between',
@@ -4248,7 +4248,7 @@ export const CustomerDashboard: React.FC = () => {
                                               <span style={{ fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                                 {itName}
                                                 {itQty > 1 && (
-                                                  <span style={{ color: '#c9a84c', fontWeight: 800, marginLeft: '6px' }}>
+                                                  <span style={{ color: 'var(--gold)', fontWeight: 800, marginLeft: '6px' }}>
                                                     ×{itQty}
                                                   </span>
                                                 )}
@@ -4268,7 +4268,7 @@ export const CustomerDashboard: React.FC = () => {
                                       <div style={{ fontSize: '0.82rem', color: 'rgba(255, 255, 255, 0.75)', lineHeight: 1.6, width: '100%' }}>
                                         <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
                                           <span style={{ color: 'rgba(255, 255, 255, 0.5)' }}>Subtotal</span>
-                                          <span style={{ color: '#f5efe6' }}>₹{(ord.subtotal || ord.total).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                          <span style={{ color: 'var(--cream)' }}>₹{(ord.subtotal || ord.total).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                                         </div>
                                         {(ord.coupon_discount || 0) > 0 && (
                                           <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
@@ -4290,17 +4290,17 @@ export const CustomerDashboard: React.FC = () => {
                                         )}
                                         <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
                                           <span style={{ color: 'rgba(255, 255, 255, 0.5)' }}>Shipping</span>
-                                          <span style={{ color: '#f5efe6' }}>₹{(ord.shipping || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                          <span style={{ color: 'var(--cream)' }}>₹{(ord.shipping || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                                         </div>
                                         {(ord.tax || 0) > 0 && (
                                           <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
                                             <span style={{ color: 'rgba(255, 255, 255, 0.5)' }}>Tax (GST)</span>
-                                            <span style={{ color: '#f5efe6' }}>₹{(ord.tax || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                            <span style={{ color: 'var(--cream)' }}>₹{(ord.tax || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                                           </div>
                                         )}
                                         <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)', marginTop: '8px', paddingTop: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                          <span style={{ color: '#f5efe6', fontWeight: 700, fontSize: '0.88rem' }}>Order Total</span>
-                                          <span style={{ color: '#c9a84c', fontWeight: 900, fontSize: '1.25rem' }}>
+                                          <span style={{ color: 'var(--cream)', fontWeight: 700, fontSize: '0.88rem' }}>Order Total</span>
+                                          <span style={{ color: 'var(--gold)', fontWeight: 900, fontSize: '1.25rem' }}>
                                             ₹{ord.total.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                           </span>
                                         </div>
@@ -4362,7 +4362,7 @@ export const CustomerDashboard: React.FC = () => {
                                             borderRadius: '6px',
                                             background: 'transparent',
                                             border: '1px solid rgba(255, 255, 255, 0.2)',
-                                            color: '#f5efe6',
+                                            color: 'var(--cream)',
                                             fontSize: '0.8rem',
                                             fontWeight: 700,
                                             cursor: 'pointer',
@@ -4378,8 +4378,8 @@ export const CustomerDashboard: React.FC = () => {
                                             padding: '7px 14px',
                                             borderRadius: '6px',
                                             background: 'transparent',
-                                            border: '1px solid rgba(201, 168, 76, 0.5)',
-                                            color: '#c9a84c',
+                                            border: '1px solid rgba(var(--gold-rgb),  0.5)',
+                                            color: 'var(--gold)',
                                             fontSize: '0.8rem',
                                             fontWeight: 700,
                                             cursor: 'pointer',
@@ -4395,13 +4395,13 @@ export const CustomerDashboard: React.FC = () => {
                                           style={{
                                             padding: '7px 14px',
                                             borderRadius: '6px',
-                                            background: 'linear-gradient(135deg, #c9a84c 0%, #e5c875 100%)',
-                                            color: '#0f0c0a',
+                                            background: 'var(--gradient-gold)',
+                                            color: 'var(--black)',
                                             border: 'none',
                                             fontSize: '0.8rem',
                                             fontWeight: 700,
                                             cursor: isPdfDownloading ? 'not-allowed' : 'pointer',
-                                            boxShadow: '0 2px 10px rgba(201, 168, 76, 0.3)',
+                                            boxShadow: '0 2px 10px rgba(var(--gold-rgb),  0.3)',
                                             display: 'inline-flex',
                                             alignItems: 'center',
                                             gap: '6px',
@@ -4427,12 +4427,12 @@ export const CustomerDashboard: React.FC = () => {
             {/* ADDRESSES PANEL */}
             {activeTab === 'addresses' && (
               <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '28px', flexWrap: 'wrap', gap: '16px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: isMobile ? '14px' : '28px', flexWrap: 'wrap', gap: '10px' }}>
                   <div>
-                    <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.8rem', color: '#f5efe6', margin: '0 0 6px 0', fontWeight: 700 }}>
+                    <h2 style={{ fontFamily: 'var(--font-display)', fontSize: isMobile ? '1.35rem' : '1.8rem', color: 'var(--cream)', margin: '0 0 4px 0', fontWeight: 700 }}>
                       Shipping Address Book
                     </h2>
-                    <p style={{ color: 'rgba(255, 255, 255, 0.6)', fontSize: '0.9rem', margin: 0 }}>
+                    <p style={{ color: 'rgba(255, 255, 255, 0.6)', fontSize: isMobile ? '0.8rem' : '0.9rem', margin: 0 }}>
                       Manage your shipping addresses for a faster checkout.
                     </p>
                   </div>
@@ -4448,13 +4448,13 @@ export const CustomerDashboard: React.FC = () => {
                     style={{
                       padding: '10px 20px',
                       borderRadius: '6px',
-                      background: 'linear-gradient(135deg, #c9a84c 0%, #e5c875 100%)',
-                      color: '#0f0c0a',
+                      background: 'var(--gradient-gold)',
+                      color: 'var(--black)',
                       border: 'none',
                       fontSize: '0.9rem',
                       fontWeight: 700,
                       cursor: 'pointer',
-                      boxShadow: '0 4px 14px rgba(201, 168, 76, 0.35)',
+                      boxShadow: '0 4px 14px rgba(var(--gold-rgb),  0.35)',
                       display: 'inline-flex',
                       alignItems: 'center',
                       gap: '8px',
@@ -4470,22 +4470,22 @@ export const CustomerDashboard: React.FC = () => {
                   <div
                     style={{
                       background: 'rgba(18, 14, 11, 0.96)',
-                      border: '1px solid rgba(201, 168, 76, 0.35)',
+                      border: '1px solid rgba(var(--gold-rgb),  0.35)',
                       borderRadius: '12px',
                       padding: '28px',
                       marginBottom: '32px',
                       boxShadow: '0 8px 30px rgba(0, 0, 0, 0.7)',
                     }}
                   >
-                    <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1.3rem', color: '#f5efe6', margin: '0 0 20px 0', fontWeight: 700 }}>
+                    <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1.3rem', color: 'var(--cream)', margin: '0 0 20px 0', fontWeight: 700 }}>
                       {editingAddressId ? 'Edit Shipping Address' : 'Add New Shipping Address'}
                     </h3>
 
                     <form onSubmit={handleAddressSubmit} style={{ display: 'grid', gridTemplateColumns: isMobileGrid ? '1fr' : '1fr 1fr', gap: '20px' }}>
                       {/* Address Label */}
                       <div>
-                        <label style={{ display: 'block', fontSize: '0.88rem', color: '#f5efe6', fontWeight: 600, marginBottom: '6px' }}>
-                          Address Label <span style={{ color: '#c9a84c' }}>*</span>
+                        <label style={{ display: 'block', fontSize: '0.88rem', color: 'var(--cream)', fontWeight: 600, marginBottom: '6px' }}>
+                          Address Label <span style={{ color: 'var(--gold)' }}>*</span>
                         </label>
                         <input
                           type="text"
@@ -4497,8 +4497,8 @@ export const CustomerDashboard: React.FC = () => {
                             padding: '11px 14px',
                             borderRadius: '6px',
                             background: 'rgba(0, 0, 0, 0.4)',
-                            border: '1px solid rgba(201, 168, 76, 0.3)',
-                            color: '#f5efe6',
+                            border: '1px solid rgba(var(--gold-rgb),  0.3)',
+                            color: 'var(--cream)',
                             fontSize: '0.9rem',
                             outline: 'none',
                             boxSizing: 'border-box',
@@ -4508,8 +4508,8 @@ export const CustomerDashboard: React.FC = () => {
 
                       {/* Recipient Full Name */}
                       <div>
-                        <label style={{ display: 'block', fontSize: '0.88rem', color: '#f5efe6', fontWeight: 600, marginBottom: '6px' }}>
-                          Recipient Full Name <span style={{ color: '#c9a84c' }}>*</span>
+                        <label style={{ display: 'block', fontSize: '0.88rem', color: 'var(--cream)', fontWeight: 600, marginBottom: '6px' }}>
+                          Recipient Full Name <span style={{ color: 'var(--gold)' }}>*</span>
                         </label>
                         <input
                           type="text"
@@ -4521,8 +4521,8 @@ export const CustomerDashboard: React.FC = () => {
                             padding: '11px 14px',
                             borderRadius: '6px',
                             background: 'rgba(0, 0, 0, 0.4)',
-                            border: '1px solid rgba(201, 168, 76, 0.3)',
-                            color: '#f5efe6',
+                            border: '1px solid rgba(var(--gold-rgb),  0.3)',
+                            color: 'var(--cream)',
                             fontSize: '0.9rem',
                             outline: 'none',
                             boxSizing: 'border-box',
@@ -4532,8 +4532,8 @@ export const CustomerDashboard: React.FC = () => {
 
                       {/* Street Address */}
                       <div style={{ gridColumn: isMobileGrid ? 'span 1' : 'span 2' }}>
-                        <label style={{ display: 'block', fontSize: '0.88rem', color: '#f5efe6', fontWeight: 600, marginBottom: '6px' }}>
-                          Street Address <span style={{ color: '#c9a84c' }}>*</span>
+                        <label style={{ display: 'block', fontSize: '0.88rem', color: 'var(--cream)', fontWeight: 600, marginBottom: '6px' }}>
+                          Street Address <span style={{ color: 'var(--gold)' }}>*</span>
                         </label>
                         <input
                           type="text"
@@ -4545,8 +4545,8 @@ export const CustomerDashboard: React.FC = () => {
                             padding: '11px 14px',
                             borderRadius: '6px',
                             background: 'rgba(0, 0, 0, 0.4)',
-                            border: '1px solid rgba(201, 168, 76, 0.3)',
-                            color: '#f5efe6',
+                            border: '1px solid rgba(var(--gold-rgb),  0.3)',
+                            color: 'var(--cream)',
                             fontSize: '0.9rem',
                             outline: 'none',
                             boxSizing: 'border-box',
@@ -4556,8 +4556,8 @@ export const CustomerDashboard: React.FC = () => {
 
                       {/* City */}
                       <div>
-                        <label style={{ display: 'block', fontSize: '0.88rem', color: '#f5efe6', fontWeight: 600, marginBottom: '6px' }}>
-                          City <span style={{ color: '#c9a84c' }}>*</span>
+                        <label style={{ display: 'block', fontSize: '0.88rem', color: 'var(--cream)', fontWeight: 600, marginBottom: '6px' }}>
+                          City <span style={{ color: 'var(--gold)' }}>*</span>
                         </label>
                         <input
                           type="text"
@@ -4569,8 +4569,8 @@ export const CustomerDashboard: React.FC = () => {
                             padding: '11px 14px',
                             borderRadius: '6px',
                             background: 'rgba(0, 0, 0, 0.4)',
-                            border: '1px solid rgba(201, 168, 76, 0.3)',
-                            color: '#f5efe6',
+                            border: '1px solid rgba(var(--gold-rgb),  0.3)',
+                            color: 'var(--cream)',
                             fontSize: '0.9rem',
                             outline: 'none',
                             boxSizing: 'border-box',
@@ -4580,8 +4580,8 @@ export const CustomerDashboard: React.FC = () => {
 
                       {/* State Select */}
                       <div>
-                        <label style={{ display: 'block', fontSize: '0.88rem', color: '#f5efe6', fontWeight: 600, marginBottom: '6px' }}>
-                          State <span style={{ color: '#c9a84c' }}>*</span>
+                        <label style={{ display: 'block', fontSize: '0.88rem', color: 'var(--cream)', fontWeight: 600, marginBottom: '6px' }}>
+                          State <span style={{ color: 'var(--gold)' }}>*</span>
                         </label>
                         <select
                           value={addressForm.state}
@@ -4591,8 +4591,8 @@ export const CustomerDashboard: React.FC = () => {
                             padding: '11px 14px',
                             borderRadius: '6px',
                             background: '#120e0b',
-                            border: '1px solid rgba(201, 168, 76, 0.3)',
-                            color: '#f5efe6',
+                            border: '1px solid rgba(var(--gold-rgb),  0.3)',
+                            color: 'var(--cream)',
                             fontSize: '0.9rem',
                             outline: 'none',
                             boxSizing: 'border-box',
@@ -4600,7 +4600,7 @@ export const CustomerDashboard: React.FC = () => {
                           }}
                         >
                           {INDIAN_STATES.map((st) => (
-                            <option key={st} value={st} style={{ background: '#120e0b', color: '#f5efe6' }}>
+                            <option key={st} value={st} style={{ background: '#120e0b', color: 'var(--cream)' }}>
                               {st}
                             </option>
                           ))}
@@ -4609,8 +4609,8 @@ export const CustomerDashboard: React.FC = () => {
 
                       {/* PIN Code */}
                       <div>
-                        <label style={{ display: 'block', fontSize: '0.88rem', color: '#f5efe6', fontWeight: 600, marginBottom: '6px' }}>
-                          PIN / Postal Code <span style={{ color: '#c9a84c' }}>*</span>
+                        <label style={{ display: 'block', fontSize: '0.88rem', color: 'var(--cream)', fontWeight: 600, marginBottom: '6px' }}>
+                          PIN / Postal Code <span style={{ color: 'var(--gold)' }}>*</span>
                         </label>
                         <input
                           type="text"
@@ -4623,8 +4623,8 @@ export const CustomerDashboard: React.FC = () => {
                             padding: '11px 14px',
                             borderRadius: '6px',
                             background: 'rgba(0, 0, 0, 0.4)',
-                            border: '1px solid rgba(201, 168, 76, 0.3)',
-                            color: '#f5efe6',
+                            border: '1px solid rgba(var(--gold-rgb),  0.3)',
+                            color: 'var(--cream)',
                             fontSize: '0.9rem',
                             outline: 'none',
                             boxSizing: 'border-box',
@@ -4634,8 +4634,8 @@ export const CustomerDashboard: React.FC = () => {
 
                       {/* Phone Number */}
                       <div>
-                        <label style={{ display: 'block', fontSize: '0.88rem', color: '#f5efe6', fontWeight: 600, marginBottom: '6px' }}>
-                          Phone Number <span style={{ color: '#c9a84c' }}>*</span>
+                        <label style={{ display: 'block', fontSize: '0.88rem', color: 'var(--cream)', fontWeight: 600, marginBottom: '6px' }}>
+                          Phone Number <span style={{ color: 'var(--gold)' }}>*</span>
                         </label>
                         <input
                           type="tel"
@@ -4648,8 +4648,8 @@ export const CustomerDashboard: React.FC = () => {
                             padding: '11px 14px',
                             borderRadius: '6px',
                             background: 'rgba(0, 0, 0, 0.4)',
-                            border: '1px solid rgba(201, 168, 76, 0.3)',
-                            color: '#f5efe6',
+                            border: '1px solid rgba(var(--gold-rgb),  0.3)',
+                            color: 'var(--cream)',
                             fontSize: '0.9rem',
                             outline: 'none',
                             boxSizing: 'border-box',
@@ -4664,9 +4664,9 @@ export const CustomerDashboard: React.FC = () => {
                           id="is-default-address-cb"
                           checked={addressForm.isDefault}
                           onChange={(e) => setAddressForm({ ...addressForm, isDefault: e.target.checked })}
-                          style={{ accentColor: '#c9a84c', width: '16px', height: '16px', cursor: 'pointer' }}
+                          style={{ accentColor: 'var(--gold)', width: '16px', height: '16px', cursor: 'pointer' }}
                         />
-                        <label htmlFor="is-default-address-cb" style={{ color: '#f5efe6', fontSize: '0.88rem', cursor: 'pointer', fontWeight: 500 }}>
+                        <label htmlFor="is-default-address-cb" style={{ color: 'var(--cream)', fontSize: '0.88rem', cursor: 'pointer', fontWeight: 500 }}>
                           Make this my default shipping address
                         </label>
                       </div>
@@ -4697,14 +4697,14 @@ export const CustomerDashboard: React.FC = () => {
                           style={{
                             padding: '10px 24px',
                             borderRadius: '6px',
-                            background: 'linear-gradient(135deg, #c9a84c 0%, #e5c875 100%)',
-                            color: '#0f0c0a',
+                            background: 'var(--gradient-gold)',
+                            color: 'var(--black)',
                             border: 'none',
                             fontSize: '0.9rem',
                             fontWeight: 700,
                             cursor: isAddressSaving ? 'not-allowed' : 'pointer',
                             opacity: isAddressSaving ? 0.7 : 1,
-                            boxShadow: '0 4px 14px rgba(201, 168, 76, 0.35)',
+                            boxShadow: '0 4px 14px rgba(var(--gold-rgb),  0.35)',
                             display: 'inline-flex',
                             alignItems: 'center',
                             gap: '8px',
@@ -4748,13 +4748,13 @@ export const CustomerDashboard: React.FC = () => {
                     style={{
                       padding: '48px 24px',
                       background: 'rgba(18, 14, 11, 0.95)',
-                      border: '1px dashed rgba(201, 168, 76, 0.3)',
+                      border: '1px dashed rgba(var(--gold-rgb),  0.3)',
                       borderRadius: '12px',
                       textAlign: 'center',
                     }}
                   >
-                    <MapPin size={42} style={{ color: '#c9a84c', marginBottom: '12px', opacity: 0.8 }} />
-                    <h3 style={{ color: '#f5efe6', margin: '0 0 8px 0', fontSize: '1.2rem', fontWeight: 700 }}>
+                    <MapPin size={42} style={{ color: 'var(--gold)', marginBottom: '12px', opacity: 0.8 }} />
+                    <h3 style={{ color: 'var(--cream)', margin: '0 0 8px 0', fontSize: '1.2rem', fontWeight: 700 }}>
                       No Saved Addresses Found
                     </h3>
                     <p style={{ color: 'rgba(255, 255, 255, 0.6)', margin: '0 0 20px 0', fontSize: '0.9rem' }}>
@@ -4765,8 +4765,8 @@ export const CustomerDashboard: React.FC = () => {
                       style={{
                         padding: '10px 22px',
                         borderRadius: '6px',
-                        background: 'linear-gradient(135deg, #c9a84c 0%, #e5c875 100%)',
-                        color: '#0f0c0a',
+                        background: 'var(--gradient-gold)',
+                        color: 'var(--black)',
                         border: 'none',
                         fontSize: '0.9rem',
                         fontWeight: 700,
@@ -4783,7 +4783,7 @@ export const CustomerDashboard: React.FC = () => {
                         key={addr.id}
                         style={{
                           background: 'rgba(18, 14, 11, 0.95)',
-                          border: '1px solid rgba(201, 168, 76, 0.25)',
+                          border: '1px solid rgba(var(--gold-rgb),  0.25)',
                           borderRadius: '14px',
                           padding: '24px',
                           boxShadow: '0 8px 30px rgba(0, 0, 0, 0.7)',
@@ -4796,9 +4796,9 @@ export const CustomerDashboard: React.FC = () => {
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                           <span
                             style={{
-                              background: 'rgba(201, 168, 76, 0.2)',
-                              color: '#c9a84c',
-                              border: '1px solid rgba(201, 168, 76, 0.4)',
+                              background: 'rgba(var(--gold-rgb),  0.2)',
+                              color: 'var(--gold)',
+                              border: '1px solid rgba(var(--gold-rgb),  0.4)',
                               padding: '4px 12px',
                               borderRadius: '6px',
                               fontSize: '0.75rem',
@@ -4811,7 +4811,7 @@ export const CustomerDashboard: React.FC = () => {
                           </span>
 
                           {addr.isDefault ? (
-                            <span style={{ color: '#c9a84c', fontSize: '0.85rem', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                            <span style={{ color: 'var(--gold)', fontSize: '0.85rem', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
                               ☆ Default
                             </span>
                           ) : (
@@ -4825,7 +4825,7 @@ export const CustomerDashboard: React.FC = () => {
                                 cursor: 'pointer',
                                 transition: 'color 0.2s ease',
                               }}
-                              onMouseEnter={(e) => (e.currentTarget.style.color = '#c9a84c')}
+                              onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--gold)')}
                               onMouseLeave={(e) => (e.currentTarget.style.color = 'rgba(255, 255, 255, 0.5)')}
                             >
                               Set as Default
@@ -4834,7 +4834,7 @@ export const CustomerDashboard: React.FC = () => {
                         </div>
 
                         {/* Recipient Name */}
-                        <h3 style={{ color: '#f5efe6', fontSize: '1.2rem', fontWeight: 700, margin: 0 }}>
+                        <h3 style={{ color: 'var(--cream)', fontSize: '1.2rem', fontWeight: 700, margin: 0 }}>
                           {addr.name}
                         </h3>
 
@@ -4846,7 +4846,7 @@ export const CustomerDashboard: React.FC = () => {
                           </div>
                           <div style={{ color: 'rgba(255, 255, 255, 0.55)', marginTop: '2px' }}>India</div>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '6px', color: 'rgba(255, 255, 255, 0.8)' }}>
-                            <Phone size={14} style={{ color: '#c9a84c' }} />
+                            <Phone size={14} style={{ color: 'var(--gold)' }} />
                             <span>{addr.phone}</span>
                           </div>
                         </div>
@@ -4857,8 +4857,8 @@ export const CustomerDashboard: React.FC = () => {
                             onClick={() => handleEditAddress(addr)}
                             style={{
                               background: 'transparent',
-                              border: '1px solid rgba(201, 168, 76, 0.4)',
-                              color: '#c9a84c',
+                              border: '1px solid rgba(var(--gold-rgb),  0.4)',
+                              color: 'var(--gold)',
                               padding: '6px 20px',
                               borderRadius: '6px',
                               fontSize: '0.85rem',
@@ -4901,12 +4901,12 @@ export const CustomerDashboard: React.FC = () => {
             {activeTab === 'rewards' && (
               <div>
                 {/* Page Title & Subtitle + Tab Buttons */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '28px', flexWrap: 'wrap', gap: '16px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: isMobile ? '14px' : '28px', flexWrap: 'wrap', gap: '10px' }}>
                   <div>
-                    <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.8rem', color: '#f5efe6', margin: '0 0 6px 0', fontWeight: 700 }}>
+                    <h2 style={{ fontFamily: 'var(--font-display)', fontSize: isMobile ? '1.35rem' : '1.8rem', color: 'var(--cream)', margin: '0 0 4px 0', fontWeight: 700 }}>
                       Chovique Reward Coins &amp; Wallet
                     </h2>
-                    <p style={{ color: 'rgba(255, 255, 255, 0.6)', fontSize: '0.9rem', margin: 0 }}>
+                    <p style={{ color: 'rgba(255, 255, 255, 0.6)', fontSize: isMobile ? '0.8rem' : '0.9rem', margin: 0 }}>
                       Track your coin balance, redemption history, and reward rules.
                     </p>
                   </div>
@@ -4963,20 +4963,20 @@ export const CustomerDashboard: React.FC = () => {
                     <div
                       style={{
                         background: 'rgba(18, 14, 11, 0.96)',
-                        border: '1px solid rgba(201, 168, 76, 0.35)',
+                        border: '1px solid rgba(var(--gold-rgb),  0.35)',
                         borderRadius: '14px',
                         padding: '28px',
                         marginBottom: '32px',
                         boxShadow: '0 8px 30px rgba(0, 0, 0, 0.7)',
                       }}
                     >
-                      <div style={{ fontSize: '0.78rem', fontWeight: 800, color: 'rgba(201, 168, 76, 0.85)', letterSpacing: '1px', textTransform: 'uppercase' }}>
+                      <div style={{ fontSize: '0.78rem', fontWeight: 800, color: 'rgba(var(--gold-rgb),  0.85)', letterSpacing: '1px', textTransform: 'uppercase' }}>
                         AVAILABLE REWARD BALANCE
                       </div>
-                      <div style={{ fontSize: '2.5rem', fontWeight: 800, color: '#f5efe6', fontFamily: 'var(--font-display)', margin: '8px 0 4px 0' }}>
+                      <div style={{ fontSize: '2.5rem', fontWeight: 800, color: 'var(--cream)', fontFamily: 'var(--font-number)', margin: '8px 0 4px 0' }}>
                         {wallet?.available_coins !== undefined ? wallet.available_coins : (wallet?.coin_balance ?? 0)} Coins
                       </div>
-                      <div style={{ fontSize: '1rem', fontWeight: 700, color: '#c9a84c' }}>
+                      <div style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--gold)' }}>
                         Equivalent value: ₹{(wallet?.rupee_value !== undefined ? wallet.rupee_value : (((wallet?.available_coins ?? wallet?.coin_balance ?? 0)) / (wallet?.settings?.coins_per_rupee || 10))).toFixed(2)}
                       </div>
                       {Boolean(wallet?.pending_coins && wallet.pending_coins > 0) && (
@@ -4990,7 +4990,7 @@ export const CustomerDashboard: React.FC = () => {
                     {/* TRANSACTION LEDGER & AUDIT HISTORY */}
                     <div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '16px' }}>
-                        <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1.4rem', color: '#f5efe6', margin: 0, fontWeight: 700 }}>
+                        <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1.4rem', color: 'var(--cream)', margin: 0, fontWeight: 700 }}>
                           Transaction Ledger &amp; Audit History
                         </h3>
 
@@ -5014,9 +5014,9 @@ export const CustomerDashboard: React.FC = () => {
                                 style={{
                                   padding: '6px 14px',
                                   borderRadius: '6px',
-                                  border: isActive ? '1px solid #c9a84c' : '1px solid rgba(255, 255, 255, 0.12)',
-                                  background: isActive ? '#c9a84c' : 'rgba(255, 255, 255, 0.05)',
-                                  color: isActive ? '#0f0c0a' : '#f5efe6',
+                                  border: isActive ? '1px solid var(--gold)' : '1px solid rgba(255, 255, 255, 0.12)',
+                                  background: isActive ? 'var(--gold)' : 'rgba(255, 255, 255, 0.05)',
+                                  color: isActive ? 'var(--black)' : '#f5efe6',
                                   fontSize: '0.82rem',
                                   fontWeight: 700,
                                   cursor: 'pointer',
@@ -5044,8 +5044,8 @@ export const CustomerDashboard: React.FC = () => {
                               padding: '6px 6px',
                               borderRadius: '6px',
                               background: 'rgba(0,0,0,0.3)',
-                              border: '1px solid rgba(201,168,76,0.3)',
-                              color: '#f5efe6',
+                              border: '1px solid rgba(var(--gold-rgb), 0.3)',
+                              color: 'var(--cream)',
                               fontSize: '0.78rem',
                               colorScheme: 'dark',
                             }}
@@ -5064,8 +5064,8 @@ export const CustomerDashboard: React.FC = () => {
                               padding: '6px 6px',
                               borderRadius: '6px',
                               background: 'rgba(0,0,0,0.3)',
-                              border: '1px solid rgba(201,168,76,0.3)',
-                              color: '#f5efe6',
+                              border: '1px solid rgba(var(--gold-rgb), 0.3)',
+                              color: 'var(--cream)',
                               fontSize: '0.78rem',
                               colorScheme: 'dark',
                             }}
@@ -5082,7 +5082,7 @@ export const CustomerDashboard: React.FC = () => {
                             style={{
                               background: 'none',
                               border: 'none',
-                              color: '#c9a84c',
+                              color: 'var(--gold)',
                               fontSize: '0.78rem',
                               fontWeight: 600,
                               cursor: 'pointer',
@@ -5098,7 +5098,7 @@ export const CustomerDashboard: React.FC = () => {
                       {/* Loading State */}
                       {isWalletTxsLoading ? (
                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: 'rgba(255, 255, 255, 0.7)', padding: '48px 0', justifyContent: 'center' }}>
-                          <Loader2 size={20} style={{ animation: 'spin 1s linear infinite', color: '#c9a84c' }} />
+                          <Loader2 size={20} style={{ animation: 'spin 1s linear infinite', color: 'var(--gold)' }} />
                           <span style={{ fontSize: '0.95rem' }}>Loading reward transactions...</span>
                         </div>
                       ) : walletTxsError ? (
@@ -5138,7 +5138,7 @@ export const CustomerDashboard: React.FC = () => {
                               style={{
                                 padding: '56px 24px',
                                 background: 'rgba(18, 14, 11, 0.95)',
-                                border: '1px dashed rgba(201, 168, 76, 0.3)',
+                                border: '1px dashed rgba(var(--gold-rgb),  0.3)',
                                 borderRadius: '14px',
                                 textAlign: 'center',
                                 boxShadow: '0 8px 30px rgba(0, 0, 0, 0.6)',
@@ -5149,17 +5149,17 @@ export const CustomerDashboard: React.FC = () => {
                                   width: '72px',
                                   height: '72px',
                                   borderRadius: '50%',
-                                  background: 'rgba(201, 168, 76, 0.1)',
-                                  border: '1px solid rgba(201, 168, 76, 0.3)',
+                                  background: 'rgba(var(--gold-rgb),  0.1)',
+                                  border: '1px solid rgba(var(--gold-rgb),  0.3)',
                                   display: 'inline-flex',
                                   alignItems: 'center',
                                   justifyContent: 'center',
                                   marginBottom: '20px',
                                 }}
                               >
-                                <Coins size={36} style={{ color: '#c9a84c' }} />
+                                <Coins size={36} style={{ color: 'var(--gold)' }} />
                               </div>
-                              <h3 style={{ color: '#f5efe6', margin: '0 0 8px 0', fontSize: '1.4rem', fontWeight: 700, fontFamily: 'var(--font-display)' }}>
+                              <h3 style={{ color: 'var(--cream)', margin: '0 0 8px 0', fontSize: '1.4rem', fontWeight: 700, fontFamily: 'var(--font-display)' }}>
                                 No Reward Transactions Yet
                               </h3>
                               <p style={{ color: 'rgba(255, 255, 255, 0.65)', margin: '0 0 28px 0', fontSize: '0.92rem' }}>
@@ -5176,7 +5176,7 @@ export const CustomerDashboard: React.FC = () => {
                           <div
                             style={{
                               background: 'rgba(18, 14, 11, 0.95)',
-                              border: '1px solid rgba(201, 168, 76, 0.25)',
+                              border: '1px solid rgba(var(--gold-rgb),  0.25)',
                               borderRadius: '14px',
                               overflow: 'hidden',
                               boxShadow: '0 8px 30px rgba(0, 0, 0, 0.7)',
@@ -5199,8 +5199,8 @@ export const CustomerDashboard: React.FC = () => {
 
                                   if (isWelcome) {
                                     typeLabel = 'WELCOME BONUS';
-                                    typeBadgeColor = '#c9a84c';
-                                    typeBadgeBg = 'rgba(201,168,76,0.18)';
+                                    typeBadgeColor = 'var(--gold)';
+                                    typeBadgeBg = 'rgba(var(--gold-rgb), 0.18)';
                                   } else if (isOrderReward) {
                                     typeLabel = 'ORDER REWARD';
                                     typeBadgeColor = '#3498db';
@@ -5228,7 +5228,7 @@ export const CustomerDashboard: React.FC = () => {
                                   const absCoins = Math.abs(tx.coins);
                                   const isPositive = tx.coins > 0 || isEarn || isWelcome || isOrderReward;
                                   const formattedCoins = isPositive ? `+${absCoins} Coins` : `−${absCoins} Coins`;
-                                  const coinsColor = isWelcome ? '#c9a84c' : isEarn || isOrderReward ? '#2ecc71' : isRedeem ? '#e74c3c' : '#c9a84c';
+                                  const coinsColor = isWelcome ? 'var(--gold)' : isEarn || isOrderReward ? '#2ecc71' : isRedeem ? '#e74c3c' : 'var(--gold)';
                                   let dateStr = 'Recently';
                                   if (tx.created_at) {
                                     try { dateStr = new Date(tx.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }); } catch { dateStr = tx.created_at; }
@@ -5246,7 +5246,7 @@ export const CustomerDashboard: React.FC = () => {
                                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '6px' }}>
                                         <span style={{ fontSize: '0.76rem', color: 'rgba(255,255,255,0.45)' }}>{dateStr}</span>
                                         {tx.order_id ? (
-                                          <span onClick={() => setActiveTab('orders')} style={{ fontSize: '0.76rem', fontWeight: 700, color: '#c9a84c', background: 'rgba(201,168,76,0.1)', border: '1px solid rgba(201,168,76,0.3)', padding: '3px 8px', borderRadius: '6px', cursor: 'pointer' }}>Order #{tx.order_id.slice(-8)}</span>
+                                          <span onClick={() => setActiveTab('orders')} style={{ fontSize: '0.76rem', fontWeight: 700, color: 'var(--gold)', background: 'rgba(var(--gold-rgb), 0.1)', border: '1px solid rgba(var(--gold-rgb), 0.3)', padding: '3px 8px', borderRadius: '6px', cursor: 'pointer' }}>Order #{tx.order_id.slice(-8)}</span>
                                         ) : <span style={{ fontSize: '0.76rem', color: 'rgba(255,255,255,0.3)' }}>—</span>}
                                       </div>
                                     </div>
@@ -5265,12 +5265,12 @@ export const CustomerDashboard: React.FC = () => {
                                     <col style={{ width: '140px' }} />
                                   </colgroup>
                                   <thead>
-                                    <tr style={{ background: 'rgba(0, 0, 0, 0.4)', borderBottom: '1px solid rgba(201, 168, 76, 0.2)' }}>
-                                      <th style={{ padding: '12px 14px', color: '#c9a84c', fontWeight: 700, whiteSpace: 'nowrap' }}>Date</th>
-                                      <th style={{ padding: '12px 14px', color: '#c9a84c', fontWeight: 700, whiteSpace: 'nowrap' }}>Type</th>
-                                      <th style={{ padding: '12px 14px', color: '#c9a84c', fontWeight: 700, whiteSpace: 'nowrap' }}>Amount</th>
-                                      <th style={{ padding: '12px 14px', color: '#c9a84c', fontWeight: 700 }}>Description</th>
-                                      <th style={{ padding: '12px 14px', color: '#c9a84c', fontWeight: 700, textAlign: 'right', whiteSpace: 'nowrap' }}>Order Ref</th>
+                                    <tr style={{ background: 'rgba(0, 0, 0, 0.4)', borderBottom: '1px solid rgba(var(--gold-rgb),  0.2)' }}>
+                                      <th style={{ padding: '12px 14px', color: 'var(--gold)', fontWeight: 700, whiteSpace: 'nowrap' }}>Date</th>
+                                      <th style={{ padding: '12px 14px', color: 'var(--gold)', fontWeight: 700, whiteSpace: 'nowrap' }}>Type</th>
+                                      <th style={{ padding: '12px 14px', color: 'var(--gold)', fontWeight: 700, whiteSpace: 'nowrap' }}>Amount</th>
+                                      <th style={{ padding: '12px 14px', color: 'var(--gold)', fontWeight: 700 }}>Description</th>
+                                      <th style={{ padding: '12px 14px', color: 'var(--gold)', fontWeight: 700, textAlign: 'right', whiteSpace: 'nowrap' }}>Order Ref</th>
                                     </tr>
                                   </thead>
                                   <tbody>
@@ -5288,8 +5288,8 @@ export const CustomerDashboard: React.FC = () => {
 
                                       if (isWelcome) {
                                         typeLabel = 'WELCOME BONUS';
-                                        typeBadgeColor = '#c9a84c';
-                                        typeBadgeBg = 'rgba(201, 168, 76, 0.18)';
+                                        typeBadgeColor = 'var(--gold)';
+                                        typeBadgeBg = 'rgba(var(--gold-rgb),  0.18)';
                                       } else if (isOrderReward) {
                                         typeLabel = 'ORDER REWARD';
                                         typeBadgeColor = '#3498db';
@@ -5310,7 +5310,7 @@ export const CustomerDashboard: React.FC = () => {
                                       const absCoins = Math.abs(tx.coins);
                                       const isPositive = tx.coins > 0 || isEarn || isWelcome || isOrderReward;
                                       const formattedCoins = isPositive ? `+${absCoins} Coins` : `−${absCoins} Coins`;
-                                      const coinsColor = isWelcome ? '#c9a84c' : isEarn || isOrderReward ? '#2ecc71' : isRedeem ? '#e74c3c' : '#c9a84c';
+                                      const coinsColor = isWelcome ? 'var(--gold)' : isEarn || isOrderReward ? '#2ecc71' : isRedeem ? '#e74c3c' : 'var(--gold)';
                                       let dateStr = 'Recently';
                                       if (tx.created_at) {
                                         try {
@@ -5334,7 +5334,7 @@ export const CustomerDashboard: React.FC = () => {
                                           </td>
                                           <td style={{ padding: '12px 14px', textAlign: 'right', whiteSpace: 'nowrap' }}>
                                             {tx.order_id ? (
-                                              <span onClick={() => setActiveTab('orders')} style={{ fontSize: '0.78rem', fontWeight: 700, color: '#c9a84c', background: 'rgba(201, 168, 76, 0.1)', border: '1px solid rgba(201, 168, 76, 0.3)', padding: '3px 8px', borderRadius: '6px', cursor: 'pointer', whiteSpace: 'nowrap' }}>#{tx.order_id.slice(-8)}</span>
+                                              <span onClick={() => setActiveTab('orders')} style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--gold)', background: 'rgba(var(--gold-rgb),  0.1)', border: '1px solid rgba(var(--gold-rgb),  0.3)', padding: '3px 8px', borderRadius: '6px', cursor: 'pointer', whiteSpace: 'nowrap' }}>#{tx.order_id.slice(-8)}</span>
                                             ) : (
                                               <span style={{ color: 'rgba(255, 255, 255, 0.35)', fontSize: '0.8rem' }}>—</span>
                                             )}
@@ -5352,7 +5352,7 @@ export const CustomerDashboard: React.FC = () => {
                               style={{
                                 padding: '16px 20px',
                                 background: 'rgba(0, 0, 0, 0.3)',
-                                borderTop: '1px solid rgba(201, 168, 76, 0.15)',
+                                borderTop: '1px solid rgba(var(--gold-rgb),  0.15)',
                                 display: 'flex',
                                 justifyContent: 'space-between',
                                 alignItems: 'center',
@@ -5363,7 +5363,7 @@ export const CustomerDashboard: React.FC = () => {
                               }}
                             >
                               <div>
-                                Showing <strong style={{ color: '#f5efe6' }}>{walletTxsTotal > 0 ? (walletTxsPage - 1) * 10 + 1 : 0}</strong>–<strong style={{ color: '#f5efe6' }}>{Math.min(walletTxsPage * 10, walletTxsTotal)}</strong> of <strong style={{ color: '#f5efe6' }}>{walletTxsTotal}</strong> transactions
+                                Showing <strong style={{ color: 'var(--cream)' }}>{walletTxsTotal > 0 ? (walletTxsPage - 1) * 10 + 1 : 0}</strong>–<strong style={{ color: 'var(--cream)' }}>{Math.min(walletTxsPage * 10, walletTxsTotal)}</strong> of <strong style={{ color: 'var(--cream)' }}>{walletTxsTotal}</strong> transactions
                               </div>
 
                               <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
@@ -5374,9 +5374,9 @@ export const CustomerDashboard: React.FC = () => {
                                   style={{
                                     padding: '6px 12px',
                                     borderRadius: '6px',
-                                    background: walletTxsPage > 1 ? 'rgba(201, 168, 76, 0.15)' : 'rgba(255, 255, 255, 0.05)',
-                                    color: walletTxsPage > 1 ? '#c9a84c' : 'rgba(255, 255, 255, 0.3)',
-                                    border: walletTxsPage > 1 ? '1px solid rgba(201, 168, 76, 0.4)' : '1px solid rgba(255, 255, 255, 0.1)',
+                                    background: walletTxsPage > 1 ? 'rgba(var(--gold-rgb),  0.15)' : 'rgba(255, 255, 255, 0.05)',
+                                    color: walletTxsPage > 1 ? 'var(--gold)' : 'rgba(255, 255, 255, 0.3)',
+                                    border: walletTxsPage > 1 ? '1px solid rgba(var(--gold-rgb),  0.4)' : '1px solid rgba(255, 255, 255, 0.1)',
                                     fontSize: '0.8rem',
                                     fontWeight: 700,
                                     cursor: walletTxsPage > 1 ? 'pointer' : 'not-allowed',
@@ -5393,9 +5393,9 @@ export const CustomerDashboard: React.FC = () => {
                                     style={{
                                       padding: '6px 10px',
                                       borderRadius: '6px',
-                                      background: pg === walletTxsPage ? '#c9a84c' : 'rgba(255, 255, 255, 0.05)',
-                                      color: pg === walletTxsPage ? '#0f0c0a' : '#f5efe6',
-                                      border: pg === walletTxsPage ? '1px solid #c9a84c' : '1px solid rgba(255, 255, 255, 0.1)',
+                                      background: pg === walletTxsPage ? 'var(--gold)' : 'rgba(255, 255, 255, 0.05)',
+                                      color: pg === walletTxsPage ? 'var(--black)' : '#f5efe6',
+                                      border: pg === walletTxsPage ? '1px solid var(--gold)' : '1px solid rgba(255, 255, 255, 0.1)',
                                       fontSize: '0.8rem',
                                       fontWeight: 700,
                                       cursor: 'pointer',
@@ -5412,9 +5412,9 @@ export const CustomerDashboard: React.FC = () => {
                                   style={{
                                     padding: '6px 12px',
                                     borderRadius: '6px',
-                                    background: walletTxsPage < walletTxsPages ? 'rgba(201, 168, 76, 0.15)' : 'rgba(255, 255, 255, 0.05)',
-                                    color: walletTxsPage < walletTxsPages ? '#c9a84c' : 'rgba(255, 255, 255, 0.3)',
-                                    border: walletTxsPage < walletTxsPages ? '1px solid rgba(201, 168, 76, 0.4)' : '1px solid rgba(255, 255, 255, 0.1)',
+                                    background: walletTxsPage < walletTxsPages ? 'rgba(var(--gold-rgb),  0.15)' : 'rgba(255, 255, 255, 0.05)',
+                                    color: walletTxsPage < walletTxsPages ? 'var(--gold)' : 'rgba(255, 255, 255, 0.3)',
+                                    border: walletTxsPage < walletTxsPages ? '1px solid rgba(var(--gold-rgb),  0.4)' : '1px solid rgba(255, 255, 255, 0.1)',
                                     fontSize: '0.8rem',
                                     fontWeight: 700,
                                     cursor: walletTxsPage < walletTxsPages ? 'pointer' : 'not-allowed',
@@ -5436,13 +5436,13 @@ export const CustomerDashboard: React.FC = () => {
                   <div
                     style={{
                       background: 'rgba(18, 14, 11, 0.96)',
-                      border: '1px solid rgba(201, 168, 76, 0.35)',
+                      border: '1px solid rgba(var(--gold-rgb),  0.35)',
                       borderRadius: '14px',
                       padding: '28px',
                       boxShadow: '0 8px 30px rgba(0, 0, 0, 0.7)',
                     }}
                   >
-                    <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1.3rem', color: '#c9a84c', margin: '0 0 16px 0', fontWeight: 700 }}>
+                    <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1.3rem', color: 'var(--gold)', margin: '0 0 16px 0', fontWeight: 700 }}>
                       Chovique Reward Rules
                     </h3>
                     <p style={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: '0.9rem', marginBottom: '24px', lineHeight: 1.6 }}>
@@ -5453,15 +5453,15 @@ export const CustomerDashboard: React.FC = () => {
                       <div
                         style={{
                           background: 'rgba(0, 0, 0, 0.4)',
-                          border: '1px solid rgba(201, 168, 76, 0.25)',
+                          border: '1px solid rgba(var(--gold-rgb),  0.25)',
                           borderRadius: '10px',
                           padding: '20px',
                         }}
                       >
-                        <div style={{ fontSize: '0.8rem', color: '#c9a84c', textTransform: 'uppercase', marginBottom: '8px', fontWeight: 700 }}>
+                        <div style={{ fontSize: '0.8rem', color: 'var(--gold)', textTransform: 'uppercase', marginBottom: '8px', fontWeight: 700 }}>
                           Earn Rule
                         </div>
-                        <div style={{ fontSize: '1.1rem', fontWeight: 700, color: '#f5efe6', marginBottom: '6px' }}>
+                        <div style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--cream)', marginBottom: '6px' }}>
                           ₹{wallet?.settings?.spend_per_coin ?? 10} spent = 1 Coin
                         </div>
                         <p style={{ fontSize: '0.82rem', color: 'rgba(255, 255, 255, 0.55)', margin: 0 }}>
@@ -5472,15 +5472,15 @@ export const CustomerDashboard: React.FC = () => {
                       <div
                         style={{
                           background: 'rgba(0, 0, 0, 0.4)',
-                          border: '1px solid rgba(201, 168, 76, 0.25)',
+                          border: '1px solid rgba(var(--gold-rgb),  0.25)',
                           borderRadius: '10px',
                           padding: '20px',
                         }}
                       >
-                        <div style={{ fontSize: '0.8rem', color: '#c9a84c', textTransform: 'uppercase', marginBottom: '8px', fontWeight: 700 }}>
+                        <div style={{ fontSize: '0.8rem', color: 'var(--gold)', textTransform: 'uppercase', marginBottom: '8px', fontWeight: 700 }}>
                           Redeem Rule
                         </div>
-                        <div style={{ fontSize: '1.1rem', fontWeight: 700, color: '#f5efe6', marginBottom: '6px' }}>
+                        <div style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--cream)', marginBottom: '6px' }}>
                           {wallet?.settings?.coins_per_rupee ?? 10} Coins = ₹1 Discount
                         </div>
                         <p style={{ fontSize: '0.82rem', color: 'rgba(255, 255, 255, 0.55)', margin: 0 }}>
@@ -5491,15 +5491,15 @@ export const CustomerDashboard: React.FC = () => {
                       <div
                         style={{
                           background: 'rgba(0, 0, 0, 0.4)',
-                          border: '1px solid rgba(201, 168, 76, 0.25)',
+                          border: '1px solid rgba(var(--gold-rgb),  0.25)',
                           borderRadius: '10px',
                           padding: '20px',
                         }}
                       >
-                        <div style={{ fontSize: '0.8rem', color: '#c9a84c', textTransform: 'uppercase', marginBottom: '8px', fontWeight: 700 }}>
+                        <div style={{ fontSize: '0.8rem', color: 'var(--gold)', textTransform: 'uppercase', marginBottom: '8px', fontWeight: 700 }}>
                           Max Usage
                         </div>
-                        <div style={{ fontSize: '1.1rem', fontWeight: 700, color: '#f5efe6', marginBottom: '6px' }}>
+                        <div style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--cream)', marginBottom: '6px' }}>
                           Up to {wallet?.settings?.max_redemption_percentage ?? 20}% per order
                         </div>
                         <p style={{ fontSize: '0.82rem', color: 'rgba(255, 255, 255, 0.55)', margin: 0 }}>
@@ -5516,19 +5516,19 @@ export const CustomerDashboard: React.FC = () => {
             {activeTab === 'coupons' && (
               <div>
                 {/* SECTION 1: AVAILABLE COUPONS */}
-                <div style={{ marginBottom: '32px' }}>
-                  <div style={{ marginBottom: '20px' }}>
-                    <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.8rem', color: '#f5efe6', margin: '0 0 6px 0', fontWeight: 700 }}>
+                <div style={{ marginBottom: isMobile ? '16px' : '32px' }}>
+                  <div style={{ marginBottom: isMobile ? '10px' : '20px' }}>
+                    <h2 style={{ fontFamily: 'var(--font-display)', fontSize: isMobile ? '1.35rem' : '1.8rem', color: 'var(--cream)', margin: '0 0 4px 0', fontWeight: 700 }}>
                       My Available Coupons
                     </h2>
-                    <p style={{ color: 'rgba(255, 255, 255, 0.6)', fontSize: '0.9rem', margin: 0 }}>
+                    <p style={{ color: 'rgba(255, 255, 255, 0.6)', fontSize: isMobile ? '0.8rem' : '0.9rem', margin: 0 }}>
                       Exclusive promotional discounts and rewards available for your next order.
                     </p>
                   </div>
 
                   {isCouponsLoading ? (
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: 'rgba(255, 255, 255, 0.7)', padding: '36px 0', justifyContent: 'center' }}>
-                      <Loader2 size={20} style={{ animation: 'spin 1s linear infinite', color: '#c9a84c' }} />
+                      <Loader2 size={20} style={{ animation: 'spin 1s linear infinite', color: 'var(--gold)' }} />
                       <span style={{ fontSize: '0.95rem' }}>Loading your coupons...</span>
                     </div>
                   ) : couponsError ? (
@@ -5540,9 +5540,9 @@ export const CustomerDashboard: React.FC = () => {
 
                       if (uniqueCoupons.length === 0) {
                         return (
-                          <div style={{ padding: '36px 24px', background: 'rgba(18, 14, 11, 0.6)', border: '1px dashed rgba(201, 168, 76, 0.3)', borderRadius: '12px', textAlign: 'center' }}>
-                            <Tag size={32} style={{ color: '#c9a84c', marginBottom: '10px' }} />
-                            <h3 style={{ color: '#f5efe6', margin: '0 0 6px 0', fontSize: '1.2rem', fontWeight: 700 }}>
+                          <div style={{ padding: '36px 24px', background: 'rgba(18, 14, 11, 0.6)', border: '1px dashed rgba(var(--gold-rgb),  0.3)', borderRadius: '12px', textAlign: 'center' }}>
+                            <Tag size={32} style={{ color: 'var(--gold)', marginBottom: '10px' }} />
+                            <h3 style={{ color: 'var(--cream)', margin: '0 0 6px 0', fontSize: '1.2rem', fontWeight: 700 }}>
                               No Available Coupons
                             </h3>
                             <p style={{ color: 'rgba(255, 255, 255, 0.6)', margin: 0, fontSize: '0.88rem' }}>
@@ -5579,7 +5579,7 @@ export const CustomerDashboard: React.FC = () => {
                                 key={c.code}
                                 style={{
                                   background: 'rgba(18, 14, 11, 0.96)',
-                                  border: '1px solid rgba(201, 168, 76, 0.4)',
+                                  border: '1px solid rgba(var(--gold-rgb),  0.4)',
                                   borderRadius: '14px',
                                   padding: '24px',
                                   display: 'flex',
@@ -5589,7 +5589,7 @@ export const CustomerDashboard: React.FC = () => {
                                 }}
                               >
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
-                                  <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1.05rem', fontWeight: 700, color: '#f5efe6', margin: 0 }}>
+                                  <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1.05rem', fontWeight: 700, color: 'var(--cream)', margin: 0 }}>
                                     {titleText}
                                   </h3>
                                   <span style={{ fontSize: '0.72rem', fontWeight: 800, padding: '4px 10px', borderRadius: '6px', textTransform: 'uppercase', background: 'rgba(46, 204, 113, 0.15)', color: '#2ecc71', border: '1px solid #2ecc71' }}>
@@ -5597,13 +5597,13 @@ export const CustomerDashboard: React.FC = () => {
                                   </span>
                                 </div>
 
-                                <div style={{ fontSize: '1.6rem', fontWeight: 800, color: '#c9a84c', margin: '4px 0 14px 0', fontFamily: 'var(--font-display)' }}>
+                                <div style={{ fontSize: '1.6rem', fontWeight: 800, color: 'var(--gold)', margin: '4px 0 14px 0', fontFamily: 'var(--font-number)' }}>
                                   {discountStr}
                                 </div>
 
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(0, 0, 0, 0.4)', border: '1px dashed rgba(201, 168, 76, 0.35)', borderRadius: '8px', padding: '10px 14px', marginBottom: '14px' }}>
-                                  <span style={{ fontSize: '0.92rem', fontWeight: 700, color: '#f5efe6' }}>
-                                    Code: <span style={{ color: '#c9a84c' }}>{c.code}</span>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(0, 0, 0, 0.4)', border: '1px dashed rgba(var(--gold-rgb),  0.35)', borderRadius: '8px', padding: '10px 14px', marginBottom: '14px' }}>
+                                  <span style={{ fontSize: '0.92rem', fontWeight: 700, color: 'var(--cream)' }}>
+                                    Code: <span style={{ color: 'var(--gold)' }}>{c.code}</span>
                                   </span>
                                   <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                                     <button
@@ -5639,13 +5639,13 @@ export const CustomerDashboard: React.FC = () => {
                                       style={{
                                         padding: '6px 14px',
                                         borderRadius: '6px',
-                                        background: 'linear-gradient(135deg, #c9a84c 0%, #e5c875 100%)',
-                                        color: '#0f0c0a',
+                                        background: 'var(--gradient-gold)',
+                                        color: 'var(--black)',
                                         border: 'none',
                                         fontSize: '0.8rem',
                                         fontWeight: 800,
                                         cursor: 'pointer',
-                                        boxShadow: '0 2px 10px rgba(201, 168, 76, 0.3)',
+                                        boxShadow: '0 2px 10px rgba(var(--gold-rgb),  0.3)',
                                       }}
                                     >
                                       USE COUPON
@@ -5657,9 +5657,9 @@ export const CustomerDashboard: React.FC = () => {
                                   {descText}
                                 </p>
 
-                                <div style={{ borderTop: '1px solid rgba(201, 168, 76, 0.15)', paddingTop: '12px', display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: 'rgba(255, 255, 255, 0.55)' }}>
-                                  <span>Minimum order: <strong style={{ color: '#f5efe6' }}>{minOrderStr}</strong></span>
-                                  <span>Expires: <strong style={{ color: '#f5efe6' }}>{expiryStr}</strong></span>
+                                <div style={{ borderTop: '1px solid rgba(var(--gold-rgb),  0.15)', paddingTop: '12px', display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: 'rgba(255, 255, 255, 0.55)' }}>
+                                  <span>Minimum order: <strong style={{ color: 'var(--cream)' }}>{minOrderStr}</strong></span>
+                                  <span>Expires: <strong style={{ color: 'var(--cream)' }}>{expiryStr}</strong></span>
                                 </div>
                               </div>
                             );
@@ -5670,9 +5670,9 @@ export const CustomerDashboard: React.FC = () => {
                 </div>
 
                 {/* SECTION 2: USED COUPONS HISTORY */}
-                <div style={{ marginTop: '40px', paddingTop: '32px', borderTop: '1px solid rgba(201, 168, 76, 0.2)' }}>
+                <div style={{ marginTop: '40px', paddingTop: '32px', borderTop: '1px solid rgba(var(--gold-rgb),  0.2)' }}>
                   <div style={{ marginBottom: '20px' }}>
-                    <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.6rem', color: '#f5efe6', margin: '0 0 6px 0', fontWeight: 700 }}>
+                    <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.6rem', color: 'var(--cream)', margin: '0 0 6px 0', fontWeight: 700 }}>
                       Used Coupons
                     </h2>
                     <p style={{ color: 'rgba(255, 255, 255, 0.6)', fontSize: '0.88rem', margin: 0 }}>
@@ -5702,12 +5702,12 @@ export const CustomerDashboard: React.FC = () => {
                           }}
                         >
                           <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                            <div style={{ width: '42px', height: '42px', borderRadius: '50%', background: 'rgba(201, 168, 76, 0.12)', border: '1px solid rgba(201, 168, 76, 0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                              <Tag size={20} style={{ color: '#c9a84c' }} />
+                            <div style={{ width: '42px', height: '42px', borderRadius: '50%', background: 'rgba(var(--gold-rgb),  0.12)', border: '1px solid rgba(var(--gold-rgb),  0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                              <Tag size={20} style={{ color: 'var(--gold)' }} />
                             </div>
                             <div>
                               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                <span style={{ color: '#c9a84c', fontWeight: 800, fontSize: '1.05rem', letterSpacing: '0.5px' }}>
+                                <span style={{ color: 'var(--gold)', fontWeight: 800, fontSize: '1.05rem', letterSpacing: '0.5px' }}>
                                   {uc.code}
                                 </span>
                                 <span style={{ color: '#2ecc71', fontWeight: 700, fontSize: '0.88rem' }}>
@@ -5715,7 +5715,7 @@ export const CustomerDashboard: React.FC = () => {
                                 </span>
                               </div>
                               <div style={{ color: 'rgba(255, 255, 255, 0.65)', fontSize: '0.84rem', marginTop: '3px' }}>
-                                Used on Order <strong style={{ color: '#f5efe6' }}>#{uc.order_id}</strong> • Date: <strong style={{ color: '#f5efe6' }}>{uc.used_at}</strong>
+                                Used on Order <strong style={{ color: 'var(--cream)' }}>#{uc.order_id}</strong> • Date: <strong style={{ color: 'var(--cream)' }}>{uc.used_at}</strong>
                               </div>
                             </div>
                           </div>
@@ -5835,13 +5835,13 @@ export const CustomerDashboard: React.FC = () => {
                 const labels: Record<string, { label: string; bg: string; color: string }> = {
                   order: { label: 'Order', bg: 'rgba(46, 204, 113, 0.15)', color: '#2ecc71' },
                   coupon: { label: 'Coupon', bg: 'rgba(155, 89, 182, 0.15)', color: '#9b59b6' },
-                  reward: { label: 'Rewards', bg: 'rgba(201, 168, 76, 0.15)', color: '#c9a84c' },
+                  reward: { label: 'Rewards', bg: 'rgba(var(--gold-rgb),  0.15)', color: 'var(--gold)' },
                   support: { label: 'Support', bg: 'rgba(230, 126, 34, 0.15)', color: '#e67e22' },
                   system: { label: 'System', bg: 'rgba(52, 152, 219, 0.15)', color: '#3498db' },
                   general: { label: 'System', bg: 'rgba(52, 152, 219, 0.15)', color: '#3498db' },
                 };
 
-                const style = labels[type] || { label: type ? type.replace('_', ' ').toUpperCase() : 'General', bg: 'rgba(201, 168, 76, 0.12)', color: '#c9a84c' };
+                const style = labels[type] || { label: type ? type.replace('_', ' ').toUpperCase() : 'General', bg: 'rgba(var(--gold-rgb),  0.12)', color: 'var(--gold)' };
                 return (
                   <span
                     style={{
@@ -5869,14 +5869,14 @@ export const CustomerDashboard: React.FC = () => {
               ];
 
               return (
-                <div style={{ width: '100%', maxWidth: '1280px', margin: '0 auto', paddingBottom: '48px', color: '#f5efe6' }}>
+                <div style={{ width: '100%', maxWidth: '1280px', margin: '0 auto', paddingBottom: '48px', color: 'var(--cream)' }}>
                   {/* Header Row */}
-                  <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px', marginBottom: '24px' }}>
+                  <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px', marginBottom: isMobile ? '12px' : '24px' }}>
                     <div>
-                      <span style={{ color: 'rgba(201, 168, 76, 0.85)', fontSize: '0.78rem', letterSpacing: '2px', textTransform: 'uppercase', fontWeight: 600, display: 'block', marginBottom: '6px' }}>
+                      <span style={{ color: 'rgba(var(--gold-rgb),  0.85)', fontSize: isMobile ? '0.72rem' : '0.78rem', letterSpacing: '2px', textTransform: 'uppercase', fontWeight: 600, display: 'block', marginBottom: '4px' }}>
                         — CUSTOMER CENTER
                       </span>
-                      <h1 style={{ fontFamily: 'var(--font-display, serif)', fontSize: '2.4rem', color: '#f5efe6', fontWeight: 700, margin: 0 }}>
+                      <h1 style={{ fontFamily: 'var(--font-display, serif)', fontSize: isMobile ? '1.4rem' : '2.4rem', color: 'var(--cream)', fontWeight: 700, margin: 0 }}>
                         Notifications
                       </h1>
                     </div>
@@ -5888,10 +5888,10 @@ export const CustomerDashboard: React.FC = () => {
                         disabled={isNotifLoading}
                         style={{
                           padding: '10px 18px',
-                          background: 'rgba(201, 168, 76, 0.1)',
-                          border: '1px solid rgba(201, 168, 76, 0.3)',
+                          background: 'rgba(var(--gold-rgb),  0.1)',
+                          border: '1px solid rgba(var(--gold-rgb),  0.3)',
                           borderRadius: '8px',
-                          color: '#c9a84c',
+                          color: 'var(--gold)',
                           fontSize: '0.82rem',
                           fontWeight: 700,
                           cursor: isNotifLoading ? 'not-allowed' : 'pointer',
@@ -5930,17 +5930,17 @@ export const CustomerDashboard: React.FC = () => {
                           onClick={handleMarkAll}
                           style={{
                             padding: '10px 18px',
-                            background: 'linear-gradient(135deg, #c9a84c 0%, #e5c875 50%, #c9a84c 100%)',
+                            background: 'var(--gradient-gold)',
                             border: 'none',
                             borderRadius: '8px',
-                            color: '#0f0c0a',
+                            color: 'var(--black)',
                             fontSize: '0.82rem',
                             fontWeight: 700,
                             cursor: 'pointer',
                             display: 'flex',
                             alignItems: 'center',
                             gap: '6px',
-                            boxShadow: '0 4px 14px rgba(201, 168, 76, 0.25)',
+                            boxShadow: '0 4px 14px rgba(var(--gold-rgb),  0.25)',
                             transition: 'all 0.2s ease',
                           }}
                         >
@@ -5974,8 +5974,8 @@ export const CustomerDashboard: React.FC = () => {
                   {/* Category Tabs & Filter Toolbar */}
                   <div
                     style={{
-                      background: 'rgba(20, 16, 13, 0.85)',
-                      border: '1px solid rgba(201, 168, 76, 0.2)',
+                      background: 'rgba(var(--surface-rgb),  0.85)',
+                      border: '1px solid rgba(var(--gold-rgb),  0.2)',
                       borderRadius: '12px',
                       padding: '16px 20px',
                       marginBottom: '28px',
@@ -5997,14 +5997,14 @@ export const CustomerDashboard: React.FC = () => {
                             background: 'rgba(10, 8, 6, 0.8)',
                             border: '1px solid rgba(255,255,255,0.15)',
                             borderRadius: '6px',
-                            color: '#f5efe6',
+                            color: 'var(--cream)',
                             fontSize: '0.82rem',
                             outline: 'none',
                             cursor: 'pointer',
                           }}
                         >
                           {categoryTabs.map((tab) => (
-                            <option key={tab.id} value={tab.id} style={{ background: '#14100d', color: '#f5efe6' }}>
+                            <option key={tab.id} value={tab.id} style={{ background: '#14100d', color: 'var(--cream)' }}>
                               {tab.label}
                             </option>
                           ))}
@@ -6018,10 +6018,10 @@ export const CustomerDashboard: React.FC = () => {
                             onClick={() => setNotifCategory(tab.id as any)}
                             style={{
                               padding: '8px 16px',
-                              background: notifCategory === tab.id ? 'rgba(201, 168, 76, 0.15)' : 'transparent',
-                              border: `1px solid ${notifCategory === tab.id ? '#c9a84c' : 'rgba(255,255,255,0.1)'}`,
+                              background: notifCategory === tab.id ? 'rgba(var(--gold-rgb),  0.15)' : 'transparent',
+                              border: `1px solid ${notifCategory === tab.id ? 'var(--gold)' : 'rgba(255,255,255,0.1)'}`,
                               borderRadius: '8px',
-                              color: notifCategory === tab.id ? '#c9a84c' : '#f5efe6',
+                              color: notifCategory === tab.id ? 'var(--gold)' : '#f5efe6',
                               fontSize: '0.85rem',
                               fontWeight: notifCategory === tab.id ? 700 : 500,
                               cursor: 'pointer',
@@ -6049,15 +6049,15 @@ export const CustomerDashboard: React.FC = () => {
                           background: 'rgba(10, 8, 6, 0.8)',
                           border: '1px solid rgba(255,255,255,0.15)',
                           borderRadius: '6px',
-                          color: '#f5efe6',
+                          color: 'var(--cream)',
                           fontSize: '0.82rem',
                           outline: 'none',
                           cursor: 'pointer',
                         }}
                       >
-                        <option value="all" style={{ background: '#14100d', color: '#f5efe6' }}>All Status</option>
-                        <option value="unread" style={{ background: '#14100d', color: '#f5efe6' }}>Unread Only</option>
-                        <option value="read" style={{ background: '#14100d', color: '#f5efe6' }}>Read Only</option>
+                        <option value="all" style={{ background: '#14100d', color: 'var(--cream)' }}>All Status</option>
+                        <option value="unread" style={{ background: '#14100d', color: 'var(--cream)' }}>Unread Only</option>
+                        <option value="read" style={{ background: '#14100d', color: 'var(--cream)' }}>Read Only</option>
                       </select>
                     </div>
                   </div>
@@ -6065,14 +6065,14 @@ export const CustomerDashboard: React.FC = () => {
                   {/* Main List / Table Container */}
                   <div
                     style={{
-                      background: 'rgba(20, 16, 13, 0.85)',
-                      border: '1px solid rgba(201, 168, 76, 0.2)',
+                      background: 'rgba(var(--surface-rgb),  0.85)',
+                      border: '1px solid rgba(var(--gold-rgb),  0.2)',
                       borderRadius: '12px',
                       overflow: 'hidden',
                     }}
                   >
                     {isNotifLoading ? (
-                      <div style={{ padding: '60px', textAlign: 'center', color: '#c9a84c' }}>
+                      <div style={{ padding: '60px', textAlign: 'center', color: 'var(--gold)' }}>
                         <Loader2 size={32} className="animate-spin" style={{ margin: '0 auto 12px auto' }} />
                         <p style={{ margin: 0, fontSize: '0.9rem', color: 'rgba(255,255,255,0.6)' }}>Loading notifications...</p>
                       </div>
@@ -6081,20 +6081,20 @@ export const CustomerDashboard: React.FC = () => {
                         <EmptyState
                           title="No Notifications Found"
                           description="You have no notifications matching the selected filter."
-                          icon={<Bell size={48} color="#c9a84c" />}
+                          icon={<Bell size={48} color="var(--gold)" />}
                         />
                       </div>
                     ) : (
                       <div style={{ width: '100%', overflowX: 'auto' }}>
                         <table className="notifications-table" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.88rem' }}>
                           <thead>
-                            <tr style={{ background: 'rgba(10, 8, 6, 0.9)', borderBottom: '1px solid rgba(201, 168, 76, 0.2)', color: '#c9a84c' }}>
+                            <tr style={{ background: 'rgba(10, 8, 6, 0.9)', borderBottom: '1px solid rgba(var(--gold-rgb),  0.2)', color: 'var(--gold)' }}>
                               <th style={{ padding: '16px 14px', width: '40px', textAlign: 'center' }}>
                                 <input
                                   type="checkbox"
                                   checked={filteredNotifications.length > 0 && selectedNotifIds.length === filteredNotifications.length}
                                   onChange={handleSelectAll}
-                                  style={{ cursor: 'pointer', accentColor: '#c9a84c', width: '15px', height: '15px' }}
+                                  style={{ cursor: 'pointer', accentColor: 'var(--gold)', width: '15px', height: '15px' }}
                                 />
                               </th>
                               <th style={{ padding: '16px 20px', fontWeight: 700 }}>NOTIFICATION</th>
@@ -6132,7 +6132,7 @@ export const CustomerDashboard: React.FC = () => {
                                   key={notif.id}
                                   style={{
                                     borderBottom: '1px solid rgba(255,255,255,0.06)',
-                                    background: selectedNotifIds.includes(notif.id) ? 'rgba(201, 168, 76, 0.1)' : isUnread ? 'rgba(201, 168, 76, 0.04)' : 'transparent',
+                                    background: selectedNotifIds.includes(notif.id) ? 'rgba(var(--gold-rgb),  0.1)' : isUnread ? 'rgba(var(--gold-rgb),  0.04)' : 'transparent',
                                     transition: 'background 0.2s ease',
                                   }}
                                 >
@@ -6142,13 +6142,13 @@ export const CustomerDashboard: React.FC = () => {
                                       type="checkbox"
                                       checked={selectedNotifIds.includes(notif.id)}
                                       onChange={() => handleToggleSelectOne(notif.id)}
-                                      style={{ cursor: 'pointer', accentColor: '#c9a84c', width: '15px', height: '15px' }}
+                                      style={{ cursor: 'pointer', accentColor: 'var(--gold)', width: '15px', height: '15px' }}
                                     />
                                   </td>
 
                                   {/* Title & Message */}
                                   <td style={{ padding: '16px 20px', maxWidth: '400px' }}>
-                                    <div style={{ fontWeight: isUnread ? 700 : 600, color: '#f5efe6', marginBottom: '4px' }}>
+                                    <div style={{ fontWeight: isUnread ? 700 : 600, color: 'var(--cream)', marginBottom: '4px' }}>
                                       {notifTitle}
                                     </div>
                                     <div style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.65)', lineHeight: 1.4 }}>
@@ -6173,8 +6173,8 @@ export const CustomerDashboard: React.FC = () => {
                                         <Check size={14} color="rgba(255,255,255,0.3)" /> Read
                                       </span>
                                     ) : (
-                                      <span style={{ fontSize: '0.78rem', color: '#c9a84c', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                                        <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#c9a84c' }} /> Unread
+                                      <span style={{ fontSize: '0.78rem', color: 'var(--gold)', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                                        <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--gold)' }} /> Unread
                                       </span>
                                     )}
                                   </td>
@@ -6187,10 +6187,10 @@ export const CustomerDashboard: React.FC = () => {
                                           onClick={() => handleMarkSingleRead(notif.id)}
                                           style={{
                                             padding: '6px 12px',
-                                            background: 'rgba(201, 168, 76, 0.12)',
-                                            border: '1px solid rgba(201, 168, 76, 0.3)',
+                                            background: 'rgba(var(--gold-rgb),  0.12)',
+                                            border: '1px solid rgba(var(--gold-rgb),  0.3)',
                                             borderRadius: '6px',
-                                            color: '#c9a84c',
+                                            color: 'var(--gold)',
                                             fontSize: '0.78rem',
                                             fontWeight: 600,
                                             cursor: 'pointer',
@@ -6208,7 +6208,7 @@ export const CustomerDashboard: React.FC = () => {
                                           background: 'transparent',
                                           border: '1px solid rgba(255,255,255,0.2)',
                                           borderRadius: '6px',
-                                          color: '#f5efe6',
+                                          color: 'var(--cream)',
                                           fontSize: '0.78rem',
                                           fontWeight: 600,
                                           cursor: 'pointer',
@@ -6258,14 +6258,14 @@ export const CustomerDashboard: React.FC = () => {
             {activeTab === 'settings' && (
               <div>
                 {/* Page Header */}
-                <div style={{ marginBottom: '28px' }}>
-                  <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.8rem', color: '#f5efe6', margin: '0 0 6px 0', fontWeight: 700 }}>
+                <div style={{ marginBottom: isMobile ? '14px' : '28px' }}>
+                  <h2 style={{ fontFamily: 'var(--font-display)', fontSize: isMobile ? '1.35rem' : '1.8rem', color: 'var(--cream)', margin: '0 0 4px 0', fontWeight: 700 }}>
                     Account Preferences &amp; Settings
                   </h2>
-                  <p style={{ color: 'rgba(255, 255, 255, 0.6)', fontSize: '0.9rem', margin: '0 0 6px 0' }}>
+                  <p style={{ color: 'rgba(255, 255, 255, 0.6)', fontSize: isMobile ? '0.8rem' : '0.9rem', margin: '0 0 4px 0' }}>
                     Manage your account preferences and security.
                   </p>
-                  <p style={{ color: 'rgba(201, 168, 76, 0.7)', fontSize: '0.8rem', margin: 0 }}>
+                  <p style={{ color: 'rgba(var(--gold-rgb),  0.7)', fontSize: '0.8rem', margin: 0 }}>
                     Fields marked with <span style={{ color: '#e74c3c', fontWeight: 700 }}>*</span> are required.
                   </p>
                 </div>
@@ -6278,7 +6278,7 @@ export const CustomerDashboard: React.FC = () => {
                   <div
                     style={{
                       background: 'rgba(18, 14, 11, 0.95)',
-                      border: '1px solid rgba(201, 168, 76, 0.25)',
+                      border: '1px solid rgba(var(--gold-rgb),  0.25)',
                       borderRadius: '14px',
                       padding: '28px',
                       boxShadow: '0 8px 30px rgba(0, 0, 0, 0.7)',
@@ -6286,7 +6286,7 @@ export const CustomerDashboard: React.FC = () => {
                   >
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '14px' }}>
                       <div>
-                        <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1.25rem', color: '#f5efe6', margin: '0 0 6px 0', fontWeight: 700 }}>
+                        <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1.25rem', color: 'var(--cream)', margin: '0 0 6px 0', fontWeight: 700 }}>
                           Security Credentials
                         </h3>
                         <p style={{ margin: 0, fontSize: '0.88rem', color: 'rgba(255, 255, 255, 0.6)' }}>
@@ -6308,8 +6308,8 @@ export const CustomerDashboard: React.FC = () => {
                           padding: '9px 22px',
                           borderRadius: '8px',
                           background: 'transparent',
-                          border: '1px solid rgba(201, 168, 76, 0.5)',
-                          color: '#c9a84c',
+                          border: '1px solid rgba(var(--gold-rgb),  0.5)',
+                          color: 'var(--gold)',
                           fontSize: '0.88rem',
                           fontWeight: 700,
                           cursor: 'pointer',
@@ -6336,7 +6336,7 @@ export const CustomerDashboard: React.FC = () => {
                         {/* Step 1: Send OTP */}
                         {updatePasswordStep === 1 && (
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                            <p style={{ margin: 0, fontSize: '0.88rem', color: '#f5efe6' }}>
+                            <p style={{ margin: 0, fontSize: '0.88rem', color: 'var(--cream)' }}>
                               To change your password, we need to verify your identity.
                             </p>
                             <div>
@@ -6347,8 +6347,8 @@ export const CustomerDashboard: React.FC = () => {
                                 style={{
                                   padding: '10px 24px',
                                   borderRadius: '8px',
-                                  background: 'linear-gradient(135deg, #c9a84c 0%, #e5c875 100%)',
-                                  color: '#0f0c0a',
+                                  background: 'var(--gradient-gold)',
+                                  color: 'var(--black)',
                                   border: 'none',
                                   fontSize: '0.9rem',
                                   fontWeight: 700,
@@ -6373,7 +6373,7 @@ export const CustomerDashboard: React.FC = () => {
                         {updatePasswordStep === 2 && (
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                             <div>
-                              <label style={{ display: 'block', fontSize: '0.88rem', color: '#f5efe6', fontWeight: 600, marginBottom: '8px' }}>
+                              <label style={{ display: 'block', fontSize: '0.88rem', color: 'var(--cream)', fontWeight: 600, marginBottom: '8px' }}>
                                 Enter 6-Digit OTP <span style={{ color: '#e74c3c' }}>*</span>
                               </label>
                               <div style={{ display: 'flex', gap: '12px' }}>
@@ -6388,8 +6388,8 @@ export const CustomerDashboard: React.FC = () => {
                                     padding: '11px 14px',
                                     borderRadius: '8px',
                                     background: 'rgba(0, 0, 0, 0.35)',
-                                    border: `1px solid ${updatePasswordOTP.length === 6 ? 'rgba(46, 204, 113, 0.5)' : 'rgba(201, 168, 76, 0.3)'}`,
-                                    color: '#f5efe6',
+                                    border: `1px solid ${updatePasswordOTP.length === 6 ? 'rgba(46, 204, 113, 0.5)' : 'rgba(var(--gold-rgb),  0.3)'}`,
+                                    color: 'var(--cream)',
                                     fontSize: '0.9rem',
                                     outline: 'none',
                                     letterSpacing: '2px',
@@ -6403,8 +6403,8 @@ export const CustomerDashboard: React.FC = () => {
                                   style={{
                                     padding: '0 24px',
                                     borderRadius: '8px',
-                                    background: 'linear-gradient(135deg, #c9a84c 0%, #e5c875 100%)',
-                                    color: '#0f0c0a',
+                                    background: 'var(--gradient-gold)',
+                                    color: 'var(--black)',
                                     border: 'none',
                                     fontSize: '0.9rem',
                                     fontWeight: 700,
@@ -6423,7 +6423,7 @@ export const CustomerDashboard: React.FC = () => {
                                 <button
                                   type="button"
                                   onClick={handleSendUpdatePasswordOTP}
-                                  style={{ background: 'none', border: 'none', color: '#c9a84c', cursor: 'pointer', padding: 0, fontWeight: 600 }}
+                                  style={{ background: 'none', border: 'none', color: 'var(--gold)', cursor: 'pointer', padding: 0, fontWeight: 600 }}
                                 >
                                   Resend OTP
                                 </button>
@@ -6436,7 +6436,7 @@ export const CustomerDashboard: React.FC = () => {
                         {updatePasswordStep === 3 && (
                           <form onSubmit={handleUpdatePasswordSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                             <div>
-                              <label style={{ display: 'block', fontSize: '0.88rem', color: '#f5efe6', fontWeight: 600, marginBottom: '8px' }}>
+                              <label style={{ display: 'block', fontSize: '0.88rem', color: 'var(--cream)', fontWeight: 600, marginBottom: '8px' }}>
                                 New Password <span style={{ color: '#e74c3c' }}>*</span>
                               </label>
                               <div style={{ position: 'relative' }}>
@@ -6452,12 +6452,12 @@ export const CustomerDashboard: React.FC = () => {
                                     background: 'rgba(0, 0, 0, 0.35)',
                                     border: `1px solid ${
                                       updatePasswordNew.length === 0
-                                        ? 'rgba(201, 168, 76, 0.3)'
+                                        ? 'rgba(var(--gold-rgb),  0.3)'
                                         : updatePasswordNew.length >= 8
                                         ? 'rgba(46, 204, 113, 0.5)'
                                         : 'rgba(231, 76, 60, 0.5)'
                                     }`,
-                                    color: '#f5efe6',
+                                    color: 'var(--cream)',
                                     fontSize: '0.9rem',
                                     outline: 'none',
                                     boxSizing: 'border-box',
@@ -6493,7 +6493,7 @@ export const CustomerDashboard: React.FC = () => {
                             </div>
 
                             <div>
-                              <label style={{ display: 'block', fontSize: '0.88rem', color: '#f5efe6', fontWeight: 600, marginBottom: '8px' }}>
+                              <label style={{ display: 'block', fontSize: '0.88rem', color: 'var(--cream)', fontWeight: 600, marginBottom: '8px' }}>
                                 Confirm New Password <span style={{ color: '#e74c3c' }}>*</span>
                               </label>
                               <div style={{ position: 'relative' }}>
@@ -6509,12 +6509,12 @@ export const CustomerDashboard: React.FC = () => {
                                     background: 'rgba(0, 0, 0, 0.35)',
                                     border: `1px solid ${
                                       updatePasswordConfirm.length === 0
-                                        ? 'rgba(201, 168, 76, 0.3)'
+                                        ? 'rgba(var(--gold-rgb),  0.3)'
                                         : updatePasswordNew === updatePasswordConfirm
                                         ? 'rgba(46, 204, 113, 0.5)'
                                         : 'rgba(231, 76, 60, 0.5)'
                                     }`,
-                                    color: '#f5efe6',
+                                    color: 'var(--cream)',
                                     fontSize: '0.9rem',
                                     outline: 'none',
                                     boxSizing: 'border-box',
@@ -6563,8 +6563,8 @@ export const CustomerDashboard: React.FC = () => {
                                 style={{
                                   padding: '10px 24px',
                                   borderRadius: '8px',
-                                  background: 'linear-gradient(135deg, #c9a84c 0%, #e5c875 100%)',
-                                  color: '#0f0c0a',
+                                  background: 'var(--gradient-gold)',
+                                  color: 'var(--black)',
                                   border: 'none',
                                   fontSize: '0.9rem',
                                   fontWeight: 700,
@@ -6620,12 +6620,12 @@ export const CustomerDashboard: React.FC = () => {
             {/* HELP & COMPLAINTS PANEL */}
             {activeTab === 'help' && (
               <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '16px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: isMobile ? '14px' : '24px', flexWrap: 'wrap', gap: '10px' }}>
                   <div>
-                    <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.5rem', color: 'var(--cream)', margin: '0 0 6px 0' }}>
+                    <h2 style={{ fontFamily: 'var(--font-display)', fontSize: isMobile ? '1.35rem' : '1.5rem', color: 'var(--cream)', margin: '0 0 4px 0' }}>
                       Help & Support Center
                     </h2>
-                    <p style={{ color: 'var(--beige)', fontSize: '0.85rem', margin: 0 }}>
+                    <p style={{ color: 'var(--beige)', fontSize: isMobile ? '0.8rem' : '0.85rem', margin: 0 }}>
                       Our customer support team will inspect and resolve your issue within 24-48 business hours.
                     </p>
                   </div>
@@ -6839,7 +6839,7 @@ export const CustomerDashboard: React.FC = () => {
                                   fontSize: '0.7rem',
                                   padding: '2px 8px',
                                   borderRadius: '12px',
-                                  background: isResolved ? 'rgba(46, 204, 113, 0.15)' : 'rgba(201, 168, 76, 0.15)',
+                                  background: isResolved ? 'rgba(46, 204, 113, 0.15)' : 'rgba(var(--gold-rgb),  0.15)',
                                   color: isResolved ? '#2ecc71' : 'var(--gold)',
                                   fontWeight: 600,
                                 }}
@@ -6873,9 +6873,9 @@ export const CustomerDashboard: React.FC = () => {
                                   style={{
                                     padding: '3px 10px',
                                     fontSize: '0.75rem',
-                                    background: 'rgba(201, 168, 76, 0.15)',
+                                    background: 'rgba(var(--gold-rgb),  0.15)',
                                     color: 'var(--gold)',
-                                    border: '1px solid rgba(201, 168, 76, 0.35)',
+                                    border: '1px solid rgba(var(--gold-rgb),  0.35)',
                                     borderRadius: '4px',
                                     cursor: 'pointer',
                                     fontWeight: 600,
@@ -6901,8 +6901,8 @@ export const CustomerDashboard: React.FC = () => {
                               <div
                                 style={{
                                   padding: '10px 12px',
-                                  background: 'rgba(201, 168, 76, 0.08)',
-                                  border: '1px dashed rgba(201, 168, 76, 0.3)',
+                                  background: 'rgba(var(--gold-rgb),  0.08)',
+                                  border: '1px dashed rgba(var(--gold-rgb),  0.3)',
                                   borderRadius: '4px',
                                   fontSize: '0.8rem',
                                   color: 'var(--beige)',
@@ -6998,11 +6998,11 @@ export const CustomerDashboard: React.FC = () => {
               {/* Profile sub-section */}
               {mobileAccountSection === 'profile' && (
                 <div className="cust-mobile-account-section">
-                  <div style={{ marginBottom: '24px' }}>
-                    <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.6rem', color: '#f5efe6', margin: '0 0 6px 0', fontWeight: 700 }}>
+                  <div style={{ marginBottom: '14px' }}>
+                    <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.35rem', color: 'var(--cream)', margin: '0 0 4px 0', fontWeight: 700 }}>
                       My Profile Details
                     </h2>
-                    <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.88rem', margin: 0 }}>
+                    <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.8rem', margin: 0 }}>
                       Manage your personal information and profile details.
                     </p>
                   </div>
@@ -7023,15 +7023,15 @@ export const CustomerDashboard: React.FC = () => {
                         const url = raw && (raw.startsWith('data:') || raw.startsWith('blob:')) ? raw : raw ? getImageUrl(raw) : '';
                         return url && !imgLoadError ? (
                           <img src={url} alt="Profile" referrerPolicy="no-referrer" onError={() => setImgLoadError(true)}
-                            style={{ width: '90px', height: '90px', borderRadius: '50%', objectFit: 'cover', border: '2px solid #c9a84c', boxShadow: '0 0 16px rgba(201,168,76,0.3)' }} />
+                            style={{ width: '90px', height: '90px', borderRadius: '50%', objectFit: 'cover', border: '2px solid var(--gold)', boxShadow: '0 0 16px rgba(var(--gold-rgb), 0.3)' }} />
                         ) : (
-                          <div style={{ width: '90px', height: '90px', borderRadius: '50%', background: 'linear-gradient(135deg,rgba(201,168,76,0.25),rgba(18,14,11,0.95))', border: '2px solid #c9a84c', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2rem', color: '#c9a84c', fontWeight: 700 }}>
+                          <div style={{ width: '90px', height: '90px', borderRadius: '50%', background: 'linear-gradient(135deg,rgba(var(--gold-rgb), 0.25),rgba(18,14,11,0.95))', border: '2px solid var(--gold)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2rem', color: 'var(--gold)', fontWeight: 700 }}>
                             {user?.name?.charAt(0)?.toUpperCase() || 'C'}
                           </div>
                         );
                       })()}
                       <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', justifyContent: 'center' }}>
-                        <label htmlFor="mob-avatar-upload" style={{ padding: '8px 16px', borderRadius: '6px', background: 'rgba(201,168,76,0.12)', border: '1px solid rgba(201,168,76,0.4)', color: '#c9a84c', fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                        <label htmlFor="mob-avatar-upload" style={{ padding: '8px 16px', borderRadius: '6px', background: 'rgba(var(--gold-rgb), 0.12)', border: '1px solid rgba(var(--gold-rgb), 0.4)', color: 'var(--gold)', fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
                           <UploadCloud size={14} /> Change Photo
                           <input
                             id="mob-avatar-upload"
@@ -7064,28 +7064,28 @@ export const CustomerDashboard: React.FC = () => {
                       <div>
                         <label style={{ display: 'block', fontSize: '0.82rem', color: 'rgba(255,255,255,0.7)', marginBottom: '6px', fontWeight: 600 }}>Full Name <span style={{ color: '#e74c3c' }}>*</span></label>
                         <input value={profileForm.name} onChange={e => setProfileForm(p => ({ ...p, name: e.target.value }))} placeholder="Your full name"
-                          style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', background: 'rgba(0,0,0,0.4)', border: '1px solid rgba(201,168,76,0.25)', color: '#f5efe6', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box' }} />
+                          style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', background: 'rgba(0,0,0,0.4)', border: '1px solid rgba(var(--gold-rgb), 0.25)', color: 'var(--cream)', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box' }} />
                       </div>
                       <div>
                         <label style={{ display: 'block', fontSize: '0.82rem', color: 'rgba(255,255,255,0.7)', marginBottom: '6px', fontWeight: 600 }}>Email Address</label>
                         <input value={profileForm.email} disabled
-                          style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', background: 'rgba(0,0,0,0.25)', border: '1px solid rgba(201,168,76,0.15)', color: 'rgba(255,255,255,0.45)', fontSize: '0.9rem', outline: 'none', cursor: 'not-allowed', boxSizing: 'border-box' }} />
+                          style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', background: 'rgba(0,0,0,0.25)', border: '1px solid rgba(var(--gold-rgb), 0.15)', color: 'rgba(255,255,255,0.45)', fontSize: '0.9rem', outline: 'none', cursor: 'not-allowed', boxSizing: 'border-box' }} />
                         <span style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)', marginTop: '4px', display: 'block' }}>Email cannot be changed.</span>
                       </div>
                       <div>
                         <label style={{ display: 'block', fontSize: '0.82rem', color: 'rgba(255,255,255,0.7)', marginBottom: '6px', fontWeight: 600 }}>Phone Number</label>
                         <input value={profileForm.phone} onChange={e => setProfileForm(p => ({ ...p, phone: e.target.value }))} placeholder="10-digit mobile number"
-                          style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', background: 'rgba(0,0,0,0.4)', border: '1px solid rgba(201,168,76,0.25)', color: '#f5efe6', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box' }} />
+                          style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', background: 'rgba(0,0,0,0.4)', border: '1px solid rgba(var(--gold-rgb), 0.25)', color: 'var(--cream)', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box' }} />
                       </div>
                       <div>
                         <label style={{ display: 'block', fontSize: '0.82rem', color: 'rgba(255,255,255,0.7)', marginBottom: '6px', fontWeight: 600 }}>Date of Birth</label>
                         <input type="date" value={profileForm.dob} onChange={e => setProfileForm(p => ({ ...p, dob: e.target.value }))}
-                          style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', background: 'rgba(0,0,0,0.4)', border: '1px solid rgba(201,168,76,0.25)', color: '#f5efe6', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box', colorScheme: 'dark' }} />
+                          style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', background: 'rgba(0,0,0,0.4)', border: '1px solid rgba(var(--gold-rgb), 0.25)', color: 'var(--cream)', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box', colorScheme: 'dark' }} />
                       </div>
                       <div>
                         <label style={{ display: 'block', fontSize: '0.82rem', color: 'rgba(255,255,255,0.7)', marginBottom: '6px', fontWeight: 600 }}>Gender</label>
                         <select value={profileForm.gender} onChange={e => setProfileForm(p => ({ ...p, gender: e.target.value }))}
-                          style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', background: 'rgba(0,0,0,0.4)', border: '1px solid rgba(201,168,76,0.25)', color: profileForm.gender ? '#f5efe6' : 'rgba(255,255,255,0.4)', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box' }}>
+                          style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', background: 'rgba(0,0,0,0.4)', border: '1px solid rgba(var(--gold-rgb), 0.25)', color: profileForm.gender ? '#f5efe6' : 'rgba(255,255,255,0.4)', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box' }}>
                           <option value="">Select gender</option>
                           <option value="Male">Male</option>
                           <option value="Female">Female</option>
@@ -7104,7 +7104,7 @@ export const CustomerDashboard: React.FC = () => {
                         </div>
                       )}
                       <button type="submit" disabled={isProfileSaving}
-                        style={{ padding: '12px 24px', borderRadius: '8px', background: 'linear-gradient(135deg,#c9a84c,#e5c875)', color: '#0f0c0a', border: 'none', fontSize: '0.9rem', fontWeight: 700, cursor: isProfileSaving ? 'not-allowed' : 'pointer', opacity: isProfileSaving ? 0.7 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                        style={{ padding: '12px 24px', borderRadius: '8px', background: 'var(--gradient-gold)', color: 'var(--black)', border: 'none', fontSize: '0.9rem', fontWeight: 700, cursor: isProfileSaving ? 'not-allowed' : 'pointer', opacity: isProfileSaving ? 0.7 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
                         {isProfileSaving ? <><Loader2 size={16} className="spin" /> Saving...</> : <><CheckCircle size={16} /> Save Profile</>}
                       </button>
                     </form>
@@ -7115,34 +7115,34 @@ export const CustomerDashboard: React.FC = () => {
               {/* Addresses sub-section */}
               {mobileAccountSection === 'addresses' && (
                 <div className="cust-mobile-account-section">
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '12px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', flexWrap: 'wrap', gap: '10px' }}>
                     <div>
-                      <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.6rem', color: '#f5efe6', margin: '0 0 4px 0', fontWeight: 700 }}>Address Book</h2>
-                      <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.85rem', margin: 0 }}>Manage your shipping addresses.</p>
+                      <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.35rem', color: 'var(--cream)', margin: '0 0 4px 0', fontWeight: 700 }}>Address Book</h2>
+                      <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.8rem', margin: 0 }}>Manage your shipping addresses.</p>
                     </div>
                     <button
                       onClick={() => { if (showAddAddressForm) { setShowAddAddressForm(false); setEditingAddressId(null); } else { handleOpenAddAddress(); } }}
-                      style={{ padding: '9px 18px', borderRadius: '6px', background: 'linear-gradient(135deg,#c9a84c,#e5c875)', color: '#0f0c0a', border: 'none', fontSize: '0.85rem', fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                      style={{ padding: '9px 18px', borderRadius: '6px', background: 'var(--gradient-gold)', color: 'var(--black)', border: 'none', fontSize: '0.85rem', fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
                       {showAddAddressForm ? <><X size={14} /> Cancel</> : <><Plus size={14} /> Add Address</>}
                     </button>
                   </div>
 
                   {/* Address form (shared state with desktop) */}
                   {showAddAddressForm && (
-                    <div style={{ background: 'rgba(18,14,11,0.95)', border: '1px solid rgba(201,168,76,0.3)', borderRadius: '12px', padding: '20px', marginBottom: '20px' }}>
-                      <h3 style={{ color: '#c9a84c', fontSize: '1rem', fontWeight: 700, margin: '0 0 16px 0' }}>{editingAddressId ? 'Edit Address' : 'New Address'}</h3>
+                    <div style={{ background: 'rgba(18,14,11,0.95)', border: '1px solid rgba(var(--gold-rgb), 0.3)', borderRadius: '12px', padding: '20px', marginBottom: '20px' }}>
+                      <h3 style={{ color: 'var(--gold)', fontSize: '1rem', fontWeight: 700, margin: '0 0 16px 0' }}>{editingAddressId ? 'Edit Address' : 'New Address'}</h3>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                         {[{key:'title',label:'Label',ph:'Home / Work / Other'},{key:'name',label:'Full Name',ph:'Recipient name'},{key:'street',label:'Street Address',ph:'House, street, area'},{key:'city',label:'City',ph:'City'},{key:'zip',label:'Pincode',ph:'6-digit pincode'},{key:'phone',label:'Phone',ph:'10-digit mobile'}].map(({key,label,ph}) => (
                           <div key={key}>
                             <label style={{ display: 'block', fontSize: '0.78rem', color: 'rgba(255,255,255,0.6)', marginBottom: '4px', fontWeight: 600 }}>{label}</label>
                             <input value={(addressForm as any)[key]} onChange={e => setAddressForm(f => ({...f, [key]: e.target.value}))} placeholder={ph}
-                              style={{ width: '100%', padding: '9px 12px', borderRadius: '7px', background: 'rgba(0,0,0,0.4)', border: '1px solid rgba(201,168,76,0.2)', color: '#f5efe6', fontSize: '0.88rem', outline: 'none', boxSizing: 'border-box' }} />
+                              style={{ width: '100%', padding: '9px 12px', borderRadius: '7px', background: 'rgba(0,0,0,0.4)', border: '1px solid rgba(var(--gold-rgb), 0.2)', color: 'var(--cream)', fontSize: '0.88rem', outline: 'none', boxSizing: 'border-box' }} />
                           </div>
                         ))}
                         <div>
                           <label style={{ display: 'block', fontSize: '0.78rem', color: 'rgba(255,255,255,0.6)', marginBottom: '4px', fontWeight: 600 }}>State</label>
                           <select value={addressForm.state} onChange={e => setAddressForm(f => ({...f, state: e.target.value}))}
-                            style={{ width: '100%', padding: '9px 12px', borderRadius: '7px', background: 'rgba(0,0,0,0.4)', border: '1px solid rgba(201,168,76,0.2)', color: '#f5efe6', fontSize: '0.88rem', outline: 'none', boxSizing: 'border-box' }}>
+                            style={{ width: '100%', padding: '9px 12px', borderRadius: '7px', background: 'rgba(0,0,0,0.4)', border: '1px solid rgba(var(--gold-rgb), 0.2)', color: 'var(--cream)', fontSize: '0.88rem', outline: 'none', boxSizing: 'border-box' }}>
                             {INDIAN_STATES.map(s => <option key={s} value={s}>{s}</option>)}
                           </select>
                         </div>
@@ -7171,7 +7171,7 @@ export const CustomerDashboard: React.FC = () => {
                             finally { setIsAddressSaving(false); }
                           }}
                           disabled={isAddressSaving}
-                          style={{ padding: '10px 20px', borderRadius: '7px', background: 'linear-gradient(135deg,#c9a84c,#e5c875)', color: '#0f0c0a', border: 'none', fontWeight: 700, fontSize: '0.88rem', cursor: isAddressSaving ? 'not-allowed' : 'pointer', opacity: isAddressSaving ? 0.7 : 1 }}>
+                          style={{ padding: '10px 20px', borderRadius: '7px', background: 'var(--gradient-gold)', color: 'var(--black)', border: 'none', fontWeight: 700, fontSize: '0.88rem', cursor: isAddressSaving ? 'not-allowed' : 'pointer', opacity: isAddressSaving ? 0.7 : 1 }}>
                           {isAddressSaving ? 'Saving...' : editingAddressId ? 'Update Address' : 'Save Address'}
                         </button>
                       </div>
@@ -7187,15 +7187,15 @@ export const CustomerDashboard: React.FC = () => {
                   ) : (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                       {addresses.map((addr: CustomerAddress) => (
-                        <div key={addr.id} style={{ padding: '16px', background: 'rgba(18,14,11,0.9)', border: `1px solid ${addr.isDefault ? '#c9a84c' : 'rgba(201,168,76,0.2)'}`, borderRadius: '10px' }}>
+                        <div key={addr.id} style={{ padding: '16px', background: 'rgba(18,14,11,0.9)', border: `1px solid ${addr.isDefault ? 'var(--gold)' : 'rgba(var(--gold-rgb), 0.2)'}`, borderRadius: '10px' }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                              <span style={{ fontWeight: 700, color: '#f5efe6', fontSize: '0.9rem' }}>{addr.title || 'Address'}</span>
-                              {addr.isDefault && <span style={{ fontSize: '0.65rem', padding: '2px 7px', background: 'rgba(201,168,76,0.15)', color: '#c9a84c', border: '1px solid rgba(201,168,76,0.4)', borderRadius: '10px', fontWeight: 700 }}>DEFAULT</span>}
+                              <span style={{ fontWeight: 700, color: 'var(--cream)', fontSize: '0.9rem' }}>{addr.title || 'Address'}</span>
+                              {addr.isDefault && <span style={{ fontSize: '0.65rem', padding: '2px 7px', background: 'rgba(var(--gold-rgb), 0.15)', color: 'var(--gold)', border: '1px solid rgba(var(--gold-rgb), 0.4)', borderRadius: '10px', fontWeight: 700 }}>DEFAULT</span>}
                             </div>
                             <div style={{ display: 'flex', gap: '8px' }}>
                               <button onClick={() => { setEditingAddressId(addr.id); setAddressForm({ title: addr.title||'Home', name: addr.name, street: addr.street, city: addr.city, state: addr.state||'Telangana', zip: addr.zip, phone: addr.phone||'', isDefault: addr.isDefault||false }); setShowAddAddressForm(true); setAddressFormError(''); }}
-                                style={{ padding: '4px 10px', borderRadius: '5px', background: 'rgba(201,168,76,0.1)', border: '1px solid rgba(201,168,76,0.3)', color: '#c9a84c', fontSize: '0.75rem', cursor: 'pointer' }}>Edit</button>
+                                style={{ padding: '4px 10px', borderRadius: '5px', background: 'rgba(var(--gold-rgb), 0.1)', border: '1px solid rgba(var(--gold-rgb), 0.3)', color: 'var(--gold)', fontSize: '0.75rem', cursor: 'pointer' }}>Edit</button>
                               <button onClick={async () => { if (window.confirm('Delete this address?')) { try { await deleteAddress(addr.id); } catch {} } }}
                                 style={{ padding: '4px 10px', borderRadius: '5px', background: 'rgba(231,76,60,0.1)', border: '1px solid rgba(231,76,60,0.3)', color: '#e74c3c', fontSize: '0.75rem', cursor: 'pointer' }}>Delete</button>
                             </div>
@@ -7206,7 +7206,7 @@ export const CustomerDashboard: React.FC = () => {
                           </p>
                           {!addr.isDefault && (
                             <button onClick={async () => { try { await setDefaultAddress(addr.id); } catch {} }}
-                              style={{ marginTop: '8px', padding: '4px 10px', borderRadius: '5px', background: 'transparent', border: '1px solid rgba(201,168,76,0.25)', color: 'rgba(201,168,76,0.7)', fontSize: '0.73rem', cursor: 'pointer' }}>Set as Default</button>
+                              style={{ marginTop: '8px', padding: '4px 10px', borderRadius: '5px', background: 'transparent', border: '1px solid rgba(var(--gold-rgb), 0.25)', color: 'rgba(var(--gold-rgb), 0.7)', fontSize: '0.73rem', cursor: 'pointer' }}>Set as Default</button>
                           )}
                         </div>
                       ))}
@@ -7218,21 +7218,21 @@ export const CustomerDashboard: React.FC = () => {
               {/* Settings sub-section */}
               {mobileAccountSection === 'settings' && (
                 <div className="cust-mobile-account-section">
-                  <div style={{ marginBottom: '24px' }}>
-                    <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.6rem', color: '#f5efe6', margin: '0 0 6px 0', fontWeight: 700 }}>Account Settings</h2>
-                    <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.85rem', margin: 0 }}>Manage your account security and preferences.</p>
+                  <div style={{ marginBottom: '14px' }}>
+                    <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.35rem', color: 'var(--cream)', margin: '0 0 4px 0', fontWeight: 700 }}>Account Settings</h2>
+                    <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.8rem', margin: 0 }}>Manage your account security and preferences.</p>
                   </div>
 
                   {/* Change Password card */}
-                  <div style={{ background: 'rgba(18,14,11,0.95)', border: '1px solid rgba(201,168,76,0.25)', borderRadius: '12px', padding: '20px', marginBottom: '16px' }}>
+                  <div style={{ background: 'rgba(18,14,11,0.95)', border: '1px solid rgba(var(--gold-rgb), 0.25)', borderRadius: '12px', padding: '20px', marginBottom: '16px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
                       <div>
-                        <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1.1rem', color: '#f5efe6', margin: '0 0 4px 0', fontWeight: 700 }}>Security Credentials</h3>
+                        <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1.1rem', color: 'var(--cream)', margin: '0 0 4px 0', fontWeight: 700 }}>Security Credentials</h3>
                         <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.82rem', margin: 0 }}>Update your account password securely.</p>
                       </div>
                       {!showUpdatePasswordForm && (
                         <button onClick={() => { setShowUpdatePasswordForm(true); setUpdatePasswordStep(1); setUpdatePasswordError(''); setUpdatePasswordMessage(''); }}
-                          style={{ padding: '9px 18px', borderRadius: '6px', background: 'rgba(201,168,76,0.12)', border: '1px solid rgba(201,168,76,0.4)', color: '#c9a84c', fontSize: '0.82rem', fontWeight: 700, cursor: 'pointer' }}>
+                          style={{ padding: '9px 18px', borderRadius: '6px', background: 'rgba(var(--gold-rgb), 0.12)', border: '1px solid rgba(var(--gold-rgb), 0.4)', color: 'var(--gold)', fontSize: '0.82rem', fontWeight: 700, cursor: 'pointer' }}>
                           Change Password
                         </button>
                       )}
@@ -7245,10 +7245,10 @@ export const CustomerDashboard: React.FC = () => {
                             <div>
                               <label style={{ display: 'block', fontSize: '0.78rem', color: 'rgba(255,255,255,0.6)', marginBottom: '4px', fontWeight: 600 }}>Email Address</label>
                               <input type="email" value={updatePasswordEmail} onChange={e => setUpdatePasswordEmail(e.target.value)} disabled={isUpdatingPassword}
-                                style={{ width: '100%', padding: '9px 12px', borderRadius: '7px', background: 'rgba(0,0,0,0.4)', border: '1px solid rgba(201,168,76,0.2)', color: '#f5efe6', fontSize: '0.88rem', outline: 'none', boxSizing: 'border-box' }} />
+                                style={{ width: '100%', padding: '9px 12px', borderRadius: '7px', background: 'rgba(0,0,0,0.4)', border: '1px solid rgba(var(--gold-rgb), 0.2)', color: 'var(--cream)', fontSize: '0.88rem', outline: 'none', boxSizing: 'border-box' }} />
                             </div>
                             <button onClick={handleSendUpdatePasswordOTP} disabled={isUpdatingPassword}
-                              style={{ padding: '10px', borderRadius: '7px', background: 'linear-gradient(135deg,#c9a84c,#e5c875)', color: '#0f0c0a', border: 'none', fontWeight: 700, fontSize: '0.88rem', cursor: isUpdatingPassword ? 'not-allowed' : 'pointer', opacity: isUpdatingPassword ? 0.7 : 1 }}>
+                              style={{ padding: '10px', borderRadius: '7px', background: 'var(--gradient-gold)', color: 'var(--black)', border: 'none', fontWeight: 700, fontSize: '0.88rem', cursor: isUpdatingPassword ? 'not-allowed' : 'pointer', opacity: isUpdatingPassword ? 0.7 : 1 }}>
                               {isUpdatingPassword ? 'Sending...' : 'Send OTP'}
                             </button>
                           </>
@@ -7258,11 +7258,11 @@ export const CustomerDashboard: React.FC = () => {
                             <div>
                               <label style={{ display: 'block', fontSize: '0.78rem', color: 'rgba(255,255,255,0.6)', marginBottom: '4px', fontWeight: 600 }}>Enter 6-digit OTP</label>
                               <input value={updatePasswordOTP} onChange={e => setUpdatePasswordOTP(e.target.value)} maxLength={6} placeholder="OTP"
-                                style={{ width: '100%', padding: '9px 12px', borderRadius: '7px', background: 'rgba(0,0,0,0.4)', border: '1px solid rgba(201,168,76,0.2)', color: '#f5efe6', fontSize: '0.88rem', outline: 'none', boxSizing: 'border-box' }} />
+                                style={{ width: '100%', padding: '9px 12px', borderRadius: '7px', background: 'rgba(0,0,0,0.4)', border: '1px solid rgba(var(--gold-rgb), 0.2)', color: 'var(--cream)', fontSize: '0.88rem', outline: 'none', boxSizing: 'border-box' }} />
                             </div>
                             {updatePasswordTimer > 0 && <span style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.5)' }}>Resend in {updatePasswordTimer}s</span>}
                             <button onClick={handleVerifyUpdatePasswordOTP} disabled={isUpdatingPassword}
-                              style={{ padding: '10px', borderRadius: '7px', background: 'linear-gradient(135deg,#c9a84c,#e5c875)', color: '#0f0c0a', border: 'none', fontWeight: 700, fontSize: '0.88rem', cursor: isUpdatingPassword ? 'not-allowed' : 'pointer', opacity: isUpdatingPassword ? 0.7 : 1 }}>
+                              style={{ padding: '10px', borderRadius: '7px', background: 'var(--gradient-gold)', color: 'var(--black)', border: 'none', fontWeight: 700, fontSize: '0.88rem', cursor: isUpdatingPassword ? 'not-allowed' : 'pointer', opacity: isUpdatingPassword ? 0.7 : 1 }}>
                               {isUpdatingPassword ? 'Verifying...' : 'Verify OTP'}
                             </button>
                           </>
@@ -7272,7 +7272,7 @@ export const CustomerDashboard: React.FC = () => {
                             <div style={{ position: 'relative' }}>
                               <label style={{ display: 'block', fontSize: '0.78rem', color: 'rgba(255,255,255,0.6)', marginBottom: '4px', fontWeight: 600 }}>New Password</label>
                               <input type={showNewPassword ? 'text' : 'password'} value={updatePasswordNew} onChange={e => setUpdatePasswordNew(e.target.value)}
-                                style={{ width: '100%', padding: '9px 40px 9px 12px', borderRadius: '7px', background: 'rgba(0,0,0,0.4)', border: '1px solid rgba(201,168,76,0.2)', color: '#f5efe6', fontSize: '0.88rem', outline: 'none', boxSizing: 'border-box' }} />
+                                style={{ width: '100%', padding: '9px 40px 9px 12px', borderRadius: '7px', background: 'rgba(0,0,0,0.4)', border: '1px solid rgba(var(--gold-rgb), 0.2)', color: 'var(--cream)', fontSize: '0.88rem', outline: 'none', boxSizing: 'border-box' }} />
                               <button type="button" onClick={() => setShowNewPassword(p => !p)} style={{ position: 'absolute', right: '10px', bottom: '10px', background: 'none', border: 'none', color: 'rgba(255,255,255,0.5)', cursor: 'pointer' }}>
                                 {showNewPassword ? <EyeOff size={15} /> : <Eye size={15} />}
                               </button>
@@ -7280,13 +7280,13 @@ export const CustomerDashboard: React.FC = () => {
                             <div style={{ position: 'relative' }}>
                               <label style={{ display: 'block', fontSize: '0.78rem', color: 'rgba(255,255,255,0.6)', marginBottom: '4px', fontWeight: 600 }}>Confirm Password</label>
                               <input type={showConfirmPassword ? 'text' : 'password'} value={updatePasswordConfirm} onChange={e => setUpdatePasswordConfirm(e.target.value)}
-                                style={{ width: '100%', padding: '9px 40px 9px 12px', borderRadius: '7px', background: 'rgba(0,0,0,0.4)', border: '1px solid rgba(201,168,76,0.2)', color: '#f5efe6', fontSize: '0.88rem', outline: 'none', boxSizing: 'border-box' }} />
+                                style={{ width: '100%', padding: '9px 40px 9px 12px', borderRadius: '7px', background: 'rgba(0,0,0,0.4)', border: '1px solid rgba(var(--gold-rgb), 0.2)', color: 'var(--cream)', fontSize: '0.88rem', outline: 'none', boxSizing: 'border-box' }} />
                               <button type="button" onClick={() => setShowConfirmPassword(p => !p)} style={{ position: 'absolute', right: '10px', bottom: '10px', background: 'none', border: 'none', color: 'rgba(255,255,255,0.5)', cursor: 'pointer' }}>
                                 {showConfirmPassword ? <EyeOff size={15} /> : <Eye size={15} />}
                               </button>
                             </div>
                             <button type="submit" disabled={isUpdatingPassword}
-                              style={{ padding: '10px', borderRadius: '7px', background: 'linear-gradient(135deg,#c9a84c,#e5c875)', color: '#0f0c0a', border: 'none', fontWeight: 700, fontSize: '0.88rem', cursor: isUpdatingPassword ? 'not-allowed' : 'pointer', opacity: isUpdatingPassword ? 0.7 : 1 }}>
+                              style={{ padding: '10px', borderRadius: '7px', background: 'var(--gradient-gold)', color: 'var(--black)', border: 'none', fontWeight: 700, fontSize: '0.88rem', cursor: isUpdatingPassword ? 'not-allowed' : 'pointer', opacity: isUpdatingPassword ? 0.7 : 1 }}>
                               {isUpdatingPassword ? 'Updating...' : 'Update Password'}
                             </button>
                           </form>
@@ -7301,7 +7301,7 @@ export const CustomerDashboard: React.FC = () => {
 
                   {/* Danger Zone */}
                   <div style={{ background: 'rgba(18,14,11,0.95)', border: '1px solid rgba(231,76,60,0.2)', borderRadius: '12px', padding: '20px' }}>
-                    <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1.1rem', color: '#f5efe6', margin: '0 0 4px 0', fontWeight: 700 }}>Session</h3>
+                    <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1.1rem', color: 'var(--cream)', margin: '0 0 4px 0', fontWeight: 700 }}>Session</h3>
                     <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.82rem', margin: '0 0 14px 0' }}>Sign out of your Chovique account.</p>
                     <button onClick={handleLogoutClick}
                       style={{ padding: '10px 20px', borderRadius: '7px', background: 'rgba(255,77,79,0.08)', border: '1px solid rgba(255,77,79,0.3)', color: '#ff4d4f', fontSize: '0.88rem', fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '8px' }}>

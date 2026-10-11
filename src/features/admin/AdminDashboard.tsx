@@ -49,6 +49,7 @@ import {
   ArrowRight,
   XCircle,
   ShieldCheck,
+  Lock,
 } from 'lucide-react';
 import { exportToCSV } from '../../utils/exportCsv';
 import { useApp } from '../../app/providers';
@@ -69,7 +70,7 @@ import { DashboardKpiSkeleton, DashboardCardSkeleton } from '../../components/ui
 import { walletService, RewardSettings } from '../../services/walletService';
 import { adminService } from '../../services/adminService';
 import { productService } from '../../services/productService';
-import { categoryService, AdminCategory } from '../../services/categoryService';
+import { categoryService, AdminCategory, CategoryProductSummary } from '../../services/categoryService';
 import { orderService } from '../../services/orderService';
 import { OrderManagement, OrderDetailModal } from './OrderManagement';
 import { CustomerDirectory } from './CustomerDirectory';
@@ -254,6 +255,144 @@ export const AdminDashboard: React.FC = () => {
   };
 
   const [viewingComplaintOrder, setViewingComplaintOrder] = useState<any | null>(null);
+
+  // --- Product Deletion Safety & Order Dependency State ---
+  const [productToDelete, setProductToDelete] = useState<Product | null>(null);
+  const [productOrderSummary, setProductOrderSummary] = useState<{
+    product_id: string;
+    product_name: string;
+    total_orders: number;
+    active_orders: number;
+    completed_orders: number;
+    can_delete: boolean;
+    active_order_ids: string[];
+  } | null>(null);
+  const [loadingProductSummary, setLoadingProductSummary] = useState<boolean>(false);
+  const [isDeletingProductInProgress, setIsDeletingProductInProgress] = useState<boolean>(false);
+  const [productDeleteError, setProductDeleteError] = useState<string | null>(null);
+
+  const handleOpenDeleteProductModal = async (prod: any) => {
+    setProductToDelete(prod);
+    setProductOrderSummary(null);
+    setProductDeleteError(null);
+    setLoadingProductSummary(true);
+    try {
+      const summary = await productService.getProductOrderSummary(prod.id);
+      setProductOrderSummary(summary);
+    } catch (err: any) {
+      console.error('Failed to get product order summary:', err);
+      setProductOrderSummary({
+        product_id: prod.id,
+        product_name: prod.name,
+        total_orders: 0,
+        active_orders: 0,
+        completed_orders: 0,
+        can_delete: true,
+        active_order_ids: [],
+      });
+    } finally {
+      setLoadingProductSummary(false);
+    }
+  };
+
+  const handleConfirmDeleteProduct = async () => {
+    if (!productToDelete) return;
+    setIsDeletingProductInProgress(true);
+    setProductDeleteError(null);
+    try {
+      await deleteProduct(productToDelete.id);
+      addToast('success', `Product "${productToDelete.name}" was successfully deleted from the database.`, 'Product Deleted');
+      setProductToDelete(null);
+      setProductOrderSummary(null);
+    } catch (err: any) {
+      const errorMsg = err?.detail || err?.message || 'Failed to delete product from database.';
+      setProductDeleteError(errorMsg);
+      addToast('error', errorMsg, 'Deletion Blocked');
+    } finally {
+      setIsDeletingProductInProgress(false);
+    }
+  };
+
+  // --- Category Deletion Safety & Product Dependency State ---
+  const [categoryToDelete, setCategoryToDelete] = useState<AdminCategory | null>(null);
+  const [categoryDeleteSummary, setCategoryDeleteSummary] = useState<CategoryProductSummary | null>(null);
+  const [loadingCategorySummary, setLoadingCategorySummary] = useState<boolean>(false);
+  const [isDeletingCategoryInProgress, setIsDeletingCategoryInProgress] = useState<boolean>(false);
+  const [categoryDeleteError, setCategoryDeleteError] = useState<string | null>(null);
+
+  const handleOpenDeleteCategoryModal = async (cat: AdminCategory) => {
+    setCategoryToDelete(cat);
+    setCategoryDeleteSummary(null);
+    setCategoryDeleteError(null);
+    setLoadingCategorySummary(true);
+
+    // Fast local calculation based on products in state
+    const localAssigned = products.filter((p) => {
+      if (!p.category && !p.category_id) return false;
+      const pCatId = (p.category_id || '').toLowerCase().trim();
+      const pCat = (p.category || '').toLowerCase().trim();
+      const cId = (cat.id || '').toLowerCase().trim();
+      const cSlug = (cat.slug || '').toLowerCase().trim();
+      const cName = cat.name.toLowerCase().trim();
+      return (
+        pCatId === cId ||
+        pCat === cSlug ||
+        pCat === cName ||
+        pCat.includes(cSlug) ||
+        (cSlug.length > 2 && cSlug.includes(pCat)) ||
+        pCat.includes(cName) ||
+        (cName.length > 2 && cName.includes(pCat))
+      );
+    });
+
+    try {
+      const summary = await categoryService.adminGetCategoryProductSummary(cat.id);
+      setCategoryDeleteSummary(summary);
+    } catch (err: any) {
+      console.error('Failed to get category product summary:', err);
+      setCategoryDeleteSummary({
+        category_id: cat.id,
+        category_name: cat.name,
+        product_count: localAssigned.length,
+        can_delete: localAssigned.length === 0,
+        products: localAssigned.map((p) => ({
+          id: p.id,
+          name: p.name,
+          price: p.price,
+          stock: p.stock ?? 0,
+          image: p.image || (p.images && p.images[0]) || null,
+        })),
+        message:
+          localAssigned.length > 0
+            ? `If you want to delete this category, first you must remove or reassign the ${localAssigned.length} product(s) which are existing based on this category.`
+            : 'Safe to delete: No products are currently assigned to this category.',
+      });
+    } finally {
+      setLoadingCategorySummary(false);
+    }
+  };
+
+  const handleConfirmDeleteCategory = async () => {
+    if (!categoryToDelete) return;
+    setIsDeletingCategoryInProgress(true);
+    setCategoryDeleteError(null);
+    try {
+      await categoryService.adminDeleteCategory(categoryToDelete.id);
+      setCategoriesList((prev) => prev.filter((c) => c.id !== categoryToDelete.id));
+      addToast('success', `Category "${categoryToDelete.name}" was successfully deleted from the database.`, 'Category Deleted');
+      setCategoryToDelete(null);
+      setCategoryDeleteSummary(null);
+    } catch (err: any) {
+      const errorMsg = err?.detail || err?.message || 'Failed to delete category.';
+      setCategoryDeleteError(errorMsg);
+      addToast('error', errorMsg, 'Deletion Blocked');
+    } finally {
+      setIsDeletingCategoryInProgress(false);
+    }
+  };
+
+  // --- Category Products Inspection State ---
+  const [viewingCategoryProducts, setViewingCategoryProducts] = useState<AdminCategory | null>(null);
 
   // --- Form Inline Validation Error States ---
   const [productFormErrors, setProductFormErrors] = useState<Record<string, string>>({});
@@ -1109,19 +1248,8 @@ export const AdminDashboard: React.FC = () => {
   };
 
   const handleDeleteCategory = (id: string, name: string) => {
-    openConfirmation(
-      'Delete Category',
-      `Are you sure you want to delete category "${name}"? This action cannot be undone.`,
-      async () => {
-        try {
-          await categoryService.adminDeleteCategory(id);
-          setCategoriesList((prev) => prev.filter((c) => c.id !== id));
-          addToast('success', `Category "${name}" deleted successfully.`, 'Category Deleted');
-        } catch (err: any) {
-          addToast('error', err?.detail || err?.message || 'Failed to delete category.', 'Error');
-        }
-      }
-    );
+    const targetCat = categoriesList.find((c) => c.id === id) || { id, name, slug: '', description: '', image_url: '', sort_order: 0, is_active: true };
+    handleOpenDeleteCategoryModal(targetCat as AdminCategory);
   };
 
   const handleToggleCategoryStatus = async (cat: AdminCategory) => {
@@ -2141,7 +2269,7 @@ export const AdminDashboard: React.FC = () => {
   };
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--black)' }}>
+    <div style={{ minHeight: '100vh', background: 'var(--bg-color, var(--black))' }}>
       {/* Sidebar navigation */}
       <Sidebar activeTab={activeTab} setActiveTab={handleTabNavigation} onRequestLogout={() => setShowLogoutConfirmModal(true)} />
 
@@ -2165,11 +2293,11 @@ export const AdminDashboard: React.FC = () => {
               height: '42px',
               padding: '0 14px',
               borderRadius: '10px',
-              background: 'rgba(20, 16, 13, 0.9)',
-              border: '1px solid rgba(201, 168, 76, 0.3)',
+              background: 'var(--surface-color)',
+              border: '1px solid rgba(var(--gold-rgb), 0.25)',
               boxShadow: '0 4px 12px rgba(0,0,0,0.4)',
               cursor: 'pointer',
-              color: '#f5efe6',
+              color: 'var(--cream)',
               fontSize: '0.84rem',
               fontWeight: 600,
               transition: 'all 0.2s ease',
@@ -2177,17 +2305,17 @@ export const AdminDashboard: React.FC = () => {
               flexShrink: 0,
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.borderColor = 'rgba(201, 168, 76, 0.6)';
-              e.currentTarget.style.background = 'rgba(30, 24, 19, 0.95)';
+              e.currentTarget.style.borderColor = 'rgba(var(--gold-rgb), 0.6)';
+              e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)';
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.borderColor = 'rgba(201, 168, 76, 0.3)';
-              e.currentTarget.style.background = 'rgba(20, 16, 13, 0.9)';
+              e.currentTarget.style.borderColor = 'rgba(var(--gold-rgb), 0.25)';
+              e.currentTarget.style.background = 'var(--surface-color)';
             }}
             title="View Live Public Storefront"
             aria-label="Live Home"
           >
-            <Home size={16} color="#c9a84c" />
+            <Home size={16} color="var(--gold)" />
             <span>Live Home</span>
           </button>
 
@@ -2282,7 +2410,7 @@ export const AdminDashboard: React.FC = () => {
                           textAlign: 'left',
                           padding: '10px 16px',
                           fontSize: '0.85rem',
-                          background: dateRangePreset === opt.id ? 'rgba(201, 168, 76, 0.15)' : 'transparent',
+                          background: dateRangePreset === opt.id ? 'rgba(var(--gold-rgb),  0.15)' : 'transparent',
                           color: dateRangePreset === opt.id ? 'var(--gold)' : 'var(--cream)',
                           border: 'none',
                           cursor: 'pointer',
@@ -2341,7 +2469,7 @@ export const AdminDashboard: React.FC = () => {
                   <span style={{ fontSize: '0.72rem', color: 'var(--beige)', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 600, display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                     Total Orders
                   </span>
-                  <div style={{ fontFamily: 'var(--font-display)', fontSize: isMobileGrid ? '1.4rem' : '2.1rem', color: 'var(--cream)', fontWeight: 700, margin: '6px 0 4px 0' }}>
+                  <div style={{ fontFamily: 'var(--font-number)', fontSize: isMobileGrid ? '1.4rem' : '2.1rem', color: 'var(--cream)', fontWeight: 700, margin: '6px 0 4px 0' }}>
                     {dashboardStats?.total_orders ?? (orders.length > 0 ? orders.length : 0)}
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.75rem', color: '#4CC978', flexWrap: 'wrap' }}>
@@ -2365,7 +2493,7 @@ export const AdminDashboard: React.FC = () => {
                   <span style={{ fontSize: '0.72rem', color: 'var(--beige)', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 600, display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                     Total Customers
                   </span>
-                  <div style={{ fontFamily: 'var(--font-display)', fontSize: isMobileGrid ? '1.4rem' : '2.1rem', color: 'var(--cream)', fontWeight: 700, margin: '6px 0 4px 0' }}>
+                  <div style={{ fontFamily: 'var(--font-number)', fontSize: isMobileGrid ? '1.4rem' : '2.1rem', color: 'var(--cream)', fontWeight: 700, margin: '6px 0 4px 0' }}>
                     {dashboardStats?.total_customers ?? (systemUsers.length > 0 ? systemUsers.length : 0)}
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.75rem', color: '#4CC978', flexWrap: 'wrap' }}>
@@ -2389,7 +2517,7 @@ export const AdminDashboard: React.FC = () => {
                   <span style={{ fontSize: '0.72rem', color: 'var(--beige)', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 600, display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                     Reward Coins
                   </span>
-                  <div style={{ fontFamily: 'var(--font-display)', fontSize: isMobileGrid ? '1.4rem' : '2.1rem', color: 'var(--gold)', fontWeight: 700, margin: '6px 0 4px 0' }}>
+                  <div style={{ fontFamily: 'var(--font-number)', fontSize: isMobileGrid ? '1.4rem' : '2.1rem', color: 'var(--gold)', fontWeight: 700, margin: '6px 0 4px 0' }}>
                     {(dashboardStats?.reward_coins_issued ?? 0).toLocaleString()}
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.75rem', color: '#4CC978', flexWrap: 'wrap' }}>
@@ -3098,9 +3226,7 @@ export const AdminDashboard: React.FC = () => {
                                     </button>
                                     <button
                                       type="button"
-                                      onClick={() => {
-                                        openConfirmation('Delete Product', `Are you sure you want to delete "${prod.name}"?`, () => deleteProduct(prod.id), 'Delete Product');
-                                      }}
+                                      onClick={() => handleOpenDeleteProductModal(prod)}
                                       style={{ flex: 1, padding: '8px', borderRadius: '4px', background: 'rgba(183, 110, 121, 0.12)', border: '1px solid rgba(183, 110, 121, 0.35)', color: 'var(--rose-gold)', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}
                                     >
                                       <Trash2 size={13} /> Delete
@@ -3308,14 +3434,7 @@ export const AdminDashboard: React.FC = () => {
                                           {/* Delete Button */}
                                           <button
                                             type="button"
-                                            onClick={() => {
-                                              openConfirmation(
-                                                `Delete Product`,
-                                                `Are you sure you want to delete "${prod.name}"? This action cannot be undone.`,
-                                                () => deleteProduct(prod.id),
-                                                'Delete Product'
-                                              );
-                                            }}
+                                            onClick={() => handleOpenDeleteProductModal(prod)}
                                             style={{
                                               display: 'inline-flex',
                                               alignItems: 'center',
@@ -3876,7 +3995,7 @@ export const AdminDashboard: React.FC = () => {
                         type="button"
                         variant="secondary"
                         onClick={handleAddToBatch}
-                        style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 20px', background: 'rgba(201,168,76,0.12)', border: '1px solid rgba(201,168,76,0.4)', color: '#c9a84c' }}
+                        style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 20px', background: 'rgba(var(--gold-rgb), 0.12)', border: '1px solid rgba(var(--gold-rgb), 0.4)', color: 'var(--gold)' }}
                       >
                         <Plus size={16} />
                         Add Another Product
@@ -3915,7 +4034,7 @@ export const AdminDashboard: React.FC = () => {
                       style={{
                         padding: '20px',
                         border: '1px solid var(--gold)',
-                        background: 'rgba(201, 168, 76, 0.08)',
+                        background: 'rgba(var(--gold-rgb),  0.08)',
                         borderRadius: '12px',
                         boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
                       }}
@@ -3947,7 +4066,7 @@ export const AdminDashboard: React.FC = () => {
                               {p.imagePreviewUrls.length > 0 ? (
                                 <img src={p.imagePreviewUrls[0]} alt={p.name} style={{ width: '36px', height: '36px', borderRadius: '4px', objectFit: 'cover' }} />
                               ) : (
-                                <div style={{ width: '36px', height: '36px', borderRadius: '4px', background: 'rgba(201,168,76,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#c9a84c', fontSize: '0.8rem', fontWeight: 700 }}>
+                                <div style={{ width: '36px', height: '36px', borderRadius: '4px', background: 'rgba(var(--gold-rgb), 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--gold)', fontSize: '0.8rem', fontWeight: 700 }}>
                                   #{idx + 1}
                                 </div>
                               )}
@@ -3963,7 +4082,7 @@ export const AdminDashboard: React.FC = () => {
                               <button
                                 type="button"
                                 onClick={() => handleEditBatchItem(p)}
-                                style={{ background: 'none', border: 'none', color: '#c9a84c', cursor: 'pointer', padding: '4px' }}
+                                style={{ background: 'none', border: 'none', color: 'var(--gold)', cursor: 'pointer', padding: '4px' }}
                                 title="Edit Item"
                               >
                                 <Edit2 size={14} />
@@ -4285,13 +4404,7 @@ export const AdminDashboard: React.FC = () => {
                               <div style={{ display: 'flex', gap: '8px', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '12px' }}>
                                 <button
                                   type="button"
-                                  onClick={() => {
-                                    setProductCategoryFilter(cat.slug || cat.name);
-                                    setProductSearch('');
-                                    setProductAvailabilityFilter('all');
-                                    setProductCurrentPage(1);
-                                    setActiveTab('products');
-                                  }}
+                                  onClick={() => setViewingCategoryProducts(cat)}
                                   style={{ flex: 1, padding: '8px', borderRadius: '4px', background: 'rgba(255, 255, 255, 0.05)', border: '1px solid var(--glass-border)', color: 'var(--cream)', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}
                                 >
                                   <span>👁</span> Products
@@ -4316,8 +4429,9 @@ export const AdminDashboard: React.FC = () => {
                                 </button>
                                 <button
                                   type="button"
-                                  onClick={() => handleDeleteCategory(cat.id, cat.name)}
+                                  onClick={() => handleOpenDeleteCategoryModal(cat)}
                                   style={{ flex: 1, padding: '8px', borderRadius: '4px', background: 'rgba(183, 110, 121, 0.12)', border: '1px solid rgba(183, 110, 121, 0.35)', color: 'var(--rose-gold)', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}
+                                  title={`Delete category ${cat.name}`}
                                 >
                                   <Trash2 size={13} /> Del
                                 </button>
@@ -4465,10 +4579,47 @@ export const AdminDashboard: React.FC = () => {
                                           fontSize: '0.78rem',
                                           fontWeight: 600,
                                           cursor: 'pointer',
+                                          transition: 'all 0.2s',
+                                        }}
+                                        onMouseEnter={(e) => {
+                                          e.currentTarget.style.background = 'rgba(255, 215, 0, 0.18)';
+                                        }}
+                                        onMouseLeave={(e) => {
+                                          e.currentTarget.style.background = 'rgba(255, 215, 0, 0.08)';
                                         }}
                                       >
                                         <Edit2 size={13} />
                                         Edit
+                                      </button>
+
+                                      {/* Delete Button (Beside Edit button) */}
+                                      <button
+                                        type="button"
+                                        onClick={() => handleOpenDeleteCategoryModal(cat)}
+                                        style={{
+                                          display: 'inline-flex',
+                                          alignItems: 'center',
+                                          gap: '4px',
+                                          padding: '5px 12px',
+                                          borderRadius: '4px',
+                                          background: prodCount > 0 ? 'rgba(220, 53, 69, 0.08)' : 'rgba(220, 53, 69, 0.12)',
+                                          border: '1px solid rgba(220, 53, 69, 0.35)',
+                                          color: '#ff8a93',
+                                          fontSize: '0.78rem',
+                                          fontWeight: 600,
+                                          cursor: 'pointer',
+                                          transition: 'all 0.2s',
+                                        }}
+                                        onMouseEnter={(e) => {
+                                          e.currentTarget.style.background = 'rgba(220, 53, 69, 0.22)';
+                                        }}
+                                        onMouseLeave={(e) => {
+                                          e.currentTarget.style.background = prodCount > 0 ? 'rgba(220, 53, 69, 0.08)' : 'rgba(220, 53, 69, 0.12)';
+                                        }}
+                                        title={prodCount > 0 ? `${prodCount} products assigned - Deletion locked` : `Delete category ${cat.name}`}
+                                      >
+                                        <Trash2 size={13} />
+                                        Delete
                                       </button>
 
                                       {/* Context Menu 3-dots Button & Dropdown Container */}
@@ -4488,11 +4639,12 @@ export const AdminDashboard: React.FC = () => {
                                             fontSize: '0.78rem',
                                             cursor: 'pointer',
                                           }}
+                                          title="More actions"
                                         >
                                           ⋮
                                         </button>
 
-                                        {/* Context Menu Dropdown matching reference screenshot */}
+                                        {/* Context Menu Dropdown */}
                                         {openCategoryMenuId === cat.id && (
                                           <div
                                             style={{
@@ -4509,86 +4661,70 @@ export const AdminDashboard: React.FC = () => {
                                               textAlign: 'left',
                                             }}
                                           >
-                                          {/* View Products */}
-                                          <button
-                                            type="button"
-                                            onClick={() => {
-                                              setOpenCategoryMenuId(null);
-                                              setProductCategoryFilter(cat.slug || cat.name);
-                                              setProductSearch('');
-                                              setProductAvailabilityFilter('all');
-                                              setProductCurrentPage(1);
-                                              setActiveTab('products');
-                                            }}
-                                            style={{
-                                              display: 'flex',
-                                              alignItems: 'center',
-                                              gap: '8px',
-                                              width: '100%',
-                                              padding: '8px 14px',
-                                              background: 'none',
-                                              border: 'none',
-                                              color: 'var(--cream)',
-                                              fontSize: '0.82rem',
-                                              cursor: 'pointer',
-                                            }}
-                                          >
-                                            <span>👁</span>
-                                            View Products
-                                          </button>
+                                            {/* View Products (Opens products in this category modal directly on page) */}
+                                            <button
+                                              type="button"
+                                              onClick={() => {
+                                                setOpenCategoryMenuId(null);
+                                                setViewingCategoryProducts(cat);
+                                              }}
+                                              style={{
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: '8px',
+                                                width: '100%',
+                                                padding: '8px 14px',
+                                                background: 'none',
+                                                border: 'none',
+                                                color: 'var(--cream)',
+                                                fontSize: '0.82rem',
+                                                cursor: 'pointer',
+                                              }}
+                                              onMouseEnter={(e) => {
+                                                e.currentTarget.style.background = 'rgba(255, 215, 0, 0.08)';
+                                              }}
+                                              onMouseLeave={(e) => {
+                                                e.currentTarget.style.background = 'none';
+                                              }}
+                                            >
+                                              <Eye size={14} color="var(--gold)" />
+                                              View Products
+                                            </button>
 
-                                          {/* Activate / Deactivate Toggle */}
-                                          <button
-                                            type="button"
-                                            onClick={() => {
-                                              setOpenCategoryMenuId(null);
-                                              handleToggleCategoryStatus(cat);
-                                            }}
-                                            style={{
-                                              display: 'flex',
-                                              alignItems: 'center',
-                                              gap: '8px',
-                                              width: '100%',
-                                              padding: '8px 14px',
-                                              background: 'none',
-                                              border: 'none',
-                                              color: 'var(--cream)',
-                                              fontSize: '0.82rem',
-                                              cursor: 'pointer',
-                                            }}
-                                          >
-                                            <span>{cat.is_active ? '⏸' : '▶'}</span>
-                                            {cat.is_active ? 'Deactivate' : 'Activate'}
-                                          </button>
-
-                                          {/* Delete */}
-                                          <button
-                                            type="button"
-                                            onClick={() => {
-                                              setOpenCategoryMenuId(null);
-                                              handleDeleteCategory(cat.id, cat.name);
-                                            }}
-                                            style={{
-                                              display: 'flex',
-                                              alignItems: 'center',
-                                              gap: '8px',
-                                              width: '100%',
-                                              padding: '8px 14px',
-                                              background: 'none',
-                                              border: 'none',
-                                              color: 'var(--rose-gold)',
-                                              fontSize: '0.82rem',
-                                              cursor: 'pointer',
-                                            }}
-                                          >
-                                            <Trash2 size={13} />
-                                            Delete
-                                          </button>
-                                        </div>
-                                      )}
+                                            {/* Activate / Deactivate Toggle */}
+                                            <button
+                                              type="button"
+                                              onClick={() => {
+                                                setOpenCategoryMenuId(null);
+                                                handleToggleCategoryStatus(cat);
+                                              }}
+                                              style={{
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: '8px',
+                                                width: '100%',
+                                                padding: '8px 14px',
+                                                background: 'none',
+                                                border: 'none',
+                                                color: 'var(--cream)',
+                                                fontSize: '0.82rem',
+                                                cursor: 'pointer',
+                                              }}
+                                              onMouseEnter={(e) => {
+                                                e.currentTarget.style.background = 'rgba(255, 215, 0, 0.08)';
+                                              }}
+                                              onMouseLeave={(e) => {
+                                                e.currentTarget.style.background = 'none';
+                                              }}
+                                            >
+                                              <span>{cat.is_active ? '⏸' : '▶'}</span>
+                                              {cat.is_active ? 'Deactivate' : 'Activate'}
+                                            </button>
+                                          </div>
+                                        )}
+                                      </div>
                                     </div>
-                                  </div>
-                                </td>
+                                  </td>
                                 </tr>
                               );
                             })
@@ -4804,8 +4940,8 @@ export const AdminDashboard: React.FC = () => {
                           marginTop: '6px',
                           padding: '14px',
                           borderRadius: '8px',
-                          background: 'rgba(201,168,76,0.08)',
-                          border: '1px solid rgba(201,168,76,0.3)',
+                          background: 'rgba(var(--gold-rgb), 0.08)',
+                          border: '1px solid rgba(var(--gold-rgb), 0.3)',
                         }}
                       >
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
@@ -4884,7 +5020,7 @@ export const AdminDashboard: React.FC = () => {
                         type="button"
                         variant="secondary"
                         onClick={handleAddCategoryToBatch}
-                        style={{ background: 'rgba(201,168,76,0.12)', border: '1px solid rgba(201,168,76,0.4)', color: '#c9a84c' }}
+                        style={{ background: 'rgba(var(--gold-rgb), 0.12)', border: '1px solid rgba(var(--gold-rgb), 0.4)', color: 'var(--gold)' }}
                       >
                         <Plus size={16} /> Add Another Category
                       </Button>
@@ -5145,7 +5281,7 @@ export const AdminDashboard: React.FC = () => {
                                   padding: '16px',
                                   background: 'rgba(15, 12, 9, 0.75)',
                                   borderRadius: '10px',
-                                  border: '1px solid rgba(201, 168, 76, 0.25)',
+                                  border: '1px solid rgba(var(--gold-rgb),  0.25)',
                                   boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
                                   gap: '12px',
                                 }}
@@ -5177,18 +5313,25 @@ export const AdminDashboard: React.FC = () => {
                                     {c.description || c.name || 'No description provided'}
                                   </div>
 
-                                  <div style={{ fontSize: '0.85rem', color: '#2ecc71', fontWeight: 700, marginTop: '8px' }}>
-                                    {c.discount_type === 'PERCENTAGE' ? `${c.discount_percent}% OFF` : c.discount_type === 'FIXED_AMOUNT' ? `₹${c.discount_amount} OFF` : 'FREE SHIPPING'}
-                                    <span style={{ color: 'rgba(255,255,255,0.45)', fontSize: '0.74rem', marginLeft: '8px', fontWeight: 400 }}>
-                                      (Used: {c.usage_count || 0})
-                                    </span>
+                                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '8px', flexWrap: 'wrap', gap: '6px' }}>
+                                    <div style={{ fontSize: '0.85rem', color: '#2ecc71', fontWeight: 700 }}>
+                                      {c.discount_type === 'PERCENTAGE' ? `${c.discount_percent}% OFF` : c.discount_type === 'FIXED_AMOUNT' ? `₹${c.discount_amount} OFF` : 'FREE SHIPPING'}
+                                      <span style={{ color: 'rgba(255,255,255,0.45)', fontSize: '0.74rem', marginLeft: '8px', fontWeight: 400 }}>
+                                        (Used: {c.usage_count || 0})
+                                      </span>
+                                    </div>
+                                    {c.expires_at && (
+                                      <span style={{ fontSize: '0.74rem', color: isExpired ? '#e74c3c' : 'rgba(255,255,255,0.6)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                        🕒 {new Date(c.expires_at).toLocaleString('en-IN', { dateStyle: 'short', timeStyle: 'short' })}
+                                      </span>
+                                    )}
                                   </div>
                                 </div>
 
                                 <div style={{ display: 'flex', gap: '8px', paddingTop: '10px', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
                                   <button 
                                     onClick={() => setEditingCoupon({ ...c })}
-                                    style={{ flex: 1, background: 'rgba(201,168,76,0.12)', border: '1px solid var(--gold)', color: 'var(--gold)', borderRadius: '6px', cursor: 'pointer', padding: '6px 10px', fontSize: '0.78rem', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}
+                                    style={{ flex: 1, background: 'rgba(var(--gold-rgb), 0.12)', border: '1px solid var(--gold)', color: 'var(--gold)', borderRadius: '6px', cursor: 'pointer', padding: '6px 10px', fontSize: '0.78rem', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}
                                     title="Edit Coupon"
                                   >
                                     <Edit2 size={13} /> Edit
@@ -5245,12 +5388,45 @@ export const AdminDashboard: React.FC = () => {
                           required
                         />
                         <Input 
-                          label="Expiry Date (Required)" 
-                          type="date"
-                          value={editingCoupon.expires_at ? editingCoupon.expires_at.slice(0, 10) : ''} 
+                          label="Expiry Date & Time (Required)" 
+                          type="datetime-local"
+                          value={editingCoupon.expires_at ? editingCoupon.expires_at.slice(0, 16) : ''} 
                           onChange={e => setEditingCoupon({...editingCoupon, expires_at: e.target.value})}
                           required
                         />
+                        <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginTop: '-8px', marginBottom: '8px' }}>
+                          {[
+                            { label: '+1h', mins: 60 },
+                            { label: '+6h', mins: 360 },
+                            { label: '+24h', mins: 1440 },
+                            { label: '+3d', mins: 4320 },
+                            { label: '+7d', mins: 10080 },
+                            { label: '+30d', mins: 43200 },
+                          ].map(p => (
+                            <button
+                              key={p.label}
+                              type="button"
+                              onClick={() => {
+                                const target = new Date(Date.now() + p.mins * 60 * 1000);
+                                const pad = (n: number) => n.toString().padStart(2, '0');
+                                const fmt = `${target.getFullYear()}-${pad(target.getMonth() + 1)}-${pad(target.getDate())}T${pad(target.getHours())}:${pad(target.getMinutes())}`;
+                                setEditingCoupon({ ...editingCoupon, expires_at: fmt });
+                              }}
+                              style={{
+                                background: 'rgba(201, 168, 76, 0.12)',
+                                border: '1px solid rgba(201, 168, 76, 0.35)',
+                                color: 'var(--gold)',
+                                padding: '3px 8px',
+                                borderRadius: '4px',
+                                fontSize: '0.74rem',
+                                fontWeight: 600,
+                                cursor: 'pointer',
+                              }}
+                            >
+                              {p.label}
+                            </button>
+                          ))}
+                        </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '5px' }}>
                           <input 
                             type="checkbox"
@@ -5296,7 +5472,7 @@ export const AdminDashboard: React.FC = () => {
                   {dashboardStats.monthly_revenue.map((m: any, i: number) => (
                     <div key={i} style={{ padding: '15px', background: 'rgba(255,255,255,0.03)', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)', textAlign: 'center' }}>
                       <div style={{ color: 'var(--beige)', fontSize: '0.9rem', marginBottom: '8px' }}>{m.month}</div>
-                      <div style={{ color: 'var(--gold)', fontSize: '1.2rem', fontWeight: 'bold' }}>₹{m.revenue.toLocaleString()}</div>
+                      <div className="font-number" style={{ color: 'var(--gold)', fontSize: '1.2rem', fontWeight: 'bold', fontFamily: 'var(--font-number)', fontVariantNumeric: 'tabular-nums' }}>₹{m.revenue.toLocaleString()}</div>
                     </div>
                   ))}
                 </div>
@@ -5415,7 +5591,7 @@ export const AdminDashboard: React.FC = () => {
                       style={{
                         padding: '12px',
                         borderRadius: '10px',
-                        background: selectedSlideIdx === idx ? 'rgba(201,168,76,0.15)' : 'rgba(255,255,255,0.03)',
+                        background: selectedSlideIdx === idx ? 'rgba(var(--gold-rgb), 0.15)' : 'rgba(255,255,255,0.03)',
                         border: selectedSlideIdx === idx ? '1px solid var(--gold)' : '1px solid var(--glass-border)',
                         cursor: 'pointer',
                         display: 'flex',
@@ -5435,7 +5611,7 @@ export const AdminDashboard: React.FC = () => {
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                         <button
                           onClick={(e) => { e.stopPropagation(); setEditingBanner(b); }}
-                          style={{ flex: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '4px', color: 'var(--gold)', background: 'rgba(201,168,76,0.12)', border: '1px solid rgba(201,168,76,0.3)', borderRadius: '6px', cursor: 'pointer', padding: '5px 8px', fontSize: '0.75rem', transition: 'all 0.2s' }}
+                          style={{ flex: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '4px', color: 'var(--gold)', background: 'rgba(var(--gold-rgb), 0.12)', border: '1px solid rgba(var(--gold-rgb), 0.3)', borderRadius: '6px', cursor: 'pointer', padding: '5px 8px', fontSize: '0.75rem', transition: 'all 0.2s' }}
                         >
                           <Edit2 size={12} />
                           Edit
@@ -5555,7 +5731,7 @@ export const AdminDashboard: React.FC = () => {
                     padding: isMobileGrid ? '16px' : '22px',
                     background: 'linear-gradient(135deg, rgba(20,15,10,0.85) 0%, rgba(30,20,15,0.7) 100%)',
                     borderRadius: '14px',
-                    border: '1px solid rgba(201,168,76,0.35)',
+                    border: '1px solid rgba(var(--gold-rgb), 0.35)',
                     boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
                   }}
                 >
@@ -5565,7 +5741,7 @@ export const AdminDashboard: React.FC = () => {
                       <Video size={18} style={{ color: 'var(--gold)' }} />
                       <span style={{ fontWeight: 600, color: 'var(--cream)', fontSize: '0.95rem' }}>Add New Instagram Video</span>
                     </div>
-                    <span style={{ fontSize: '0.74rem', color: 'var(--gold)', background: 'rgba(201,168,76,0.12)', padding: '3px 10px', borderRadius: '12px', border: '1px solid rgba(201,168,76,0.25)', display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+                    <span style={{ fontSize: '0.74rem', color: 'var(--gold)', background: 'rgba(var(--gold-rgb), 0.12)', padding: '3px 10px', borderRadius: '12px', border: '1px solid rgba(var(--gold-rgb), 0.25)', display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
                       <Zap size={12} /> Instant Reel Extraction
                     </span>
                   </div>
@@ -5642,7 +5818,7 @@ export const AdminDashboard: React.FC = () => {
                           fontSize: '0.88rem',
                           letterSpacing: '0.5px',
                           borderRadius: '4px',
-                          boxShadow: isFetchingReelMeta ? 'none' : '0 2px 12px rgba(201, 168, 76, 0.3)',
+                          boxShadow: isFetchingReelMeta ? 'none' : '0 2px 12px rgba(var(--gold-rgb),  0.3)',
                         }}
                       >
                         {isFetchingReelMeta ? (
@@ -5666,8 +5842,8 @@ export const AdminDashboard: React.FC = () => {
                           marginTop: '10px',
                           padding: '10px 14px',
                           borderRadius: '8px',
-                          background: 'rgba(201,168,76,0.12)',
-                          border: '1px solid rgba(201,168,76,0.3)',
+                          background: 'rgba(var(--gold-rgb), 0.12)',
+                          border: '1px solid rgba(var(--gold-rgb), 0.3)',
                           display: 'flex',
                           alignItems: 'center',
                           gap: '10px',
@@ -5746,7 +5922,7 @@ export const AdminDashboard: React.FC = () => {
                         padding: '14px',
                         background: 'rgba(0,0,0,0.5)',
                         borderRadius: '10px',
-                        border: '1px solid rgba(201,168,76,0.3)',
+                        border: '1px solid rgba(var(--gold-rgb), 0.3)',
                         display: 'flex',
                         flexDirection: 'column',
                         gap: '10px',
@@ -5783,7 +5959,7 @@ export const AdminDashboard: React.FC = () => {
                         padding: '8px 12px',
                         background: 'rgba(255,255,255,0.05)',
                         borderRadius: '6px',
-                        border: '1px dashed rgba(201,168,76,0.25)',
+                        border: '1px dashed rgba(var(--gold-rgb), 0.25)',
                         width: '100%',
                         boxSizing: 'border-box',
                       }}
@@ -5901,7 +6077,7 @@ export const AdminDashboard: React.FC = () => {
                         <button
                           onClick={() => { setEditingReel(reel); setEditingReelVideoFile(null); }}
                           title="Edit reel"
-                          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '32px', height: '32px', borderRadius: '8px', background: 'rgba(201,168,76,0.12)', border: '1px solid rgba(201,168,76,0.3)', color: 'var(--gold)', cursor: 'pointer', transition: 'all 0.2s' }}
+                          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '32px', height: '32px', borderRadius: '8px', background: 'rgba(var(--gold-rgb), 0.12)', border: '1px solid rgba(var(--gold-rgb), 0.3)', color: 'var(--gold)', cursor: 'pointer', transition: 'all 0.2s' }}
                         >
                           <Edit2 size={14} />
                         </button>
@@ -5935,7 +6111,7 @@ export const AdminDashboard: React.FC = () => {
                 variant="glass"
                 onClick={() => exportToCSV('Customer_Complaints_Ledger', tickets)}
                 disabled={tickets.length === 0}
-                style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.82rem', padding: '8px 14px', border: '1px solid rgba(201,168,76,0.35)', color: '#c9a84c' }}
+                style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.82rem', padding: '8px 14px', border: '1px solid rgba(var(--gold-rgb), 0.35)', color: 'var(--gold)' }}
               >
                 <FileSpreadsheet size={15} /> Export CSV
               </Button>
@@ -6025,7 +6201,7 @@ export const AdminDashboard: React.FC = () => {
                                   fontWeight: 700,
                                   flexShrink: 0,
                                   alignSelf: isMobileGrid ? 'flex-start' : 'flex-start',
-                                  background: isClosedOrResolved ? 'rgba(46, 204, 113, 0.15)' : 'rgba(201, 168, 76, 0.15)',
+                                  background: isClosedOrResolved ? 'rgba(46, 204, 113, 0.15)' : 'rgba(var(--gold-rgb),  0.15)',
                                   color: isClosedOrResolved ? '#2ecc71' : 'var(--gold)',
                                   border: `1px solid ${isClosedOrResolved ? '#2ecc71' : 'var(--gold)'}`,
                                 }}
@@ -6055,9 +6231,9 @@ export const AdminDashboard: React.FC = () => {
                                     style={{
                                       padding: '2px 8px',
                                       fontSize: '0.72rem',
-                                      background: 'rgba(201, 168, 76, 0.15)',
+                                      background: 'rgba(var(--gold-rgb),  0.15)',
                                       color: 'var(--gold)',
-                                      border: '1px solid rgba(201, 168, 76, 0.35)',
+                                      border: '1px solid rgba(var(--gold-rgb),  0.35)',
                                       borderRadius: '4px',
                                       cursor: 'pointer',
                                       fontWeight: 600,
@@ -6534,7 +6710,7 @@ export const AdminDashboard: React.FC = () => {
                       { key: 'all', label: 'All', count: reviewsList.length },
                       { key: 'pending', label: 'Pending', count: reviewsList.filter((r) => (r.status || 'approved').toLowerCase() === 'pending').length },
                       { key: 'approved', label: 'Approved', count: reviewsList.filter((r) => (r.status || 'approved').toLowerCase() === 'approved').length },
-                      { key: 'featured', label: '★ Featured on Home', count: reviewsList.filter((r) => r.is_featured_on_home && (r.status || 'approved').toLowerCase() === 'approved').length },
+                      { key: 'featured', label: 'Featured on Home', count: reviewsList.filter((r) => r.is_featured_on_home && (r.status || 'approved').toLowerCase() === 'approved').length },
                       { key: 'rejected', label: 'Rejected', count: reviewsList.filter((r) => (r.status || 'approved').toLowerCase() === 'rejected').length },
                     ].map((tab) => (
                       <button
@@ -6622,8 +6798,11 @@ export const AdminDashboard: React.FC = () => {
                           return (
                             <div
                               key={rev.id}
+                              className="glass-panel"
                               style={{
-                                background: 'rgba(14, 11, 9, 0.95)',
+                                background: 'rgba(14, 10, 7, 0.32)',
+                                backdropFilter: 'blur(2px)',
+                                WebkitBackdropFilter: 'blur(2px)',
                                 border: status === 'pending'
                                   ? '1px solid rgba(240, 190, 60, 0.4)'
                                   : '1px solid rgba(212, 175, 55, 0.22)',
@@ -6633,7 +6812,7 @@ export const AdminDashboard: React.FC = () => {
                                 flexDirection: 'column',
                                 justifyContent: 'space-between',
                                 gap: '14px',
-                                boxShadow: '0 6px 20px rgba(0,0,0,0.4)',
+                                boxShadow: '0 6px 20px rgba(0,0,0,0.3)',
                               }}
                             >
                               <div>
@@ -6943,7 +7122,7 @@ export const AdminDashboard: React.FC = () => {
                                           transition: 'all 0.2s',
                                         }}
                                       >
-                                        <Star size={12} fill="var(--gold)" /> ★ Approve & Feature
+                                        <Star size={12} fill="var(--gold)" /> Approve & Feature
                                       </button>
                                     </>
                                   )}
@@ -6995,7 +7174,7 @@ export const AdminDashboard: React.FC = () => {
                                           transition: 'all 0.2s',
                                         }}
                                       >
-                                        <Star size={11} fill="var(--gold)" /> ★ Feature on Home
+                                        <Star size={11} fill="var(--gold)" /> Feature on Home
                                       </button>
                                     )
                                   )}
@@ -7138,10 +7317,13 @@ export const AdminDashboard: React.FC = () => {
                           return (
                             <div
                               key={t.id || idx}
+                              className="glass-panel"
                               style={{
                                 padding: '18px',
-                                background: 'rgba(12, 10, 8, 0.75)',
-                                border: '1px solid rgba(201, 168, 76, 0.2)',
+                                background: 'rgba(14, 10, 7, 0.32)',
+                                backdropFilter: 'blur(2px)',
+                                WebkitBackdropFilter: 'blur(2px)',
+                                border: '1px solid rgba(var(--gold-rgb), 0.22)',
                                 borderRadius: '10px',
                                 display: 'flex',
                                 flexDirection: 'column',
@@ -7337,7 +7519,7 @@ export const AdminDashboard: React.FC = () => {
                   </div>
 
                   {storyVideoUrl && (
-                    <div style={{ marginBottom: '18px', padding: '14px', background: 'rgba(0,0,0,0.45)', borderRadius: '8px', border: '1px solid rgba(201,168,76,0.3)' }}>
+                    <div style={{ marginBottom: '18px', padding: '14px', background: 'rgba(0,0,0,0.45)', borderRadius: '8px', border: '1px solid rgba(var(--gold-rgb), 0.3)' }}>
                       <span style={{ fontSize: '0.8rem', color: 'var(--gold)', fontWeight: 700, display: 'block', marginBottom: '8px' }}>
                         Current Live Crafting Process Video:
                       </span>
@@ -7514,7 +7696,7 @@ export const AdminDashboard: React.FC = () => {
                   variant="glass"
                   onClick={() => exportToCSV('Contact_Messages_Inbox', contactMessages)}
                   disabled={contactMessages.length === 0}
-                  style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.82rem', padding: '8px 14px', border: '1px solid rgba(201,168,76,0.35)', color: '#c9a84c' }}
+                  style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.82rem', padding: '8px 14px', border: '1px solid rgba(var(--gold-rgb), 0.35)', color: 'var(--gold)' }}
                 >
                   <FileSpreadsheet size={15} /> Export CSV
                 </Button>
@@ -7547,7 +7729,7 @@ export const AdminDashboard: React.FC = () => {
                           </div>
                           
                           <div style={{ marginBottom: '10px' }}>
-                            <span style={{ display: 'inline-block', background: 'rgba(201, 168, 76, 0.15)', color: 'var(--gold)', padding: '2px 8px', borderRadius: '4px', fontSize: '0.72rem', marginBottom: '6px' }}>
+                            <span style={{ display: 'inline-block', background: 'rgba(var(--gold-rgb),  0.15)', color: 'var(--gold)', padding: '2px 8px', borderRadius: '4px', fontSize: '0.72rem', marginBottom: '6px' }}>
                               {msg.subject || 'General'}
                             </span>
                             <div style={{ fontSize: '0.82rem', color: 'var(--beige)', lineHeight: 1.4, background: 'rgba(0,0,0,0.2)', padding: '8px', borderRadius: '4px' }}>
@@ -7558,7 +7740,7 @@ export const AdminDashboard: React.FC = () => {
                           <div style={{ display: 'flex', gap: '8px', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '10px' }}>
                             <button
                               onClick={() => setSelectedContactMessage(msg)}
-                              style={{ flex: 1, background: 'rgba(201, 168, 76, 0.15)', border: '1px solid var(--gold)', color: 'var(--gold)', borderRadius: '4px', cursor: 'pointer', padding: '6px', fontSize: '0.78rem', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}
+                              style={{ flex: 1, background: 'rgba(var(--gold-rgb),  0.15)', border: '1px solid var(--gold)', color: 'var(--gold)', borderRadius: '4px', cursor: 'pointer', padding: '6px', fontSize: '0.78rem', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}
                             >
                               <Eye size={13} /> View
                             </button>
@@ -7605,7 +7787,7 @@ export const AdminDashboard: React.FC = () => {
                             </td>
                             <td>{msg.phone || '—'}</td>
                             <td>
-                              <span style={{ background: 'rgba(201, 168, 76, 0.15)', color: 'var(--gold)', padding: '2px 8px', borderRadius: '4px', fontSize: '0.8rem' }}>
+                              <span style={{ background: 'rgba(var(--gold-rgb),  0.15)', color: 'var(--gold)', padding: '2px 8px', borderRadius: '4px', fontSize: '0.8rem' }}>
                                 {msg.subject || 'General'}
                               </span>
                             </td>
@@ -7616,7 +7798,7 @@ export const AdminDashboard: React.FC = () => {
                               <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
                                 <button
                                   onClick={() => setSelectedContactMessage(msg)}
-                                  style={{ background: 'rgba(201, 168, 76, 0.15)', border: '1px solid var(--gold)', color: 'var(--gold)', borderRadius: '4px', cursor: 'pointer', padding: '4px 8px', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '4px' }}
+                                  style={{ background: 'rgba(var(--gold-rgb),  0.15)', border: '1px solid var(--gold)', color: 'var(--gold)', borderRadius: '4px', cursor: 'pointer', padding: '4px 8px', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '4px' }}
                                   title="View complete message"
                                 >
                                   <Eye size={14} /> View
@@ -7655,7 +7837,7 @@ export const AdminDashboard: React.FC = () => {
             {showEditSupportModal && (
               <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }}>
                 <div className="glass-panel" style={{ width: '100%', maxWidth: '580px', maxHeight: '90vh', overflowY: 'auto', padding: '30px', border: '1px solid var(--gold)', background: 'rgba(20,10,0,0.95)' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px', borderBottom: '1px solid rgba(201, 168, 76, 0.2)', paddingBottom: '12px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px', borderBottom: '1px solid rgba(var(--gold-rgb),  0.2)', paddingBottom: '12px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                       <Headphones size={22} color="var(--gold)" />
                       <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1.35rem', color: 'var(--gold)', margin: 0 }}>
@@ -7760,7 +7942,7 @@ export const AdminDashboard: React.FC = () => {
             {selectedContactMessage && (
               <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
                 <div className="glass-panel" style={{ width: '100%', maxWidth: '540px', padding: '30px', border: '1px solid var(--gold)', background: 'rgba(20,10,0,0.95)' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', borderBottom: '1px solid rgba(201, 168, 76, 0.2)', paddingBottom: '12px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', borderBottom: '1px solid rgba(var(--gold-rgb),  0.2)', paddingBottom: '12px' }}>
                     <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1.35rem', color: 'var(--gold)', margin: 0 }}>
                       Customer Inquiry Details
                     </h3>
@@ -7797,7 +7979,7 @@ export const AdminDashboard: React.FC = () => {
 
                     <div>
                       <span style={{ fontSize: '0.75rem', color: 'var(--beige)', textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>Subject</span>
-                      <span style={{ background: 'rgba(201, 168, 76, 0.15)', color: 'var(--gold)', padding: '3px 10px', borderRadius: '4px', fontSize: '0.82rem', fontWeight: 600 }}>
+                      <span style={{ background: 'rgba(var(--gold-rgb),  0.15)', color: 'var(--gold)', padding: '3px 10px', borderRadius: '4px', fontSize: '0.82rem', fontWeight: 600 }}>
                         {selectedContactMessage.subject || 'General Inquiries'}
                       </span>
                     </div>
@@ -7977,7 +8159,7 @@ export const AdminDashboard: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => editingBannerFileRef.current?.click()}
-                    style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(201,168,76,0.1)', border: '1px solid rgba(201,168,76,0.4)', borderRadius: '8px', color: 'var(--gold)', padding: '8px 16px', cursor: 'pointer', fontSize: '0.85rem', width: '100%', justifyContent: 'center' }}
+                    style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(var(--gold-rgb), 0.1)', border: '1px solid rgba(var(--gold-rgb), 0.4)', borderRadius: '8px', color: 'var(--gold)', padding: '8px 16px', cursor: 'pointer', fontSize: '0.85rem', width: '100%', justifyContent: 'center' }}
                   >
                     <UploadCloud size={16} />
                     {editingBannerImageFile ? `✓ Image Selected: ${editingBannerImageFile.name}` : 'Choose New Image (Optional)'}
@@ -8041,7 +8223,7 @@ export const AdminDashboard: React.FC = () => {
                 {/* Header */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px', paddingBottom: '12px', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <div style={{ width: '34px', height: '34px', borderRadius: '8px', background: 'rgba(201,168,76,0.15)', border: '1px solid rgba(201,168,76,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--gold)' }}>
+                    <div style={{ width: '34px', height: '34px', borderRadius: '8px', background: 'rgba(var(--gold-rgb), 0.15)', border: '1px solid rgba(var(--gold-rgb), 0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--gold)' }}>
                       <Video size={18} />
                     </div>
                     <div>
@@ -8103,7 +8285,7 @@ export const AdminDashboard: React.FC = () => {
                           borderRadius: '12px',
                           overflow: 'hidden',
                           background: '#000',
-                          border: '1px solid rgba(201,168,76,0.35)',
+                          border: '1px solid rgba(var(--gold-rgb), 0.35)',
                           boxShadow: '0 4px 20px rgba(0,0,0,0.5)',
                         }}
                       >
@@ -8152,7 +8334,7 @@ export const AdminDashboard: React.FC = () => {
                           padding: '24px 16px',
                           borderRadius: '12px',
                           background: 'rgba(255,255,255,0.03)',
-                          border: '1px dashed rgba(201,168,76,0.3)',
+                          border: '1px dashed rgba(var(--gold-rgb), 0.3)',
                           textAlign: 'center',
                           color: 'var(--beige)',
                           fontSize: '0.85rem',
@@ -8268,8 +8450,8 @@ export const AdminDashboard: React.FC = () => {
                           marginTop: '8px',
                           padding: '8px 12px',
                           borderRadius: '6px',
-                          background: 'rgba(201,168,76,0.12)',
-                          border: '1px solid rgba(201,168,76,0.3)',
+                          background: 'rgba(var(--gold-rgb), 0.12)',
+                          border: '1px solid rgba(var(--gold-rgb), 0.3)',
                           display: 'flex',
                           alignItems: 'center',
                           gap: '8px',
@@ -8553,7 +8735,7 @@ export const AdminDashboard: React.FC = () => {
             <div
               style={{
                 background: '#14100d',
-                border: '1px solid rgba(201, 168, 76, 0.4)',
+                border: '1px solid rgba(var(--gold-rgb),  0.4)',
                 borderRadius: '16px',
                 width: '100%',
                 maxWidth: '1100px',
@@ -8575,7 +8757,7 @@ export const AdminDashboard: React.FC = () => {
                   background: 'rgba(0,0,0,0.3)',
                 }}
               >
-                <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.4rem', color: '#c9a84c', margin: 0, fontWeight: 700 }}>
+                <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.4rem', color: 'var(--gold)', margin: 0, fontWeight: 700 }}>
                   All Offline Sales Ledger
                 </h2>
                 <Button variant="secondary" size="sm" onClick={() => setShowOfflineSalesModal(false)}>
@@ -8588,6 +8770,841 @@ export const AdminDashboard: React.FC = () => {
             </div>
           </div>
         )}
+
+        {/* ============================================================ */}
+        {/* DELETE PRODUCT MODAL (WITH ORDER STATUS ANALYSIS)            */}
+        {/* ============================================================ */}
+        {productToDelete && (
+          <div
+            className="chovique-delete-modal-overlay"
+            onClick={() => {
+              if (!isDeletingProductInProgress) {
+                setProductToDelete(null);
+                setProductOrderSummary(null);
+                setProductDeleteError(null);
+              }
+            }}
+          >
+            <div
+              className={`chovique-delete-modal-card ${!productOrderSummary?.can_delete && !loadingProductSummary ? 'blocked-border' : 'safe-border'}`}
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Header */}
+              <div className="chovique-delete-modal-header">
+                <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                  <div
+                    style={{
+                      width: '44px',
+                      height: '44px',
+                      borderRadius: '50%',
+                      background: !productOrderSummary?.can_delete && !loadingProductSummary ? 'rgba(231, 76, 60, 0.15)' : 'rgba(183, 110, 121, 0.15)',
+                      border: !productOrderSummary?.can_delete && !loadingProductSummary ? '1px solid #e74c3c' : '1px solid var(--rose-gold)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexShrink: 0,
+                    }}
+                  >
+                    <AlertIcon size={22} style={{ color: !productOrderSummary?.can_delete && !loadingProductSummary ? '#ff7675' : 'var(--rose-gold)' }} />
+                  </div>
+                  <div>
+                    <h3
+                      style={{
+                        fontFamily: 'var(--font-display)',
+                        fontSize: '1.3rem',
+                        color: 'var(--cream)',
+                        margin: 0,
+                        fontWeight: 700,
+                      }}
+                    >
+                      Delete Product
+                    </h3>
+                    <p style={{ margin: '2px 0 0 0', fontSize: '0.8rem', color: 'var(--beige)' }}>
+                      Database validation &amp; order dependency check
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  disabled={isDeletingProductInProgress}
+                  onClick={() => {
+                    setProductToDelete(null);
+                    setProductOrderSummary(null);
+                    setProductDeleteError(null);
+                  }}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: 'rgba(255, 255, 255, 0.5)',
+                    cursor: 'pointer',
+                    padding: '4px',
+                  }}
+                >
+                  <X size={20} />
+                </button>
+              </div>
+
+              {/* Body */}
+              <div className="chovique-delete-modal-body">
+                {/* Product Info Snapshot */}
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '14px',
+                    padding: '12px 14px',
+                    background: '#140c07',
+                    borderRadius: '8px',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                  }}
+                >
+                  <img
+                    src={getImageUrl(productToDelete.image)}
+                    alt={productToDelete.name}
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src =
+                        'https://images.unsplash.com/photo-1548907040-4d42b52115ca?auto=format&fit=crop&w=600&q=80';
+                    }}
+                    style={{
+                      width: '48px',
+                      height: '48px',
+                      objectFit: 'cover',
+                      borderRadius: '6px',
+                      border: '1px solid rgba(255, 255, 255, 0.1)',
+                      flexShrink: 0,
+                    }}
+                  />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontWeight: 600, color: '#ffffff', fontSize: '0.95rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {productToDelete.name}
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '3px', fontSize: '0.78rem', color: 'var(--beige)', flexWrap: 'wrap' }}>
+                      <span>SKU: {productToDelete.sku || `CHO${productToDelete.id.slice(0, 4).toUpperCase()}`}</span>
+                      <span>•</span>
+                      <span style={{ color: 'var(--gold)', fontWeight: 600 }}>₹{productToDelete.price}</span>
+                      <span>•</span>
+                      <span>Stock: {productToDelete.stock ?? 0}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Order Status Breakdown & Safety Check */}
+                {loadingProductSummary ? (
+                  <div
+                    style={{
+                      padding: '24px',
+                      textAlign: 'center',
+                      background: 'rgba(0,0,0,0.3)',
+                      borderRadius: '8px',
+                      border: '1px solid rgba(255,255,255,0.08)',
+                    }}
+                  >
+                    <Loader2 size={24} style={{ color: 'var(--gold)', animation: 'spin 1s linear infinite', margin: '0 auto 10px auto' }} />
+                    <div style={{ fontSize: '0.85rem', color: 'var(--cream)', fontWeight: 500 }}>
+                      Checking placed orders and database dependencies...
+                    </div>
+                  </div>
+                ) : productOrderSummary ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    {/* Order Metrics Tiles */}
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
+                      <div
+                        style={{
+                          padding: '10px 12px',
+                          background: 'rgba(0,0,0,0.4)',
+                          borderRadius: '6px',
+                          border: '1px solid rgba(255, 255, 255, 0.08)',
+                          textAlign: 'center',
+                        }}
+                      >
+                        <div style={{ fontSize: '0.7rem', color: 'var(--beige)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                          Total Orders
+                        </div>
+                        <div style={{ fontSize: '1.25rem', fontWeight: 700, color: '#ffffff', marginTop: '2px' }}>
+                          {productOrderSummary.total_orders}
+                        </div>
+                      </div>
+
+                      <div
+                        style={{
+                          padding: '10px 12px',
+                          background: productOrderSummary.active_orders > 0 ? 'rgba(231, 76, 60, 0.15)' : 'rgba(46, 204, 113, 0.1)',
+                          borderRadius: '6px',
+                          border: productOrderSummary.active_orders > 0 ? '1px solid rgba(231, 76, 60, 0.45)' : '1px solid rgba(46, 204, 113, 0.35)',
+                          textAlign: 'center',
+                        }}
+                      >
+                        <div style={{ fontSize: '0.7rem', color: productOrderSummary.active_orders > 0 ? '#ff7675' : '#2ecc71', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 600 }}>
+                          Active Orders
+                        </div>
+                        <div style={{ fontSize: '1.25rem', fontWeight: 700, color: productOrderSummary.active_orders > 0 ? '#ff7675' : '#2ecc71', marginTop: '2px' }}>
+                          {productOrderSummary.active_orders}
+                        </div>
+                      </div>
+
+                      <div
+                        style={{
+                          padding: '10px 12px',
+                          background: 'rgba(46, 204, 113, 0.1)',
+                          borderRadius: '6px',
+                          border: '1px solid rgba(46, 204, 113, 0.35)',
+                          textAlign: 'center',
+                        }}
+                      >
+                        <div style={{ fontSize: '0.7rem', color: '#2ecc71', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 600 }}>
+                          Completed
+                        </div>
+                        <div style={{ fontSize: '1.25rem', fontWeight: 700, color: '#2ecc71', marginTop: '2px' }}>
+                          {productOrderSummary.completed_orders}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Active Orders Warning or Ready Note */}
+                    {productOrderSummary.active_orders > 0 ? (
+                      <div
+                        style={{
+                          padding: '14px 16px',
+                          background: 'rgba(231, 76, 60, 0.12)',
+                          border: '1px solid rgba(231, 76, 60, 0.4)',
+                          borderRadius: '8px',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '8px',
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#ff7675', fontWeight: 700, fontSize: '0.88rem' }}>
+                          <AlertIcon size={18} />
+                          Action Blocked: Active Orders In Progress
+                        </div>
+                        <p style={{ margin: 0, fontSize: '0.82rem', color: 'var(--cream)', lineHeight: 1.55 }}>
+                          This product has <strong style={{ color: '#ff7675' }}>{productOrderSummary.active_orders} active order(s)</strong> currently being processed ({productOrderSummary.active_order_ids.join(', ')}). A product cannot be deleted while customer orders are in-flight. Once all active orders are completed or delivered, the product can be safely deleted.
+                        </p>
+                      </div>
+                    ) : (
+                      <div
+                        style={{
+                          padding: '12px 16px',
+                          background: 'rgba(46, 204, 113, 0.08)',
+                          border: '1px solid rgba(46, 204, 113, 0.3)',
+                          borderRadius: '8px',
+                          display: 'flex',
+                          alignItems: 'flex-start',
+                          gap: '10px',
+                        }}
+                      >
+                        <CheckCircle size={18} style={{ color: '#2ecc71', flexShrink: 0, marginTop: '2px' }} />
+                        <div style={{ fontSize: '0.82rem', color: 'var(--cream)', lineHeight: 1.5 }}>
+                          <strong>Ready to Delete:</strong> This product has 0 active in-process orders ({productOrderSummary.completed_orders} historical orders preserved). Deleting will permanently remove it from the catalog and database.
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ) : null}
+
+                {/* Error Message if any */}
+                {productDeleteError && (
+                  <div
+                    style={{
+                      padding: '10px 14px',
+                      background: 'rgba(231, 76, 60, 0.15)',
+                      border: '1px solid rgba(231, 76, 60, 0.4)',
+                      borderRadius: '6px',
+                      color: '#ff7675',
+                      fontSize: '0.82rem',
+                      lineHeight: 1.4,
+                    }}
+                  >
+                    {productDeleteError}
+                  </div>
+                )}
+              </div>
+
+              {/* Actions Footer */}
+              <div className="chovique-delete-modal-footer">
+                {productOrderSummary && productOrderSummary.active_orders > 0 && (
+                  <Button
+                    variant="gold"
+                    size="sm"
+                    className="chovique-delete-modal-footer-primary"
+                    onClick={() => {
+                      setProductToDelete(null);
+                      setProductOrderSummary(null);
+                      setActiveTab('orders');
+                    }}
+                  >
+                    <ShoppingBag size={14} />
+                    <span>Manage Active Orders</span>
+                    <ArrowRight size={14} />
+                  </Button>
+                )}
+
+                <div className="chovique-delete-modal-footer-actions">
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    type="button"
+                    disabled={isDeletingProductInProgress}
+                    onClick={() => {
+                      setProductToDelete(null);
+                      setProductOrderSummary(null);
+                      setProductDeleteError(null);
+                    }}
+                    style={{ color: 'var(--cream)', border: '1px solid rgba(255, 255, 255, 0.2)' }}
+                  >
+                    Cancel
+                  </Button>
+
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    type="button"
+                    disabled={loadingProductSummary || isDeletingProductInProgress || !productOrderSummary?.can_delete}
+                    onClick={handleConfirmDeleteProduct}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      background: !productOrderSummary?.can_delete ? 'rgba(255, 255, 255, 0.05)' : 'rgba(220, 53, 69, 0.25)',
+                      borderColor: !productOrderSummary?.can_delete ? 'rgba(255, 255, 255, 0.1)' : 'rgba(220, 53, 69, 0.5)',
+                      color: !productOrderSummary?.can_delete ? 'rgba(255, 255, 255, 0.35)' : '#ff8a93',
+                      cursor: !productOrderSummary?.can_delete ? 'not-allowed' : 'pointer',
+                    }}
+                  >
+                    {isDeletingProductInProgress ? (
+                      <>
+                        <Loader2 size={14} className="animate-spin" />
+                        <span>Deleting...</span>
+                      </>
+                    ) : !productOrderSummary?.can_delete && !loadingProductSummary ? (
+                      <>
+                        <Lock size={13} />
+                        <span>Delete Blocked</span>
+                      </>
+                    ) : (
+                      <>
+                        <Trash2 size={14} />
+                        <span>Delete Product</span>
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ============================================================ */}
+        {/* VIEW CATEGORY PRODUCTS MODAL                                */}
+        {/* ============================================================ */}
+        {viewingCategoryProducts && (() => {
+          const matchingProducts = products.filter((p) => {
+            if (!p.category) return false;
+            const pCat = p.category.toLowerCase().trim();
+            const cSlug = (viewingCategoryProducts.slug || '').toLowerCase().trim();
+            const cName = viewingCategoryProducts.name.toLowerCase().trim();
+            const cId = (viewingCategoryProducts.id || '').toLowerCase().trim();
+            return (
+              pCat === cSlug ||
+              pCat === cName ||
+              pCat === cId ||
+              pCat.includes(cSlug) ||
+              (cSlug.length > 2 && cSlug.includes(pCat)) ||
+              pCat.includes(cName) ||
+              (cName.length > 2 && cName.includes(pCat))
+            );
+          });
+
+          return (
+            <div
+              className="chovique-delete-modal-overlay"
+              onClick={() => setViewingCategoryProducts(null)}
+            >
+              <div
+                className="chovique-delete-modal-card safe-border"
+                style={{ maxWidth: '680px' }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                {/* Header */}
+                <div className="chovique-delete-modal-header">
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                    <div
+                      style={{
+                        width: '44px',
+                        height: '44px',
+                        borderRadius: '50%',
+                        background: 'rgba(255, 215, 0, 0.1)',
+                        border: '1px solid var(--gold)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        overflow: 'hidden',
+                        flexShrink: 0,
+                      }}
+                    >
+                      {viewingCategoryProducts.image_url ? (
+                        <img src={getImageUrl(viewingCategoryProducts.image_url)} alt={viewingCategoryProducts.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      ) : (
+                        <FolderTree size={22} style={{ color: 'var(--gold)' }} />
+                      )}
+                    </div>
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1.3rem', color: 'var(--cream)', margin: 0, fontWeight: 700 }}>
+                          {viewingCategoryProducts.name}
+                        </h3>
+                        {viewingCategoryProducts.is_active ? (
+                          <span style={{ padding: '2px 8px', borderRadius: '12px', background: 'rgba(46, 204, 113, 0.12)', border: '1px solid rgba(46, 204, 113, 0.3)', color: '#2ecc71', fontSize: '0.72rem', fontWeight: 600 }}>Active</span>
+                        ) : (
+                          <span style={{ padding: '2px 8px', borderRadius: '12px', background: 'rgba(231, 76, 60, 0.12)', border: '1px solid rgba(231, 76, 60, 0.3)', color: '#e74c3c', fontSize: '0.72rem', fontWeight: 600 }}>Inactive</span>
+                        )}
+                      </div>
+                      <p style={{ margin: '3px 0 0 0', fontSize: '0.8rem', color: 'var(--beige)' }}>
+                        Showing products assigned to this category ({matchingProducts.length} products found)
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setViewingCategoryProducts(null)}
+                    style={{ background: 'none', border: 'none', color: 'rgba(255, 255, 255, 0.5)', cursor: 'pointer', padding: '4px' }}
+                  >
+                    <X size={20} />
+                  </button>
+                </div>
+
+                {/* Product List */}
+                <div className="chovique-delete-modal-body" style={{ maxHeight: '55vh' }}>
+                  {matchingProducts.length === 0 ? (
+                    <div style={{ padding: '40px 20px', textAlign: 'center', color: 'var(--beige)' }}>
+                      <FolderTree size={36} style={{ color: 'rgba(255, 215, 0, 0.3)', margin: '0 auto 12px auto' }} />
+                      <div style={{ fontSize: '0.95rem', fontWeight: 600, color: '#ffffff' }}>
+                        No Products in this Category
+                      </div>
+                      <div style={{ fontSize: '0.82rem', color: 'var(--beige)', marginTop: '4px' }}>
+                        No products have been assigned to "{viewingCategoryProducts.name}" yet.
+                      </div>
+                    </div>
+                  ) : (
+                    matchingProducts.map((prod) => {
+                      const displayStock = prod.stock !== undefined ? prod.stock : (productMetrics[prod.id]?.stock ?? 0);
+                      const isAvailable = (prod.isAvailable ?? prod.is_available ?? true) && displayStock > 0;
+
+                      return (
+                        <div
+                          key={prod.id}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            padding: '12px 14px',
+                            background: '#140c07',
+                            border: '1px solid rgba(255, 255, 255, 0.08)',
+                            borderRadius: '8px',
+                            gap: '12px',
+                          }}
+                        >
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0, flex: 1 }}>
+                            <img
+                              src={getImageUrl(prod.image)}
+                              alt={prod.name}
+                              onError={(e) => {
+                                (e.target as HTMLImageElement).src =
+                                  'https://images.unsplash.com/photo-1548907040-4d42b52115ca?auto=format&fit=crop&w=600&q=80';
+                              }}
+                              style={{
+                                width: '44px',
+                                height: '44px',
+                                objectFit: 'cover',
+                                borderRadius: '6px',
+                                border: '1px solid rgba(255, 255, 255, 0.1)',
+                                flexShrink: 0,
+                              }}
+                            />
+                            <div style={{ minWidth: 0 }}>
+                              <div style={{ fontWeight: 600, color: '#ffffff', fontSize: '0.92rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                {prod.name}
+                              </div>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '2px', fontSize: '0.75rem', color: 'var(--beige)' }}>
+                                <span>SKU: {prod.sku || `CHO${prod.id.slice(0, 4).toUpperCase()}`}</span>
+                                <span>•</span>
+                                <span>{prod.weight}</span>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexShrink: 0 }}>
+                            <div style={{ textAlign: 'right' }}>
+                              <div style={{ fontWeight: 700, color: 'var(--gold)', fontSize: '0.92rem' }}>
+                                ₹{prod.price}
+                              </div>
+                              <div style={{ fontSize: '0.74rem', color: 'var(--beige)' }}>
+                                {displayStock} in stock
+                              </div>
+                            </div>
+
+                            {isAvailable ? (
+                              <span style={{ padding: '3px 8px', borderRadius: '10px', background: 'rgba(46, 204, 113, 0.12)', border: '1px solid rgba(46, 204, 113, 0.3)', color: '#2ecc71', fontSize: '0.72rem', fontWeight: 600 }}>
+                                Available
+                              </span>
+                            ) : (
+                              <span style={{ padding: '3px 8px', borderRadius: '10px', background: 'rgba(231, 76, 60, 0.12)', border: '1px solid rgba(231, 76, 60, 0.3)', color: '#e74c3c', fontSize: '0.72rem', fontWeight: 600 }}>
+                                Stock Out
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+
+                {/* Footer */}
+                <div className="chovique-delete-modal-footer">
+                  <Button
+                    variant="gold"
+                    size="sm"
+                    className="chovique-delete-modal-footer-primary"
+                    onClick={() => {
+                      const filterVal = viewingCategoryProducts.slug || viewingCategoryProducts.name;
+                      setViewingCategoryProducts(null);
+                      setProductCategoryFilter(filterVal);
+                      setProductSearch('');
+                      setProductAvailabilityFilter('all');
+                      setProductCurrentPage(1);
+                      setActiveTab('products');
+                    }}
+                  >
+                    <span>Manage in Products Catalog</span>
+                    <ArrowRight size={14} />
+                  </Button>
+
+                  <div className="chovique-delete-modal-footer-actions">
+                    <Button variant="secondary" size="sm" onClick={() => setViewingCategoryProducts(null)}>
+                      Close
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
+
+        {/* ============================================================ */}
+        {/* DELETE CATEGORY MODAL (WITH PRODUCT DEPENDENCY ANALYSIS)     */}
+        {/* ============================================================ */}
+        {categoryToDelete && (() => {
+          const localMatching = products.filter((p) => {
+            if (!p.category && !p.category_id) return false;
+            const pCatId = (p.category_id || '').toLowerCase().trim();
+            const pCat = (p.category || '').toLowerCase().trim();
+            const cId = (categoryToDelete.id || '').toLowerCase().trim();
+            const cSlug = (categoryToDelete.slug || '').toLowerCase().trim();
+            const cName = categoryToDelete.name.toLowerCase().trim();
+            return (
+              pCatId === cId ||
+              pCat === cSlug ||
+              pCat === cName ||
+              pCat.includes(cSlug) ||
+              (cSlug.length > 2 && cSlug.includes(pCat)) ||
+              pCat.includes(cName) ||
+              (cName.length > 2 && cName.includes(pCat))
+            );
+          });
+
+          const totalAssignedCount = categoryDeleteSummary
+            ? categoryDeleteSummary.product_count
+            : localMatching.length;
+
+          const canDelete = categoryDeleteSummary
+            ? categoryDeleteSummary.can_delete
+            : totalAssignedCount === 0;
+
+          const assignedProductsList = categoryDeleteSummary?.products?.length
+            ? categoryDeleteSummary.products
+            : localMatching.map((p) => ({
+                id: p.id,
+                name: p.name,
+                price: p.price,
+                stock: p.stock,
+                image: p.image || (p.images && p.images[0]) || null,
+              }));
+
+          return (
+            <div
+              className="chovique-delete-modal-overlay"
+              onClick={() => {
+                if (!isDeletingCategoryInProgress) {
+                  setCategoryToDelete(null);
+                  setCategoryDeleteSummary(null);
+                  setCategoryDeleteError(null);
+                }
+              }}
+            >
+              <div
+                className={`chovique-delete-modal-card ${canDelete ? 'safe-border' : 'blocked-border'}`}
+                onClick={(e) => e.stopPropagation()}
+              >
+                {/* Header */}
+                <div className="chovique-delete-modal-header">
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <div
+                      style={{
+                        width: '42px',
+                        height: '42px',
+                        borderRadius: '50%',
+                        background: canDelete ? 'rgba(183, 110, 121, 0.15)' : 'rgba(231, 76, 60, 0.15)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        border: canDelete ? '1px solid rgba(183, 110, 121, 0.4)' : '1px solid rgba(231, 76, 60, 0.4)',
+                        flexShrink: 0,
+                      }}
+                    >
+                      {canDelete ? <Trash2 size={20} color="var(--rose-gold)" /> : <AlertIcon size={20} color="#ff6b6b" />}
+                    </div>
+                    <div>
+                      <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1.25rem', color: 'var(--cream)', margin: 0, fontWeight: 700 }}>
+                        {canDelete ? 'Delete Category' : 'Cannot Delete Category'}
+                      </h3>
+                      <p style={{ margin: '2px 0 0 0', fontSize: '0.8rem', color: 'var(--beige)' }}>
+                        Target: <strong style={{ color: 'var(--gold)' }}>{categoryToDelete.name}</strong>
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!isDeletingCategoryInProgress) {
+                        setCategoryToDelete(null);
+                        setCategoryDeleteSummary(null);
+                        setCategoryDeleteError(null);
+                      }
+                    }}
+                    disabled={isDeletingCategoryInProgress}
+                    style={{ background: 'none', border: 'none', color: 'rgba(255, 255, 255, 0.5)', cursor: 'pointer', padding: '4px' }}
+                  >
+                    <X size={20} />
+                  </button>
+                </div>
+
+                {/* Body */}
+                <div className="chovique-delete-modal-body">
+                  {loadingCategorySummary ? (
+                    <div style={{ padding: '28px 20px', textAlign: 'center', color: 'var(--beige)' }}>
+                      <Loader2 size={24} className="animate-spin" style={{ margin: '0 auto 8px auto', color: 'var(--gold)' }} />
+                      <div style={{ fontSize: '0.85rem' }}>Checking catalog product assignments...</div>
+                    </div>
+                  ) : !canDelete ? (
+                    /* BLOCKED: CATEGORY HAS PRODUCTS ASSIGNED */
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                      {/* Warning Message Card */}
+                      <div
+                        style={{
+                          padding: '16px',
+                          borderRadius: '8px',
+                          background: 'rgba(220, 53, 69, 0.16)',
+                          border: '1px solid rgba(220, 53, 69, 0.45)',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '10px',
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#ff8a93', fontWeight: 700, fontSize: '0.9rem' }}>
+                          <AlertIcon size={16} />
+                          <span>Action Blocked: {totalAssignedCount} Product(s) Assigned</span>
+                        </div>
+                        <p style={{ margin: 0, fontSize: '0.86rem', color: '#ffffff', lineHeight: '1.5' }}>
+                          This category cannot be deleted because <strong style={{ color: 'var(--gold)' }}>{totalAssignedCount} product(s)</strong> are currently added based on this category in your catalog.
+                        </p>
+                        <div
+                          style={{
+                            padding: '10px 12px',
+                            borderRadius: '6px',
+                            background: 'rgba(0, 0, 0, 0.65)',
+                            borderLeft: '3px solid var(--gold)',
+                            fontSize: '0.82rem',
+                            color: 'var(--beige)',
+                            lineHeight: '1.45',
+                          }}
+                        >
+                          <strong style={{ color: 'var(--gold)' }}>Required action:</strong> If you want to delete this category, first you must remove or reassign the products which are existing based on this category.
+                        </div>
+                      </div>
+
+                      {/* Assigned Products Preview */}
+                      <div>
+                        <div style={{ fontSize: '0.8rem', color: 'var(--beige)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '8px' }}>
+                          Assigned Products ({assignedProductsList.length}):
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '180px', overflowY: 'auto', paddingRight: '4px' }}>
+                          {assignedProductsList.map((p) => (
+                            <div
+                              key={p.id}
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'space-between',
+                                padding: '10px 14px',
+                                borderRadius: '8px',
+                                background: '#140c07',
+                                border: '1px solid rgba(255, 215, 0, 0.15)',
+                                boxShadow: '0 2px 8px rgba(0,0,0,0.5)',
+                              }}
+                            >
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0 }}>
+                                <div
+                                  style={{
+                                    width: '36px',
+                                    height: '36px',
+                                    borderRadius: '6px',
+                                    background: 'rgba(0,0,0,0.6)',
+                                    border: '1px solid rgba(201, 168, 76, 0.3)',
+                                    overflow: 'hidden',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    flexShrink: 0,
+                                  }}
+                                >
+                                  {p.image ? (
+                                    <img src={getImageUrl(p.image)} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                  ) : (
+                                    <FolderTree size={18} color="var(--gold)" />
+                                  )}
+                                </div>
+                                <div style={{ minWidth: 0 }}>
+                                  <div style={{ fontSize: '0.88rem', color: '#ffffff', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.name}</div>
+                                  <div style={{ fontSize: '0.74rem', color: 'var(--beige)', marginTop: '2px' }}>Stock: <strong style={{ color: 'var(--cream)' }}>{p.stock ?? 0} units</strong></div>
+                                </div>
+                              </div>
+                              <div style={{ fontSize: '0.92rem', color: 'var(--gold)', fontWeight: 700, marginLeft: '10px', flexShrink: 0 }}>
+                                ₹{p.price?.toFixed(2)}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    /* SAFE: NO PRODUCTS ASSIGNED */
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                      <div
+                        style={{
+                          padding: '16px',
+                          borderRadius: '8px',
+                          background: 'rgba(46, 204, 113, 0.12)',
+                          border: '1px solid rgba(46, 204, 113, 0.35)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '10px',
+                          color: '#2ecc71',
+                          fontSize: '0.86rem',
+                        }}
+                      >
+                        <CheckCircle size={18} />
+                        <span>Safe to delete — 0 products currently assigned to this category.</span>
+                      </div>
+                      <p style={{ margin: 0, fontSize: '0.88rem', color: 'var(--cream)', lineHeight: '1.5' }}>
+                        Are you sure you want to permanently delete category <strong style={{ color: 'var(--gold)' }}>"{categoryToDelete.name}"</strong>? This action cannot be undone.
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Error message banner */}
+                  {categoryDeleteError && (
+                    <div
+                      style={{
+                        padding: '10px 12px',
+                        borderRadius: '6px',
+                        background: 'rgba(231, 76, 60, 0.15)',
+                        border: '1px solid rgba(231, 76, 60, 0.4)',
+                        color: '#ff8a93',
+                        fontSize: '0.82rem',
+                      }}
+                    >
+                      {categoryDeleteError}
+                    </div>
+                  )}
+                </div>
+
+                {/* Actions Footer */}
+                <div className="chovique-delete-modal-footer">
+                  {!canDelete && (
+                    <Button
+                      variant="gold"
+                      size="sm"
+                      className="chovique-delete-modal-footer-primary"
+                      onClick={() => {
+                        const filterVal = categoryToDelete.slug || categoryToDelete.name;
+                        setCategoryToDelete(null);
+                        setCategoryDeleteSummary(null);
+                        setProductCategoryFilter(filterVal);
+                        setProductSearch('');
+                        setProductAvailabilityFilter('all');
+                        setProductCurrentPage(1);
+                        setActiveTab('products');
+                      }}
+                    >
+                      <span>Manage Assigned Products</span>
+                      <ArrowRight size={14} />
+                    </Button>
+                  )}
+
+                  <div className="chovique-delete-modal-footer-actions">
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => {
+                        setCategoryToDelete(null);
+                        setCategoryDeleteSummary(null);
+                        setCategoryDeleteError(null);
+                      }}
+                      disabled={isDeletingCategoryInProgress}
+                      style={{ color: 'var(--cream)', border: '1px solid rgba(255, 255, 255, 0.2)' }}
+                    >
+                      Cancel
+                    </Button>
+
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={handleConfirmDeleteCategory}
+                      disabled={!canDelete || isDeletingCategoryInProgress || loadingCategorySummary}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        background: canDelete ? 'rgba(220, 53, 69, 0.25)' : 'rgba(255, 255, 255, 0.05)',
+                        border: canDelete ? '1px solid rgba(220, 53, 69, 0.5)' : '1px solid rgba(255, 255, 255, 0.1)',
+                        color: canDelete ? '#ff8a93' : 'rgba(255, 255, 255, 0.35)',
+                        cursor: canDelete ? 'pointer' : 'not-allowed',
+                      }}
+                      title={canDelete ? 'Permanently delete this category' : 'Category has active products - delete is blocked'}
+                    >
+                      {isDeletingCategoryInProgress ? (
+                        <>
+                          <Loader2 size={14} className="animate-spin" />
+                          <span>Deleting...</span>
+                        </>
+                      ) : !canDelete ? (
+                        <>
+                          <Lock size={13} />
+                          <span>Delete Blocked</span>
+                        </>
+                      ) : (
+                        <>
+                          <Trash2 size={14} />
+                          <span>Delete Category</span>
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
       </div>
     </div>
   );

@@ -235,7 +235,7 @@ export const Hero: React.FC = () => {
             >
               {currentSlide === 0 ? (
                 <>
-                  The Art of <em style={{ fontFamily: 'var(--font-elegant)', fontStyle: 'italic', fontWeight: 400, background: 'linear-gradient(135deg, #FFE8A3 0%, #E8D48B 50%, #C9A84C 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Fine Chocolate</em>
+                  The Art of <em style={{ fontFamily: 'var(--font-elegant)', fontStyle: 'italic', fontWeight: 400, background: 'var(--gradient-gold-text)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Fine Chocolate</em>
                 </>
               ) : (
                 activeBanner.title

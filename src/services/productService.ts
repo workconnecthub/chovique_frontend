@@ -53,6 +53,26 @@ export const productService = {
   updateProductImage: (id: string, formData: FormData): Promise<Product> =>
     apiPostFormData<Product>(`/products/${id}/image`, formData),
 
+  /** Get order status summary for product deletion checks (admin/superadmin). */
+  getProductOrderSummary: (id: string): Promise<{
+    product_id: string;
+    product_name: string;
+    total_orders: number;
+    active_orders: number;
+    completed_orders: number;
+    can_delete: boolean;
+    active_order_ids: string[];
+  }> =>
+    apiGet<{
+      product_id: string;
+      product_name: string;
+      total_orders: number;
+      active_orders: number;
+      completed_orders: number;
+      can_delete: boolean;
+      active_order_ids: string[];
+    }>(`/products/${id}/order-summary`),
+
   /** Delete a product (admin only). */
   deleteProduct: (id: string): Promise<void> =>
     apiDelete<void>(`/products/${id}`),

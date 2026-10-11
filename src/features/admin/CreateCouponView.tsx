@@ -63,6 +63,18 @@ export const CreateCouponView: React.FC<CreateCouponViewProps> = ({
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
+  const setExpiryOffset = (minutes: number) => {
+    const target = new Date(Date.now() + minutes * 60 * 1000);
+    const pad = (n: number) => n.toString().padStart(2, '0');
+    const formatted = `${target.getFullYear()}-${pad(target.getMonth() + 1)}-${pad(target.getDate())}T${pad(target.getHours())}:${pad(target.getMinutes())}`;
+    handleChange('expires_at', formatted);
+    if (!formData.start_at) {
+      const now = new Date();
+      const nowFormatted = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
+      handleChange('start_at', nowFormatted);
+    }
+  };
+
   const handleApplicabilityChange = (newApplicability: string) => {
     setFormData((prev) => ({
       ...prev,
@@ -882,26 +894,70 @@ export const CreateCouponView: React.FC<CreateCouponViewProps> = ({
             </div>
           </div>
 
-          {/* SECTION 6: Validity Period */}
+          {/* SECTION 6: Validity Period (Days, Hours, and Minutes) */}
           <div style={{ background: 'rgba(20,15,10,0.6)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '12px', padding: '24px' }}>
-            <h3 style={{ fontSize: '1.05rem', color: '#c9a84c', margin: '0 0 16px 0', fontWeight: 700 }}>
-              6. Validity Period
-            </h3>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '8px' }}>
+              <div>
+                <h3 style={{ fontSize: '1.05rem', color: '#c9a84c', margin: 0, fontWeight: 700 }}>
+                  6. Validity Period &amp; Time Limit
+                </h3>
+                <p style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.5)', margin: '4px 0 0 0' }}>
+                  Set start and expiry with exact day, hour, and minute precision.
+                </p>
+              </div>
+            </div>
+
+            {/* Quick Duration Presets for Minutes, Hours, and Days */}
+            <div style={{ marginBottom: '16px', background: 'rgba(0,0,0,0.25)', padding: '12px 14px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.06)' }}>
+              <span style={{ fontSize: '0.76rem', color: 'var(--gold)', fontWeight: 600, display: 'block', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                Quick Expiry Presets (Minutes, Hours, Days)
+              </span>
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                {[
+                  { label: '+30 Mins', mins: 30 },
+                  { label: '+1 Hour', mins: 60 },
+                  { label: '+6 Hours', mins: 360 },
+                  { label: '+12 Hours', mins: 720 },
+                  { label: '+24h (1 Day)', mins: 1440 },
+                  { label: '+3 Days', mins: 4320 },
+                  { label: '+7 Days', mins: 10080 },
+                  { label: '+30 Days', mins: 43200 },
+                ].map((preset) => (
+                  <button
+                    key={preset.label}
+                    type="button"
+                    onClick={() => setExpiryOffset(preset.mins)}
+                    style={{
+                      background: 'rgba(201, 168, 76, 0.1)',
+                      border: '1px solid rgba(201, 168, 76, 0.3)',
+                      color: 'var(--cream)',
+                      padding: '4px 10px',
+                      borderRadius: '4px',
+                      fontSize: '0.76rem',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease',
+                    }}
+                  >
+                    {preset.label}
+                  </button>
+                ))}
+              </div>
+            </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
               <div>
                 <label style={{ display: 'block', fontSize: '0.83rem', fontWeight: 600, color: 'rgba(255,255,255,0.85)', marginBottom: '8px' }}>
-                  Start Date <span style={{ color: '#e74c3c' }}>*</span>
+                  Start Date &amp; Time <span style={{ color: '#e74c3c' }}>*</span>
                 </label>
                 <div style={{ position: 'relative' }}>
                   <input
-                    type="date"
+                    type="datetime-local"
                     value={formData.start_at}
                     onChange={(e) => handleChange('start_at', e.target.value)}
                     style={{
                       width: '100%',
                       padding: '11px 14px',
-                      paddingRight: '36px',
                       borderRadius: '6px',
                       border: '1px solid rgba(255,255,255,0.12)',
                       background: 'rgba(0,0,0,0.4)',
@@ -916,18 +972,17 @@ export const CreateCouponView: React.FC<CreateCouponViewProps> = ({
 
               <div>
                 <label style={{ display: 'block', fontSize: '0.83rem', fontWeight: 600, color: 'rgba(255,255,255,0.85)', marginBottom: '8px' }}>
-                  Expiry Date <span style={{ color: '#e74c3c' }}>*</span>
+                  Expiry Date &amp; Time <span style={{ color: '#e74c3c' }}>*</span>
                 </label>
                 <div style={{ position: 'relative' }}>
                   <input
-                    type="date"
+                    type="datetime-local"
                     value={formData.expires_at}
                     onChange={(e) => handleChange('expires_at', e.target.value)}
                     required
                     style={{
                       width: '100%',
                       padding: '11px 14px',
-                      paddingRight: '36px',
                       borderRadius: '6px',
                       border: '1px solid rgba(255,255,255,0.12)',
                       background: 'rgba(0,0,0,0.4)',

@@ -28,6 +28,22 @@ export const isValidPhone = (phone: string): boolean => {
   return phoneRegex.test(trimValue(phone));
 };
 
+/**
+ * Validates 10-digit Indian mobile numbers (starting with 6, 7, 8, or 9)
+ * with optional +91, 91, or leading 0 prefix.
+ */
+export const isValidIndianPhone = (phone: string): boolean => {
+  if (!phone) return false;
+  const trimmed = trimValue(phone);
+  let digits = trimmed.replace(/[\s\-\(\)\+]/g, '');
+  if (digits.startsWith('91') && digits.length === 12) {
+    digits = digits.slice(2);
+  } else if (digits.startsWith('0') && digits.length === 11) {
+    digits = digits.slice(1);
+  }
+  return digits.length === 10 && ['6', '7', '8', '9'].includes(digits[0]) && /^\d+$/.test(digits);
+};
+
 export const isNonEmpty = (val: string): boolean => {
   return trimValue(val).length > 0;
 };

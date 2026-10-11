@@ -344,8 +344,11 @@ export const OrderDetailModal: React.FC<{
             </span>
             <h2
               id="order-details-modal-title"
+              className="font-number"
+              data-number="true"
               style={{
-                fontFamily: 'monospace',
+                fontFamily: 'var(--font-number, monospace)',
+                fontVariantNumeric: 'tabular-nums',
                 fontSize: '1.15rem',
                 color: 'var(--cream)',
                 margin: '2px 0 0 0',
@@ -894,11 +897,11 @@ export const OrderDetailModal: React.FC<{
                     <div style={{ fontSize: '0.82rem', color: 'var(--cream)', fontWeight: 600, wordBreak: 'break-word' }}>
                       {it.product?.name || 'Product'}
                     </div>
-                    <div style={{ fontSize: '0.7rem', color: 'var(--grey-light)' }}>
+                    <div className="font-number" data-number="true" style={{ fontSize: '0.7rem', color: 'var(--grey-light)', fontFamily: 'var(--font-number, var(--font-body))', fontVariantNumeric: 'tabular-nums' }}>
                       Qty: {it.quantity} × ₹{it.price}
                     </div>
                   </div>
-                  <div style={{ fontWeight: 700, color: 'var(--gold)', fontSize: '0.85rem', flexShrink: 0 }}>
+                  <div className="font-number" data-number="true" style={{ fontWeight: 700, color: 'var(--gold)', fontSize: '0.85rem', flexShrink: 0, fontFamily: 'var(--font-number, var(--font-body))', fontVariantNumeric: 'tabular-nums' }}>
                     ₹{(it.quantity * it.price).toLocaleString()}
                   </div>
                 </div>
@@ -911,33 +914,33 @@ export const OrderDetailModal: React.FC<{
             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '0.82rem' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--cream)' }}>
                 <span>Subtotal</span>
-                <span style={{ fontWeight: 600 }}>₹{(order.subtotal || 0).toLocaleString()}</span>
+                <span className="font-number" data-number="true" style={{ fontWeight: 600, fontFamily: 'var(--font-number, var(--font-body))', fontVariantNumeric: 'tabular-nums' }}>₹{(order.subtotal || 0).toLocaleString()}</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--cream)' }}>
                 <span>Delivery</span>
-                <span style={{ fontWeight: 600 }}>{order.shipping > 0 ? `₹${order.shipping.toLocaleString()}` : 'Free'}</span>
+                <span className="font-number" data-number="true" style={{ fontWeight: 600, fontFamily: 'var(--font-number, var(--font-body))', fontVariantNumeric: 'tabular-nums' }}>{order.shipping > 0 ? `₹${order.shipping.toLocaleString()}` : 'Free'}</span>
               </div>
               {(order.tax || 0) > 0 && (
                 <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--cream)' }}>
                   <span>Tax (GST)</span>
-                  <span style={{ fontWeight: 600 }}>₹{order.tax.toLocaleString()}</span>
+                  <span className="font-number" data-number="true" style={{ fontWeight: 600, fontFamily: 'var(--font-number, var(--font-body))', fontVariantNumeric: 'tabular-nums' }}>₹{order.tax.toLocaleString()}</span>
                 </div>
               )}
               {(order.coupon_discount || order.discount || 0) > 0 && (
                 <div style={{ display: 'flex', justifyContent: 'space-between', color: '#2ecc71' }}>
                   <span>Coupon {order.coupon_code ? `(${order.coupon_code})` : ''}</span>
-                  <span style={{ fontWeight: 600 }}>−₹{(order.coupon_discount || order.discount || 0).toLocaleString()}</span>
+                  <span className="font-number" data-number="true" style={{ fontWeight: 600, fontFamily: 'var(--font-number, var(--font-body))', fontVariantNumeric: 'tabular-nums' }}>−₹{(order.coupon_discount || order.discount || 0).toLocaleString()}</span>
                 </div>
               )}
               {(order.coin_discount || 0) > 0 && (
                 <div style={{ display: 'flex', justifyContent: 'space-between', color: '#2ecc71' }}>
                   <span>Reward Coins ({order.coins_used})</span>
-                  <span style={{ fontWeight: 600 }}>−₹{(order.coin_discount || 0).toLocaleString()}</span>
+                  <span className="font-number" data-number="true" style={{ fontWeight: 600, fontFamily: 'var(--font-number, var(--font-body))', fontVariantNumeric: 'tabular-nums' }}>−₹{(order.coin_discount || 0).toLocaleString()}</span>
                 </div>
               )}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px dashed rgba(255,255,255,0.1)', paddingTop: '8px', marginTop: '2px' }}>
                 <span style={{ color: 'var(--cream)', fontWeight: 700, fontSize: '0.88rem' }}>Total</span>
-                <span style={{ color: 'var(--gold)', fontWeight: 800, fontSize: '1.1rem', fontFamily: 'var(--font-display)' }}>
+                <span className="font-number" data-number="true" style={{ color: 'var(--gold)', fontWeight: 800, fontSize: '1.1rem', fontFamily: 'var(--font-number, var(--font-display))', fontVariantNumeric: 'tabular-nums' }}>
                   ₹{(order.total || 0).toLocaleString()}
                 </span>
               </div>
@@ -1920,14 +1923,20 @@ export const OrderManagement: React.FC<OrderManagementProps> = ({
         >
           <Crown size={15} color={fulfillmentTypeFilter === 'ALL' ? '#0f0c0a' : 'var(--gold)'} />
           <span>All Orders</span>
-          <span style={{
-            fontSize: '0.72rem',
-            padding: '2px 8px',
-            borderRadius: '12px',
-            background: fulfillmentTypeFilter === 'ALL' ? '#0f0c0a' : 'rgba(255,255,255,0.1)',
-            color: fulfillmentTypeFilter === 'ALL' ? 'var(--gold)' : 'var(--cream)',
-            fontWeight: 800,
-          }}>
+          <span
+            className="font-number"
+            data-number="true"
+            style={{
+              fontSize: '0.72rem',
+              padding: '2px 8px',
+              borderRadius: '12px',
+              background: fulfillmentTypeFilter === 'ALL' ? '#0f0c0a' : 'rgba(255,255,255,0.1)',
+              color: fulfillmentTypeFilter === 'ALL' ? 'var(--gold)' : 'var(--cream)',
+              fontWeight: 800,
+              fontFamily: 'var(--font-number, var(--font-body))',
+              fontVariantNumeric: 'tabular-nums',
+            }}
+          >
             {kpis.total}
           </span>
         </button>
@@ -1956,26 +1965,38 @@ export const OrderManagement: React.FC<OrderManagementProps> = ({
         >
           <Zap size={15} color="#e5c158" />
           <span>Local Express Orders</span>
-          <span style={{
-            fontSize: '0.72rem',
-            padding: '2px 8px',
-            borderRadius: '12px',
-            background: 'rgba(201,168,76,0.25)',
-            color: 'var(--gold)',
-            fontWeight: 800,
-          }}>
+          <span
+            className="font-number"
+            data-number="true"
+            style={{
+              fontSize: '0.72rem',
+              padding: '2px 8px',
+              borderRadius: '12px',
+              background: 'rgba(201,168,76,0.25)',
+              color: 'var(--gold)',
+              fontWeight: 800,
+              fontFamily: 'var(--font-number, var(--font-body))',
+              fontVariantNumeric: 'tabular-nums',
+            }}
+          >
             {kpis.local}
           </span>
           {kpis.unassignedLocal > 0 && (
-            <span style={{
-              fontSize: '0.7rem',
-              padding: '2px 8px',
-              borderRadius: '10px',
-              background: 'rgba(231,76,60,0.25)',
-              border: '1px solid rgba(231,76,60,0.5)',
-              color: '#ff6b6b',
-              fontWeight: 800,
-            }}>
+            <span
+              className="font-number"
+              data-number="true"
+              style={{
+                fontSize: '0.7rem',
+                padding: '2px 8px',
+                borderRadius: '10px',
+                background: 'rgba(231,76,60,0.25)',
+                border: '1px solid rgba(231,76,60,0.5)',
+                color: '#ff6b6b',
+                fontWeight: 800,
+                fontFamily: 'var(--font-number, var(--font-body))',
+                fontVariantNumeric: 'tabular-nums',
+              }}
+            >
               🔴 {kpis.unassignedLocal} Unassigned
             </span>
           )}
@@ -2005,14 +2026,20 @@ export const OrderManagement: React.FC<OrderManagementProps> = ({
         >
           <Send size={14} color="#93c5fd" />
           <span>iThink Logistics Express</span>
-          <span style={{
-            fontSize: '0.72rem',
-            padding: '2px 8px',
-            borderRadius: '12px',
-            background: 'rgba(59,130,246,0.2)',
-            color: '#93c5fd',
-            fontWeight: 800,
-          }}>
+          <span
+            className="font-number"
+            data-number="true"
+            style={{
+              fontSize: '0.72rem',
+              padding: '2px 8px',
+              borderRadius: '12px',
+              background: 'rgba(59,130,246,0.2)',
+              color: '#93c5fd',
+              fontWeight: 800,
+              fontFamily: 'var(--font-number, var(--font-body))',
+              fontVariantNumeric: 'tabular-nums',
+            }}
+          >
             {kpis.courier}
           </span>
         </button>
@@ -2062,11 +2089,14 @@ export const OrderManagement: React.FC<OrderManagementProps> = ({
             </div>
             <div>
               <div
+                className="kpi-value font-number"
+                data-number="true"
                 style={{
                   fontSize: k.isRevenue ? '1.25rem' : '1.45rem',
                   fontWeight: 800,
                   color: k.color,
-                  fontFamily: 'var(--font-display)',
+                  fontFamily: 'var(--font-number, var(--font-display))',
+                  fontVariantNumeric: 'tabular-nums',
                   lineHeight: 1.1,
                   whiteSpace: 'nowrap',
                   overflow: 'hidden',
@@ -2077,12 +2107,16 @@ export const OrderManagement: React.FC<OrderManagementProps> = ({
               </div>
               {k.sub && (
                 <div
+                  className="font-number"
+                  data-number="true"
                   style={{
                     display: 'inline-block',
                     marginTop: '5px',
                     fontSize: '0.68rem',
                     fontWeight: 700,
                     padding: '2px 6px',
+                    fontFamily: 'var(--font-number, var(--font-body))',
+                    fontVariantNumeric: 'tabular-nums',
                     borderRadius: '4px',
                     background: 'rgba(230, 126, 34, 0.15)',
                     color: k.subColor || '#e67e22',
@@ -2378,11 +2412,11 @@ export const OrderManagement: React.FC<OrderManagementProps> = ({
                             />
                           )}
                           <div>
-                            <div style={{ fontWeight: 700, color: 'var(--gold)', fontFamily: 'monospace', fontSize: '0.85rem' }}>{ord.id}</div>
-                            <div style={{ fontSize: '0.75rem', color: 'var(--grey-light)' }}>{ordDate?.slice(0, 10)}</div>
+                            <div className="font-number" data-number="true" style={{ fontWeight: 700, color: 'var(--gold)', fontFamily: 'var(--font-number, monospace)', fontSize: '0.85rem', fontVariantNumeric: 'tabular-nums' }}>{ord.id}</div>
+                            <div className="font-number" data-number="true" style={{ fontSize: '0.75rem', color: 'var(--grey-light)', fontFamily: 'var(--font-number, var(--font-body))', fontVariantNumeric: 'tabular-nums' }}>{ordDate?.slice(0, 10)}</div>
                           </div>
                         </div>
-                        <div style={{ fontWeight: 700, color: 'var(--gold)', fontSize: '1rem' }}>
+                        <div className="font-number" data-number="true" style={{ fontWeight: 700, color: 'var(--gold)', fontSize: '1rem', fontFamily: 'var(--font-number, var(--font-body))', fontVariantNumeric: 'tabular-nums' }}>
                           ₹{ord.total?.toLocaleString('en-IN')}
                         </div>
                       </div>
@@ -2440,7 +2474,9 @@ export const OrderManagement: React.FC<OrderManagementProps> = ({
                                   href={ord.tracking_url || `https://ithinklogistics.com/track?awb=${ord.tracking_number}`}
                                   target="_blank"
                                   rel="noopener noreferrer"
-                                  style={{ fontSize: '0.68rem', color: '#93c5fd', textDecoration: 'none', background: 'rgba(59,130,246,0.15)', padding: '2px 6px', borderRadius: '4px', border: '1px solid rgba(59,130,246,0.3)', display: 'inline-flex', alignItems: 'center', gap: '3px' }}
+                                  className="font-number"
+                                  data-number="true"
+                                  style={{ fontSize: '0.68rem', color: '#93c5fd', textDecoration: 'none', background: 'rgba(59,130,246,0.15)', padding: '2px 6px', borderRadius: '4px', border: '1px solid rgba(59,130,246,0.3)', display: 'inline-flex', alignItems: 'center', gap: '3px', fontFamily: 'var(--font-number, monospace)' }}
                                 >
                                   <ExternalLink size={10} /> {ord.tracking_number}
                                 </a>
@@ -2463,7 +2499,7 @@ export const OrderManagement: React.FC<OrderManagementProps> = ({
                         {ord.items?.slice(0, 2).map((it: any, i: number) => (
                           <div key={i} style={{ fontSize: '0.8rem', color: 'var(--cream)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
                             <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{it.product?.name || 'Product'}</span>
-                            <span style={{ color: 'var(--gold)', fontWeight: 700, marginLeft: '8px' }}>×{it.quantity}</span>
+                            <span className="font-number" data-number="true" style={{ color: 'var(--gold)', fontWeight: 700, marginLeft: '8px', fontFamily: 'var(--font-number, var(--font-body))', fontVariantNumeric: 'tabular-nums' }}>×{it.quantity}</span>
                           </div>
                         ))}
                         {(ord.items?.length || 0) > 2 && <div style={{ fontSize: '0.75rem', color: 'var(--grey-light)', textAlign: 'right' }}>+{ord.items.length - 2} more</div>}
@@ -2564,8 +2600,8 @@ export const OrderManagement: React.FC<OrderManagementProps> = ({
                         </td>
                         {/* Order ID & Date */}
                         <td style={{ padding: '10px 12px', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
-                          <div style={{ fontWeight: 700, color: 'var(--gold)', fontFamily: 'monospace', fontSize: '0.75rem' }}>{ord.id}</div>
-                          <div style={{ fontSize: '0.67rem', color: 'var(--grey-light)', marginTop: '2px' }}>{ordDate?.slice(0, 10)}</div>
+                          <div className="font-number" data-number="true" style={{ fontWeight: 700, color: 'var(--gold)', fontFamily: 'var(--font-number, monospace)', fontSize: '0.75rem', fontVariantNumeric: 'tabular-nums' }}>{ord.id}</div>
+                          <div className="font-number" data-number="true" style={{ fontSize: '0.67rem', color: 'var(--grey-light)', marginTop: '2px', fontFamily: 'var(--font-number, var(--font-body))', fontVariantNumeric: 'tabular-nums' }}>{ordDate?.slice(0, 10)}</div>
                         </td>
                         {/* Customer */}
                         <td style={{ padding: '10px 12px', verticalAlign: 'middle' }}>
@@ -2624,7 +2660,9 @@ export const OrderManagement: React.FC<OrderManagementProps> = ({
                                     href={ord.tracking_url || `https://ithinklogistics.com/track?awb=${ord.tracking_number}`}
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    style={{ fontSize: '0.67rem', color: '#93c5fd', textDecoration: 'none', background: 'rgba(59,130,246,0.12)', padding: '2px 6px', borderRadius: '3px', border: '1px solid rgba(59,130,246,0.3)', display: 'inline-flex', alignItems: 'center', gap: '3px' }}
+                                    className="font-number"
+                                    data-number="true"
+                                    style={{ fontSize: '0.67rem', color: '#93c5fd', textDecoration: 'none', background: 'rgba(59,130,246,0.12)', padding: '2px 6px', borderRadius: '3px', border: '1px solid rgba(59,130,246,0.3)', display: 'inline-flex', alignItems: 'center', gap: '3px', fontFamily: 'var(--font-number, monospace)' }}
                                   >
                                     <ExternalLink size={9} /> {ord.tracking_number}
                                   </a>
@@ -2662,7 +2700,7 @@ export const OrderManagement: React.FC<OrderManagementProps> = ({
                             <div key={i} style={{ fontSize: '0.74rem', color: 'var(--cream)', display: 'flex', alignItems: 'center', gap: '4px', overflow: 'hidden' }}>
                               <span style={{ width: '4px', height: '4px', borderRadius: '50%', background: 'var(--gold)', flexShrink: 0, display: 'inline-block' }} />
                               <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{it.product?.name || 'Product'}</span>
-                              <span style={{ color: 'var(--gold)', fontWeight: 700, flexShrink: 0 }}>×{it.quantity}</span>
+                              <span className="font-number" data-number="true" style={{ color: 'var(--gold)', fontWeight: 700, flexShrink: 0, fontFamily: 'var(--font-number, var(--font-body))', fontVariantNumeric: 'tabular-nums' }}>×{it.quantity}</span>
                             </div>
                           ))}
                           {(ord.items?.length || 0) > 2 && <div style={{ fontSize: '0.65rem', color: 'var(--grey-light)' }}>+{ord.items.length - 2} more</div>}
@@ -2700,7 +2738,7 @@ export const OrderManagement: React.FC<OrderManagementProps> = ({
                         </td>
                         {/* Total */}
                         <td style={{ padding: '10px 12px', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
-                          <div style={{ fontWeight: 700, color: 'var(--gold)', fontSize: '0.88rem' }}>₹{ord.total?.toLocaleString('en-IN')}</div>
+                          <div className="font-number" data-number="true" style={{ fontWeight: 700, color: 'var(--gold)', fontSize: '0.88rem', fontFamily: 'var(--font-number, var(--font-body))', fontVariantNumeric: 'tabular-nums' }}>₹{ord.total?.toLocaleString('en-IN')}</div>
                         </td>
                         {/* Actions */}
                         <td style={{ padding: '10px 12px', verticalAlign: 'middle' }}>
@@ -2721,7 +2759,7 @@ export const OrderManagement: React.FC<OrderManagementProps> = ({
 
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '18px', flexWrap: 'wrap', gap: '15px' }}>
         <div style={{ fontSize: '0.82rem', color: 'var(--beige)' }}>
-          Showing {totalCount > 0 ? (page - 1) * limit + 1 : 0} to {Math.min(page * limit, totalCount)} of {totalCount} orders
+          Showing <span className="font-number" data-number="true" style={{ fontFamily: 'var(--font-number, var(--font-body))', fontWeight: 700 }}>{totalCount > 0 ? (page - 1) * limit + 1 : 0}</span> to <span className="font-number" data-number="true" style={{ fontFamily: 'var(--font-number, var(--font-body))', fontWeight: 700 }}>{Math.min(page * limit, totalCount)}</span> of <span className="font-number" data-number="true" style={{ fontFamily: 'var(--font-number, var(--font-body))', fontWeight: 700 }}>{totalCount}</span> orders
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
           <Pagination

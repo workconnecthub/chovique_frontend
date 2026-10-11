@@ -124,9 +124,9 @@ export const CustomerAvatar: React.FC<CustomerAvatarProps> = ({
         borderRadius: '50%',
         flexShrink: 0,
         background: glow
-          ? 'linear-gradient(135deg, #c9a84c 0%, #e5c875 100%)'
-          : 'linear-gradient(135deg, #c9a84c 0%, #8a7028 100%)',
-        color: '#0a0806',
+          ? 'var(--gradient-gold)'
+          : 'linear-gradient(135deg, var(--gold) 0%, var(--gold-dark) 100%)',
+        color: 'var(--black)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -134,7 +134,7 @@ export const CustomerAvatar: React.FC<CustomerAvatarProps> = ({
         fontSize,
         fontFamily: 'var(--font-display)',
         border,
-        boxShadow: glow ? '0 0 16px rgba(201, 168, 76, 0.4)' : '0 2px 8px rgba(0, 0, 0, 0.25)',
+        boxShadow: glow ? '0 0 16px rgba(var(--gold-rgb), 0.4)' : '0 2px 8px rgba(0, 0, 0, 0.25)',
         userSelect: 'none',
       }}
     >
@@ -564,20 +564,23 @@ export const CustomerDirectory: React.FC<CustomerDirectoryProps> = ({
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '16px', marginBottom: '28px' }}>
         {[
-          { label: 'Total Customers', value: summaryMetrics.totalCust, color: '#c9a84c' },
-          { label: 'Active Accounts', value: summaryMetrics.activeCust, color: '#2ecc71' },
-          { label: 'Total Orders Placed', value: summaryMetrics.totalOrdersCount, color: '#3498db' },
-          { label: 'Lifetime Customer Spend', value: `₹${summaryMetrics.totalRevenue.toLocaleString('en-IN')}`, color: '#c9a84c' },
+          { label: 'Total Customers', value: summaryMetrics.totalCust, color: 'var(--gold)', borderColor: 'rgba(var(--gold-rgb), 0.25)' },
+          { label: 'Active Accounts', value: summaryMetrics.activeCust, color: '#2ecc71', borderColor: 'rgba(46, 204, 113, 0.25)' },
+          { label: 'Total Orders Placed', value: summaryMetrics.totalOrdersCount, color: '#3498db', borderColor: 'rgba(52, 152, 219, 0.25)' },
+          { label: 'Lifetime Customer Spend', value: `₹${summaryMetrics.totalRevenue.toLocaleString('en-IN')}`, color: 'var(--gold)', borderColor: 'rgba(var(--gold-rgb), 0.25)' },
         ].map((kpi) => (
           <div
             key={kpi.label}
             className="glass-panel"
-            style={{ padding: '16px 18px', border: `1px solid ${kpi.color}25`, borderRadius: '10px', borderTop: `2px solid ${kpi.color}` }}
+            style={{ padding: '16px 18px', border: `1px solid ${kpi.borderColor}`, borderRadius: '10px', borderTop: `2px solid ${kpi.color}` }}
           >
             <div style={{ fontSize: '0.68rem', color: 'var(--grey-light)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '8px' }}>
               {kpi.label}
             </div>
-            <div style={{ fontSize: '1.6rem', fontWeight: 700, color: kpi.color, fontFamily: 'var(--font-display)' }}>
+            <div
+              className="kpi-value font-number"
+              style={{ fontSize: '1.6rem', fontWeight: 700, color: kpi.color, fontFamily: 'var(--font-number)', fontVariantNumeric: 'tabular-nums' }}
+            >
               {kpi.value}
             </div>
           </div>
@@ -636,7 +639,7 @@ export const CustomerDirectory: React.FC<CustomerDirectoryProps> = ({
                 style={{
                   display: 'flex', alignItems: 'center', gap: '6px',
                   padding: '5px 14px', borderRadius: '20px', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer',
-                  background: 'rgba(201,168,76,0.1)', color: '#c9a84c', border: '1px solid rgba(201,168,76,0.4)',
+                  background: 'rgba(var(--gold-rgb), 0.1)', color: 'var(--gold)', border: '1px solid rgba(var(--gold-rgb), 0.4)',
                 }}
               >
                 <Download size={13} /> Export CSV
@@ -788,15 +791,15 @@ export const CustomerDirectory: React.FC<CustomerDirectoryProps> = ({
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px', padding: '14px', background: 'rgba(255,255,255,0.03)', borderRadius: '8px', marginBottom: '16px' }}>
                 <div>
                   <div style={{ fontSize: '0.65rem', color: 'var(--grey-light)', textTransform: 'uppercase' }}>Total Orders</div>
-                  <div style={{ fontSize: '1.15rem', fontWeight: 700, color: 'var(--cream)', fontFamily: 'var(--font-display)' }}>{totalOrdersCount}</div>
+                  <div className="font-number" style={{ fontSize: '1.15rem', fontWeight: 700, color: 'var(--cream)', fontFamily: 'var(--font-number)', fontVariantNumeric: 'tabular-nums' }}>{totalOrdersCount}</div>
                 </div>
                 <div>
                   <div style={{ fontSize: '0.65rem', color: 'var(--grey-light)', textTransform: 'uppercase' }}>Total Spent</div>
-                  <div style={{ fontSize: '1.15rem', fontWeight: 700, color: 'var(--gold)', fontFamily: 'var(--font-display)' }}>₹{totalSpentAmount.toLocaleString('en-IN')}</div>
+                  <div className="font-number" style={{ fontSize: '1.15rem', fontWeight: 700, color: 'var(--gold)', fontFamily: 'var(--font-number)', fontVariantNumeric: 'tabular-nums' }}>₹{totalSpentAmount.toLocaleString('en-IN')}</div>
                 </div>
                 <div>
                   <div style={{ fontSize: '0.65rem', color: 'var(--grey-light)', textTransform: 'uppercase' }}>Reward Coins</div>
-                  <div style={{ fontSize: '1.15rem', fontWeight: 700, color: '#f39c12', fontFamily: 'var(--font-display)' }}>{totalRewardCoins}</div>
+                  <div className="font-number" style={{ fontSize: '1.15rem', fontWeight: 700, color: '#f39c12', fontFamily: 'var(--font-number)', fontVariantNumeric: 'tabular-nums' }}>{totalRewardCoins}</div>
                 </div>
               </div>
 
@@ -1067,7 +1070,7 @@ export const CustomerDirectory: React.FC<CustomerDirectoryProps> = ({
                       customerOrdersList.map((ord: any) => (
                         <div key={ord.id} style={{ padding: '10px 12px', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '6px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                           <div><div style={{ fontWeight: 700, color: 'var(--gold)', fontSize: '0.78rem', fontFamily: 'monospace' }}>{ord.id}</div><div style={{ fontSize: '0.7rem', color: 'var(--grey-light)', marginTop: '2px' }}>{ord.created_at || ord.date}</div></div>
-                          <div style={{ textAlign: 'right' }}><div style={{ fontWeight: 700, color: 'var(--cream)', fontSize: '0.82rem' }}>₹{ord.total?.toLocaleString()}</div><span style={{ fontSize: '0.67rem', fontWeight: 700, color: ord.status === 'Cancelled' ? '#e74c3c' : '#2ecc71' }}>{ord.status}</span></div>
+                          <div style={{ textAlign: 'right' }}><div className="font-number" style={{ fontWeight: 700, color: 'var(--cream)', fontSize: '0.82rem', fontFamily: 'var(--font-number)', fontVariantNumeric: 'tabular-nums' }}>₹{ord.total?.toLocaleString()}</div><span style={{ fontSize: '0.67rem', fontWeight: 700, color: ord.status === 'Cancelled' ? '#e74c3c' : '#2ecc71' }}>{ord.status}</span></div>
                         </div>
                       ))
                     )}
@@ -1077,7 +1080,7 @@ export const CustomerDirectory: React.FC<CustomerDirectoryProps> = ({
                 {activeTab === 'coins' && (
                   <div style={{ padding: '16px', background: 'rgba(243,156,18,0.05)', border: '1px solid rgba(243,156,18,0.2)', borderRadius: '8px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}><Award size={18} color="#f39c12" /><span style={{ fontSize: '0.9rem', fontWeight: 700, color: '#f39c12' }}>Reward Wallet</span></div>
-                    <div style={{ fontSize: '1.6rem', fontWeight: 700, color: 'var(--cream)', fontFamily: 'var(--font-display)' }}>{customerDetails?.reward_coins || 0} <span style={{ fontSize: '0.85rem', color: 'var(--beige)' }}>Coins</span></div>
+                    <div className="font-number" style={{ fontSize: '1.6rem', fontWeight: 700, color: 'var(--cream)', fontFamily: 'var(--font-number)', fontVariantNumeric: 'tabular-nums' }}>{customerDetails?.reward_coins || 0} <span style={{ fontSize: '0.85rem', color: 'var(--beige)' }}>Coins</span></div>
                   </div>
                 )}
 

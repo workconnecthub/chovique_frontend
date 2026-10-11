@@ -23,16 +23,16 @@ export const Button: React.FC<ButtonProps> = ({
     switch (variant) {
       case 'primary':
         return {
-          background: 'var(--chocolate-brown)',
-          color: 'var(--cream)',
-          border: '1px solid var(--chocolate-brown)',
+          background: 'var(--button-bg, var(--chocolate-brown))',
+          color: 'var(--button-text, #FFFFFF)',
+          border: '1px solid var(--button-bg, var(--chocolate-brown))',
         };
       case 'secondary':
       case 'outline':
         return {
           background: 'transparent',
-          color: 'var(--cream)',
-          border: '1px solid var(--beige)',
+          color: 'var(--button-secondary, var(--gold))',
+          border: '1px solid var(--button-secondary, var(--gold))',
         };
       case 'gold':
         return {

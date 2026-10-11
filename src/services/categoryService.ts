@@ -84,6 +84,10 @@ export const categoryService = {
   adminDeleteCategory: (id: string): Promise<void> =>
     apiDelete<void>(`/admin/categories/${id}`),
 
+  /** Get products assigned to category and whether it can be deleted. */
+  adminGetCategoryProductSummary: (id: string): Promise<CategoryProductSummary> =>
+    apiGet<CategoryProductSummary>(`/admin/categories/${id}/product-summary`),
+
   /**
    * Upload or replace a category image (admin only).
    * Sends multipart/form-data with an 'image' file field.
@@ -94,3 +98,18 @@ export const categoryService = {
   ): Promise<{ image_url: string }> =>
     apiPostFormData<{ image_url: string }>(`/admin/categories/${id}/image`, formData),
 };
+
+export interface CategoryProductSummary {
+  category_id: string;
+  category_name: string;
+  product_count: number;
+  can_delete: boolean;
+  products: Array<{
+    id: string;
+    name: string;
+    price: number;
+    stock: number;
+    image: string | null;
+  }>;
+  message: string;
+}

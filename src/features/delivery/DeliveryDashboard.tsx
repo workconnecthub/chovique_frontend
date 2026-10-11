@@ -801,7 +801,7 @@ export const DeliveryDashboard: React.FC = () => {
   };
 
   return (
-    <div className="delivery-layout-container" style={{ position: 'relative', minHeight: '100vh', background: 'radial-gradient(circle at 50% 0%, #1a1410 0%, #0c0907 100%)' }}>
+    <div className="delivery-layout-container" style={{ position: 'relative', minHeight: '100vh' }}>
       {/* Toast Notification */}
       {toastMessage && (
         <div
@@ -810,8 +810,8 @@ export const DeliveryDashboard: React.FC = () => {
             top: '20px',
             right: '20px',
             zIndex: 9999,
-            background: toastMessage.type === 'error' ? '#e74c3c' : toastMessage.type === 'success' ? '#2ecc71' : '#c9a84c',
-            color: toastMessage.type === 'error' || toastMessage.type === 'success' ? '#fff' : '#0f0c0a',
+            background: toastMessage.type === 'error' ? '#e74c3c' : toastMessage.type === 'success' ? '#2ecc71' : 'var(--gold)',
+            color: toastMessage.type === 'error' || toastMessage.type === 'success' ? '#fff' : 'var(--black)',
             padding: '12px 20px',
             borderRadius: '10px',
             fontWeight: 700,
@@ -838,7 +838,7 @@ export const DeliveryDashboard: React.FC = () => {
             width: '260px',
             height: '100vh',
             background: 'linear-gradient(180deg, #16100c 0%, #0d0907 100%)',
-            borderRight: '1px solid rgba(201, 168, 76, 0.22)',
+            borderRight: '1px solid rgba(var(--gold-rgb),  0.22)',
             position: 'fixed',
             top: 0,
             left: 0,
@@ -872,9 +872,9 @@ export const DeliveryDashboard: React.FC = () => {
                   width: '38px',
                   height: '38px',
                   borderRadius: '50%',
-                  border: '1px solid #c9a84c',
+                  border: '1px solid var(--gold)',
                   objectFit: 'cover',
-                  boxShadow: '0 0 10px rgba(201, 168, 76, 0.35)',
+                  boxShadow: '0 0 10px rgba(var(--gold-rgb),  0.35)',
                 }}
                 onError={(e) => {
                   (e.target as HTMLImageElement).src =
@@ -899,7 +899,7 @@ export const DeliveryDashboard: React.FC = () => {
                 <span
                   style={{
                     fontSize: '0.66rem',
-                    color: '#c9a84c',
+                    color: 'var(--gold)',
                     textTransform: 'uppercase',
                     letterSpacing: '1.8px',
                     fontWeight: 700,
@@ -967,7 +967,7 @@ export const DeliveryDashboard: React.FC = () => {
               <span
                 style={{
                   fontSize: '0.68rem',
-                  color: '#c9a84c',
+                  color: 'var(--gold)',
                   textTransform: 'uppercase',
                   letterSpacing: '1.8px',
                   fontWeight: 700,
@@ -984,47 +984,47 @@ export const DeliveryDashboard: React.FC = () => {
                 className={`delivery-sidebar-item ${activeTab === 'mission' ? 'active' : ''}`}
               >
                 <div className="sidebar-item-left">
-                  <Navigation size={16} color={activeTab === 'mission' ? '#0f0c0a' : '#c9a84c'} />
+                  <Navigation size={16} color={activeTab === 'mission' ? 'var(--black)' : 'var(--gold)'} />
                   <span>Active Delivery</span>
                 </div>
                 {activeMissionOrder && (
-                  <span className="sidebar-badge" style={{ background: activeTab === 'mission' ? '#0f0c0a' : 'rgba(201,168,76,0.2)', color: '#c9a84c' }}>LIVE</span>
+                  <span className="sidebar-badge" style={{ background: activeTab === 'mission' ? 'var(--black)' : 'rgba(var(--gold-rgb), 0.2)', color: 'var(--gold)' }}>LIVE</span>
                 )}
               </button>
 
               {/* 2. Assigned Queue */}
               <button onClick={() => setActiveTab('queue')} className={`delivery-sidebar-item ${activeTab === 'queue' ? 'active' : ''}`}>
                 <div className="sidebar-item-left">
-                  <Package size={16} color={activeTab === 'queue' ? '#0f0c0a' : '#c9a84c'} />
+                  <Package size={16} color={activeTab === 'queue' ? 'var(--black)' : 'var(--gold)'} />
                   <span>Assigned Queue</span>
                 </div>
                 {assignedOrders.length > 0 && (
-                  <span className="sidebar-badge" style={{ background: activeTab === 'queue' ? '#0f0c0a' : '#e67e22', color: activeTab === 'queue' ? '#e67e22' : '#fff' }}>{assignedOrders.length}</span>
+                  <span className="sidebar-badge" style={{ background: activeTab === 'queue' ? 'var(--black)' : '#e67e22', color: activeTab === 'queue' ? '#e67e22' : '#fff' }}>{assignedOrders.length}</span>
                 )}
               </button>
 
               {/* 3. Route Multi-Stop */}
               <button onClick={() => setActiveTab('route')} className={`delivery-sidebar-item ${activeTab === 'route' ? 'active' : ''}`}>
                 <div className="sidebar-item-left">
-                  <Route size={16} color={activeTab === 'route' ? '#0f0c0a' : '#c9a84c'} />
+                  <Route size={16} color={activeTab === 'route' ? 'var(--black)' : 'var(--gold)'} />
                   <span>Multi-Stop Route</span>
                 </div>
-                <span className="sidebar-badge" style={{ background: activeTab === 'route' ? '#0f0c0a' : 'rgba(52,152,219,0.2)', color: '#3498db' }}>{inProgressOrders.length}</span>
+                <span className="sidebar-badge" style={{ background: activeTab === 'route' ? 'var(--black)' : 'rgba(52,152,219,0.2)', color: '#3498db' }}>{inProgressOrders.length}</span>
               </button>
 
               {/* 4. Delivered History */}
               <button onClick={() => setActiveTab('history')} className={`delivery-sidebar-item ${activeTab === 'history' ? 'active' : ''}`}>
                 <div className="sidebar-item-left">
-                  <Award size={16} color={activeTab === 'history' ? '#0f0c0a' : '#c9a84c'} />
+                  <Award size={16} color={activeTab === 'history' ? 'var(--black)' : 'var(--gold)'} />
                   <span>Delivery History</span>
                 </div>
-                <span className="sidebar-badge" style={{ background: activeTab === 'history' ? '#0f0c0a' : 'rgba(46,204,113,0.2)', color: '#2ecc71' }}>{deliveredOrders.length}</span>
+                <span className="sidebar-badge" style={{ background: activeTab === 'history' ? 'var(--black)' : 'rgba(46,204,113,0.2)', color: '#2ecc71' }}>{deliveredOrders.length}</span>
               </button>
 
               {/* 5. Profile */}
               <button onClick={() => setActiveTab('profile')} className={`delivery-sidebar-item ${activeTab === 'profile' ? 'active' : ''}`}>
                 <div className="sidebar-item-left">
-                  <User size={16} color={activeTab === 'profile' ? '#0f0c0a' : '#c9a84c'} />
+                  <User size={16} color={activeTab === 'profile' ? 'var(--black)' : 'var(--gold)'} />
                   <span>Profile &amp; Hub</span>
                 </div>
               </button>
@@ -1037,7 +1037,7 @@ export const DeliveryDashboard: React.FC = () => {
           <div
             style={{
               paddingTop: '16px',
-              borderTop: '1px solid rgba(201, 168, 76, 0.2)',
+              borderTop: '1px solid rgba(var(--gold-rgb),  0.2)',
               display: 'flex',
               flexDirection: 'column',
               gap: '10px',
@@ -1049,9 +1049,9 @@ export const DeliveryDashboard: React.FC = () => {
                   width: '38px',
                   height: '38px',
                   borderRadius: '50%',
-                  background: 'linear-gradient(135deg, rgba(201,168,76,0.25), rgba(26,17,14,0.9))',
-                  border: '1px solid #c9a84c',
-                  color: '#c9a84c',
+                  background: 'linear-gradient(135deg, rgba(var(--gold-rgb), 0.25), rgba(26,17,14,0.9))',
+                  border: '1px solid var(--gold)',
+                  color: 'var(--gold)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -1062,10 +1062,10 @@ export const DeliveryDashboard: React.FC = () => {
                 {profile?.full_name?.charAt(0) || user?.name?.charAt(0) || 'D'}
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontWeight: 700, fontSize: '0.84rem', color: '#f5efe6', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                <div style={{ fontWeight: 700, fontSize: '0.84rem', color: 'var(--cream)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                   {profile?.full_name || user?.name || 'Executive'}
                 </div>
-                <div style={{ fontSize: '0.7rem', color: '#c9a84c', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <div style={{ fontSize: '0.7rem', color: 'var(--gold)', display: 'flex', alignItems: 'center', gap: '4px' }}>
                   <span>{isSupervisor ? (user?.role === 'superadmin' ? 'Superadmin Supervisor' : 'Admin Supervisor') : 'Delivery Partner'}</span>
                   <span style={{ color: 'rgba(255,255,255,0.3)' }}>•</span>
                   <span style={{ color: isOnDuty ? '#2ecc71' : '#e74c3c' }}>{isOnDuty ? 'Active' : 'Standby'}</span>
@@ -1112,7 +1112,7 @@ export const DeliveryDashboard: React.FC = () => {
             height: '60px',
             background: 'rgba(18, 14, 11, 0.98)',
             backdropFilter: 'blur(12px)',
-            borderBottom: '1px solid rgba(201, 168, 76, 0.25)',
+            borderBottom: '1px solid rgba(var(--gold-rgb),  0.25)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
@@ -1127,7 +1127,7 @@ export const DeliveryDashboard: React.FC = () => {
             <img
               src="/assets/logo.png"
               alt="Chovique Logo"
-              style={{ width: '34px', height: '34px', borderRadius: '50%', border: '1px solid #c9a84c', objectFit: 'cover' }}
+              style={{ width: '34px', height: '34px', borderRadius: '50%', border: '1px solid var(--gold)', objectFit: 'cover' }}
               onError={(e) => {
                 (e.target as HTMLImageElement).src =
                   'https://images.unsplash.com/photo-1548907040-4d42b52115ca?auto=format&fit=crop&w=100&q=80';
@@ -1151,7 +1151,7 @@ export const DeliveryDashboard: React.FC = () => {
               <span
                 style={{
                   fontSize: '0.62rem',
-                  color: '#c9a84c',
+                  color: 'var(--gold)',
                   letterSpacing: '1.4px',
                   fontWeight: 800,
                   textTransform: 'uppercase',
@@ -1258,8 +1258,8 @@ export const DeliveryDashboard: React.FC = () => {
               onClick={() => setIsMobileDrawerOpen(true)}
               title="More Navigation Options"
               style={{
-                background: 'rgba(201, 168, 76, 0.15)',
-                border: '1px solid rgba(201, 168, 76, 0.35)',
+                background: 'rgba(var(--gold-rgb),  0.15)',
+                border: '1px solid rgba(var(--gold-rgb),  0.35)',
                 color: '#f5d77f',
                 width: '32px',
                 height: '32px',
@@ -1303,7 +1303,7 @@ export const DeliveryDashboard: React.FC = () => {
               bottom: 0,
               width: '280px',
               background: 'linear-gradient(180deg, #18120d 0%, #0d0907 100%)',
-              borderLeft: '1px solid rgba(201,168,76,0.3)',
+              borderLeft: '1px solid rgba(var(--gold-rgb), 0.3)',
               zIndex: 1200,
               display: 'flex',
               flexDirection: 'column',
@@ -1314,16 +1314,16 @@ export const DeliveryDashboard: React.FC = () => {
             }}
           >
             <div>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '18px', paddingBottom: '12px', borderBottom: '1px solid rgba(201,168,76,0.2)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '18px', paddingBottom: '12px', borderBottom: '1px solid rgba(var(--gold-rgb), 0.2)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                   <img
                     src="/assets/logo.png"
                     alt="Logo"
-                    style={{ width: '30px', height: '30px', borderRadius: '50%', border: '1px solid #c9a84c' }}
+                    style={{ width: '30px', height: '30px', borderRadius: '50%', border: '1px solid var(--gold)' }}
                   />
                   <div style={{ lineHeight: 1.1 }}>
-                    <div style={{ fontFamily: 'serif', fontWeight: 700, color: '#f5efe6', fontSize: '0.95rem' }}>CHOVIQUE</div>
-                    <div style={{ fontSize: '0.62rem', color: '#c9a84c', letterSpacing: '1px', textTransform: 'uppercase' }}>Partner Menu</div>
+                    <div style={{ fontFamily: 'serif', fontWeight: 700, color: 'var(--cream)', fontSize: '0.95rem' }}>CHOVIQUE</div>
+                    <div style={{ fontSize: '0.62rem', color: 'var(--gold)', letterSpacing: '1px', textTransform: 'uppercase' }}>Partner Menu</div>
                   </div>
                 </div>
                 <button
@@ -1335,8 +1335,8 @@ export const DeliveryDashboard: React.FC = () => {
               </div>
 
               {/* User Card in Drawer */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px', background: 'rgba(255,255,255,0.03)', borderRadius: '10px', border: '1px solid rgba(201,168,76,0.2)', marginBottom: '16px' }}>
-                <div style={{ width: '38px', height: '38px', borderRadius: '50%', border: '1px solid #c9a84c', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#1a110e', color: '#c9a84c', fontWeight: 800 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px', background: 'rgba(255,255,255,0.03)', borderRadius: '10px', border: '1px solid rgba(var(--gold-rgb), 0.2)', marginBottom: '16px' }}>
+                <div style={{ width: '38px', height: '38px', borderRadius: '50%', border: '1px solid var(--gold)', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--surface-color)', color: 'var(--gold)', fontWeight: 800 }}>
                   {profile?.avatar_url ? (
                     <img src={getImageUrl(profile.avatar_url)} alt="Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                   ) : (
@@ -1344,10 +1344,10 @@ export const DeliveryDashboard: React.FC = () => {
                   )}
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontWeight: 700, fontSize: '0.82rem', color: '#f5efe6', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  <div style={{ fontWeight: 700, fontSize: '0.82rem', color: 'var(--cream)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                     {profile?.full_name || user?.name || 'Executive'}
                   </div>
-                  <div style={{ fontSize: '0.68rem', color: '#c9a84c' }}>
+                  <div style={{ fontSize: '0.68rem', color: 'var(--gold)' }}>
                     {isSupervisor ? (user?.role === 'superadmin' ? 'Superadmin Supervisor' : 'Admin Supervisor') : 'Delivery Partner'}
                   </div>
                 </div>
@@ -1367,8 +1367,8 @@ export const DeliveryDashboard: React.FC = () => {
                     gap: '10px',
                     padding: '10px 12px',
                     borderRadius: '8px',
-                    background: 'rgba(201,168,76,0.1)',
-                    border: '1px solid rgba(201,168,76,0.25)',
+                    background: 'rgba(var(--gold-rgb), 0.1)',
+                    border: '1px solid rgba(var(--gold-rgb), 0.25)',
                     color: '#f5d77f',
                     fontSize: '0.82rem',
                     fontWeight: 700,
@@ -1394,7 +1394,7 @@ export const DeliveryDashboard: React.FC = () => {
                       borderRadius: '8px',
                       background: 'transparent',
                       border: 'none',
-                      color: '#f5efe6',
+                      color: 'var(--cream)',
                       fontSize: '0.82rem',
                       fontWeight: 600,
                       cursor: 'pointer',
@@ -1419,7 +1419,7 @@ export const DeliveryDashboard: React.FC = () => {
                     borderRadius: '8px',
                     background: 'transparent',
                     border: 'none',
-                    color: '#f5efe6',
+                    color: 'var(--cream)',
                     fontSize: '0.82rem',
                     fontWeight: 600,
                     cursor: 'pointer',
@@ -1432,7 +1432,7 @@ export const DeliveryDashboard: React.FC = () => {
               </div>
             </div>
 
-            <div style={{ borderTop: '1px solid rgba(201,168,76,0.2)', paddingTop: '14px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <div style={{ borderTop: '1px solid rgba(var(--gold-rgb), 0.2)', paddingTop: '14px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
               <button
                 onClick={() => handleToggleDuty()}
                 style={{
@@ -1506,7 +1506,7 @@ export const DeliveryDashboard: React.FC = () => {
               width: isMobile ? '100%' : '380px',
               maxHeight: isMobile ? '70dvh' : '500px',
               background: 'linear-gradient(145deg, #1a1410 0%, #0f0c0a 100%)',
-              border: '1px solid rgba(201, 168, 76, 0.35)',
+              border: '1px solid rgba(var(--gold-rgb),  0.35)',
               borderRadius: isMobile ? '0 0 20px 20px' : '14px',
               boxShadow: '0 16px 48px rgba(0,0,0,0.7)',
               zIndex: 1060,
@@ -1519,7 +1519,7 @@ export const DeliveryDashboard: React.FC = () => {
             <div
               style={{
                 padding: '16px 20px',
-                borderBottom: '1px solid rgba(201, 168, 76, 0.2)',
+                borderBottom: '1px solid rgba(var(--gold-rgb),  0.2)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
@@ -1531,19 +1531,19 @@ export const DeliveryDashboard: React.FC = () => {
                     width: '32px',
                     height: '32px',
                     borderRadius: '8px',
-                    background: unreadNotifCount > 0 ? 'rgba(230, 126, 34, 0.2)' : 'rgba(201, 168, 76, 0.1)',
-                    border: `1px solid ${unreadNotifCount > 0 ? '#e67e22' : 'rgba(201,168,76,0.3)'}`,
+                    background: unreadNotifCount > 0 ? 'rgba(230, 126, 34, 0.2)' : 'rgba(var(--gold-rgb),  0.1)',
+                    border: `1px solid ${unreadNotifCount > 0 ? '#e67e22' : 'rgba(var(--gold-rgb), 0.3)'}`,
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    color: unreadNotifCount > 0 ? '#e67e22' : '#c9a84c',
+                    color: unreadNotifCount > 0 ? '#e67e22' : 'var(--gold)',
                   }}
                 >
                   <Bell size={16} />
                 </div>
                 <div>
-                  <div style={{ fontWeight: 800, fontSize: '0.92rem', color: '#f5efe6' }}>Notifications</div>
-                  <div style={{ fontSize: '0.72rem', color: '#c9a84c' }}>
+                  <div style={{ fontWeight: 800, fontSize: '0.92rem', color: 'var(--cream)' }}>Notifications</div>
+                  <div style={{ fontSize: '0.72rem', color: 'var(--gold)' }}>
                     {assignedOrders.length > 0 ? `${assignedOrders.length} order${assignedOrders.length > 1 ? 's' : ''} awaiting acceptance` : 'All caught up!'}
                   </div>
                 </div>
@@ -1561,7 +1561,7 @@ export const DeliveryDashboard: React.FC = () => {
               {assignedOrders.length === 0 ? (
                 <div style={{ textAlign: 'center', padding: '32px 20px', color: 'rgba(255,255,255,0.45)' }}>
                   <CheckCircle size={36} style={{ margin: '0 auto 12px', display: 'block', color: '#2ecc71' }} />
-                  <div style={{ fontWeight: 700, fontSize: '0.9rem', color: '#f5efe6' }}>No pending assignments</div>
+                  <div style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--cream)' }}>No pending assignments</div>
                   <div style={{ fontSize: '0.78rem', marginTop: '4px' }}>You're all caught up! Check back soon.</div>
                 </div>
               ) : (
@@ -1595,7 +1595,7 @@ export const DeliveryDashboard: React.FC = () => {
                       <Package size={18} />
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontWeight: 800, fontSize: '0.86rem', color: '#f5efe6' }}>
+                      <div style={{ fontWeight: 800, fontSize: '0.86rem', color: 'var(--cream)' }}>
                         Order #{order.id}
                       </div>
                       <div style={{ fontSize: '0.74rem', color: 'rgba(255,255,255,0.6)', marginTop: '2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -1616,7 +1616,7 @@ export const DeliveryDashboard: React.FC = () => {
                         borderRadius: '8px',
                         background: 'linear-gradient(135deg, #2ecc71, #27ae60)',
                         border: 'none',
-                        color: '#0f0c0a',
+                        color: 'var(--black)',
                         fontWeight: 800,
                         fontSize: '0.78rem',
                         cursor: 'pointer',
@@ -1633,7 +1633,7 @@ export const DeliveryDashboard: React.FC = () => {
 
             {/* Panel Footer */}
             {assignedOrders.length > 0 && (
-              <div style={{ padding: '12px 16px', borderTop: '1px solid rgba(201,168,76,0.15)', display: 'flex', gap: '8px' }}>
+              <div style={{ padding: '12px 16px', borderTop: '1px solid rgba(var(--gold-rgb), 0.15)', display: 'flex', gap: '8px' }}>
                 <button
                   onClick={() => {
                     handleCloseNotifPanel();
@@ -1643,9 +1643,9 @@ export const DeliveryDashboard: React.FC = () => {
                     flex: 1,
                     padding: '11px',
                     borderRadius: '10px',
-                    background: 'rgba(201,168,76,0.12)',
-                    border: '1px solid rgba(201,168,76,0.3)',
-                    color: '#c9a84c',
+                    background: 'rgba(var(--gold-rgb), 0.12)',
+                    border: '1px solid rgba(var(--gold-rgb), 0.3)',
+                    color: 'var(--gold)',
                     fontWeight: 700,
                     fontSize: '0.82rem',
                     cursor: 'pointer',
@@ -1665,7 +1665,7 @@ export const DeliveryDashboard: React.FC = () => {
                     borderRadius: '10px',
                     background: 'linear-gradient(135deg, #2ecc71, #27ae60)',
                     border: 'none',
-                    color: '#0f0c0a',
+                    color: 'var(--black)',
                     fontWeight: 800,
                     fontSize: '0.82rem',
                     cursor: isBatchAccepting ? 'not-allowed' : 'pointer',
@@ -1692,7 +1692,7 @@ export const DeliveryDashboard: React.FC = () => {
             right: 0,
             height: '64px',
             background: 'rgba(10, 7, 5, 0.98)',
-            borderTop: '1px solid rgba(201, 168, 76, 0.25)',
+            borderTop: '1px solid rgba(var(--gold-rgb),  0.25)',
             backdropFilter: 'blur(16px)',
             WebkitBackdropFilter: 'blur(16px)',
             display: 'flex',
@@ -1716,10 +1716,10 @@ export const DeliveryDashboard: React.FC = () => {
               justifyContent: 'center',
               flex: 1,
               gap: '3px',
-              background: activeTab === 'mission' ? 'rgba(201, 168, 76, 0.1)' : 'transparent',
+              background: activeTab === 'mission' ? 'rgba(var(--gold-rgb),  0.1)' : 'transparent',
               border: 'none',
               borderRadius: '8px',
-              color: activeTab === 'mission' ? '#c9a84c' : 'rgba(255, 255, 255, 0.45)',
+              color: activeTab === 'mission' ? 'var(--gold)' : 'rgba(255, 255, 255, 0.45)',
               cursor: 'pointer',
               padding: '6px 4px',
               position: 'relative',
@@ -1737,7 +1737,7 @@ export const DeliveryDashboard: React.FC = () => {
                   transform: 'translateX(-50%)',
                   width: '24px',
                   height: '3px',
-                  background: '#c9a84c',
+                  background: 'var(--gold)',
                   borderRadius: '0 0 2px 2px',
                 }}
               />
@@ -1771,10 +1771,10 @@ export const DeliveryDashboard: React.FC = () => {
               justifyContent: 'center',
               flex: 1,
               gap: '3px',
-              background: activeTab === 'queue' ? 'rgba(201, 168, 76, 0.1)' : 'transparent',
+              background: activeTab === 'queue' ? 'rgba(var(--gold-rgb),  0.1)' : 'transparent',
               border: 'none',
               borderRadius: '8px',
-              color: activeTab === 'queue' ? '#c9a84c' : 'rgba(255, 255, 255, 0.45)',
+              color: activeTab === 'queue' ? 'var(--gold)' : 'rgba(255, 255, 255, 0.45)',
               cursor: 'pointer',
               padding: '6px 4px',
               position: 'relative',
@@ -1792,7 +1792,7 @@ export const DeliveryDashboard: React.FC = () => {
                   transform: 'translateX(-50%)',
                   width: '24px',
                   height: '3px',
-                  background: '#c9a84c',
+                  background: 'var(--gold)',
                   borderRadius: '0 0 2px 2px',
                 }}
               />
@@ -1833,7 +1833,7 @@ export const DeliveryDashboard: React.FC = () => {
               gap: '3px',
               background: 'transparent',
               border: 'none',
-              color: activeTab === 'route' ? '#c9a84c' : 'rgba(255, 255, 255, 0.45)',
+              color: activeTab === 'route' ? 'var(--gold)' : 'rgba(255, 255, 255, 0.45)',
               cursor: 'pointer',
               padding: '6px 4px',
               position: 'relative',
@@ -1844,7 +1844,7 @@ export const DeliveryDashboard: React.FC = () => {
           >
             <div
               style={{
-                background: activeTab === 'route' ? '#e5c875' : '#c9a84c',
+                background: activeTab === 'route' ? '#e5c875' : 'var(--gold)',
                 color: '#1a1512',
                 borderRadius: '50%',
                 width: '48px',
@@ -1854,8 +1854,8 @@ export const DeliveryDashboard: React.FC = () => {
                 justifyContent: 'center',
                 marginTop: '-24px',
                 boxShadow: activeTab === 'route'
-                  ? '0 4px 25px rgba(201, 168, 76, 0.7)'
-                  : '0 4px 15px rgba(201, 168, 76, 0.4)',
+                  ? '0 4px 25px rgba(var(--gold-rgb),  0.7)'
+                  : '0 4px 15px rgba(var(--gold-rgb),  0.4)',
                 border: '4px solid #0a0705',
                 transition: 'transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease',
               }}
@@ -1878,10 +1878,10 @@ export const DeliveryDashboard: React.FC = () => {
               justifyContent: 'center',
               flex: 1,
               gap: '3px',
-              background: activeTab === 'history' ? 'rgba(201, 168, 76, 0.1)' : 'transparent',
+              background: activeTab === 'history' ? 'rgba(var(--gold-rgb),  0.1)' : 'transparent',
               border: 'none',
               borderRadius: '8px',
-              color: activeTab === 'history' ? '#c9a84c' : 'rgba(255, 255, 255, 0.45)',
+              color: activeTab === 'history' ? 'var(--gold)' : 'rgba(255, 255, 255, 0.45)',
               cursor: 'pointer',
               padding: '6px 4px',
               position: 'relative',
@@ -1899,7 +1899,7 @@ export const DeliveryDashboard: React.FC = () => {
                   transform: 'translateX(-50%)',
                   width: '24px',
                   height: '3px',
-                  background: '#c9a84c',
+                  background: 'var(--gold)',
                   borderRadius: '0 0 2px 2px',
                 }}
               />
@@ -1919,10 +1919,10 @@ export const DeliveryDashboard: React.FC = () => {
               justifyContent: 'center',
               flex: 1,
               gap: '3px',
-              background: activeTab === 'profile' ? 'rgba(201, 168, 76, 0.1)' : 'transparent',
+              background: activeTab === 'profile' ? 'rgba(var(--gold-rgb),  0.1)' : 'transparent',
               border: 'none',
               borderRadius: '8px',
-              color: activeTab === 'profile' ? '#c9a84c' : 'rgba(255, 255, 255, 0.45)',
+              color: activeTab === 'profile' ? 'var(--gold)' : 'rgba(255, 255, 255, 0.45)',
               cursor: 'pointer',
               padding: '6px 4px',
               position: 'relative',
@@ -1940,7 +1940,7 @@ export const DeliveryDashboard: React.FC = () => {
                   transform: 'translateX(-50%)',
                   width: '24px',
                   height: '3px',
-                  background: '#c9a84c',
+                  background: 'var(--gold)',
                   borderRadius: '0 0 2px 2px',
                 }}
               />
@@ -1985,7 +1985,7 @@ export const DeliveryDashboard: React.FC = () => {
             style={{
               background: 'rgba(20, 15, 12, 0.9)',
               backdropFilter: 'blur(12px)',
-              borderBottom: '1px solid rgba(201, 168, 76, 0.2)',
+              borderBottom: '1px solid rgba(var(--gold-rgb),  0.2)',
               padding: '16px 28px',
               display: 'flex',
               justifyContent: 'space-between',
@@ -2000,7 +2000,7 @@ export const DeliveryDashboard: React.FC = () => {
                 style={{
                   fontFamily: 'var(--font-display, serif)',
                   fontSize: '1.4rem',
-                  color: '#f5efe6',
+                  color: 'var(--cream)',
                   margin: 0,
                   display: 'flex',
                   alignItems: 'center',
@@ -2031,7 +2031,7 @@ export const DeliveryDashboard: React.FC = () => {
                 style={{
                   background: 'rgba(255, 255, 255, 0.06)',
                   border: '1px solid rgba(255, 255, 255, 0.14)',
-                  color: '#f5efe6',
+                  color: 'var(--cream)',
                   padding: '8px 14px',
                   borderRadius: '8px',
                   display: 'flex',
@@ -2054,9 +2054,9 @@ export const DeliveryDashboard: React.FC = () => {
                   width: '38px',
                   height: '38px',
                   borderRadius: '50%',
-                  background: 'linear-gradient(135deg, rgba(201,168,76,0.3), rgba(26,17,14,0.9))',
-                  border: '1px solid #c9a84c',
-                  color: '#c9a84c',
+                  background: 'linear-gradient(135deg, rgba(var(--gold-rgb), 0.3), rgba(26,17,14,0.9))',
+                  border: '1px solid var(--gold)',
+                  color: 'var(--gold)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -2077,8 +2077,8 @@ export const DeliveryDashboard: React.FC = () => {
             style={{
               marginTop: '16px',
               padding: '12px 18px',
-              background: 'linear-gradient(90deg, rgba(201, 168, 76, 0.15) 0%, rgba(26, 17, 14, 0.8) 100%)',
-              border: '1px solid rgba(201, 168, 76, 0.35)',
+              background: 'linear-gradient(90deg, rgba(var(--gold-rgb),  0.15) 0%, rgba(26, 17, 14, 0.8) 100%)',
+              border: '1px solid rgba(var(--gold-rgb),  0.35)',
               borderRadius: '12px',
               display: 'flex',
               alignItems: 'center',
@@ -2088,9 +2088,9 @@ export const DeliveryDashboard: React.FC = () => {
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <ShieldCheck size={20} color="#c9a84c" />
+              <ShieldCheck size={20} color="var(--gold)" />
               <div>
-                <div style={{ fontSize: '0.86rem', fontWeight: 700, color: '#f5efe6' }}>
+                <div style={{ fontSize: '0.86rem', fontWeight: 700, color: 'var(--cream)' }}>
                   Supervisor Mode Active — {user?.role === 'superadmin' ? 'Superadmin' : 'Admin'} Privilege
                 </div>
                 <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.65)' }}>
@@ -2103,8 +2103,8 @@ export const DeliveryDashboard: React.FC = () => {
               onClick={() => navigate(user?.role === 'superadmin' ? '/superadmin' : '/admin')}
               style={{
                 padding: '6px 14px',
-                background: 'rgba(201, 168, 76, 0.2)',
-                border: '1px solid rgba(201, 168, 76, 0.4)',
+                background: 'rgba(var(--gold-rgb),  0.2)',
+                border: '1px solid rgba(var(--gold-rgb),  0.4)',
                 borderRadius: '8px',
                 color: '#f5d77f',
                 fontSize: '0.78rem',
@@ -2124,7 +2124,7 @@ export const DeliveryDashboard: React.FC = () => {
         {/* ─── Main Content Views ─────────────────────────────────────────────── */}
         <div className="delivery-content">
         {isLoading ? (
-          <div style={{ textAlign: 'center', padding: '60px 20px', color: '#c9a84c' }}>
+          <div style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--gold)' }}>
             <RefreshCw size={36} className="spinning" style={{ margin: '0 auto 16px' }} />
             <div style={{ fontSize: '1.1rem', fontWeight: 700 }}>Synchronizing Assigned Deliveries...</div>
           </div>
@@ -2149,9 +2149,9 @@ export const DeliveryDashboard: React.FC = () => {
                     onClick={() => setActiveTab('queue')}
                     style={{
                       background: assignedOrders.length > 0
-                        ? 'linear-gradient(135deg, rgba(230, 126, 34, 0.22) 0%, rgba(20, 16, 13, 0.95) 100%)'
-                        : 'rgba(20, 16, 13, 0.85)',
-                      border: `1.5px solid ${assignedOrders.length > 0 ? '#e67e22' : 'rgba(201, 168, 76, 0.25)'}`,
+                        ? 'linear-gradient(135deg, rgba(230, 126, 34, 0.22) 0%, rgba(var(--surface-rgb),  0.95) 100%)'
+                        : 'rgba(var(--surface-rgb),  0.85)',
+                      border: `1.5px solid ${assignedOrders.length > 0 ? '#e67e22' : 'rgba(var(--gold-rgb),  0.25)'}`,
                       borderRadius: '12px',
                       padding: '12px 14px',
                       cursor: 'pointer',
@@ -2203,9 +2203,9 @@ export const DeliveryDashboard: React.FC = () => {
                     }}
                     style={{
                       background: inProgressOrders.length > 0
-                        ? 'linear-gradient(135deg, rgba(46, 204, 113, 0.18) 0%, rgba(20, 16, 13, 0.95) 100%)'
-                        : 'rgba(20, 16, 13, 0.85)',
-                      border: `1.5px solid ${inProgressOrders.length > 0 ? '#2ecc71' : 'rgba(201, 168, 76, 0.25)'}`,
+                        ? 'linear-gradient(135deg, rgba(46, 204, 113, 0.18) 0%, rgba(var(--surface-rgb),  0.95) 100%)'
+                        : 'rgba(var(--surface-rgb),  0.85)',
+                      border: `1.5px solid ${inProgressOrders.length > 0 ? '#2ecc71' : 'rgba(var(--gold-rgb),  0.25)'}`,
                       borderRadius: '12px',
                       padding: '12px 14px',
                       cursor: inProgressOrders.length > 0 ? 'pointer' : 'default',
@@ -2246,8 +2246,8 @@ export const DeliveryDashboard: React.FC = () => {
                   <div
                     onClick={() => setActiveTab('history')}
                     style={{
-                      background: 'rgba(20, 16, 13, 0.85)',
-                      border: '1px solid rgba(201, 168, 76, 0.25)',
+                      background: 'rgba(var(--surface-rgb),  0.85)',
+                      border: '1px solid rgba(var(--gold-rgb),  0.25)',
                       borderRadius: '12px',
                       padding: '12px 14px',
                       cursor: 'pointer',
@@ -2261,21 +2261,21 @@ export const DeliveryDashboard: React.FC = () => {
                         width: '36px',
                         height: '36px',
                         borderRadius: '10px',
-                        background: 'rgba(201, 168, 76, 0.15)',
+                        background: 'rgba(var(--gold-rgb),  0.15)',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        color: '#c9a84c',
+                        color: 'var(--gold)',
                         flexShrink: 0,
                       }}
                     >
                       <CheckCircle2 size={18} />
                     </div>
                     <div>
-                      <div style={{ fontSize: '0.66rem', color: '#c9a84c', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                      <div style={{ fontSize: '0.66rem', color: 'var(--gold)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                         Delivered Today
                       </div>
-                      <div style={{ fontSize: '1.08rem', fontWeight: 800, color: '#f5efe6' }}>
+                      <div style={{ fontSize: '1.08rem', fontWeight: 800, color: 'var(--cream)' }}>
                         {deliveredOrders.length} {deliveredOrders.length === 1 ? 'Order' : 'Orders'}
                       </div>
                       <span style={{ fontSize: '0.64rem', color: 'rgba(255,255,255,0.45)' }}>View logs →</span>
@@ -2291,8 +2291,8 @@ export const DeliveryDashboard: React.FC = () => {
                       alignItems: 'center',
                       justifyContent: 'space-between',
                       padding: '12px 18px',
-                      background: 'linear-gradient(135deg, rgba(201,168,76,0.15) 0%, rgba(26,17,14,0.92) 100%)',
-                      border: '1px solid rgba(201,168,76,0.4)',
+                      background: 'linear-gradient(135deg, rgba(var(--gold-rgb), 0.15) 0%, rgba(26,17,14,0.92) 100%)',
+                      border: '1px solid rgba(var(--gold-rgb), 0.4)',
                       borderRadius: '12px',
                       marginBottom: '16px',
                       flexWrap: 'wrap',
@@ -2305,7 +2305,7 @@ export const DeliveryDashboard: React.FC = () => {
                           width: '38px',
                           height: '38px',
                           borderRadius: '50%',
-                          background: 'rgba(201,168,76,0.2)',
+                          background: 'rgba(var(--gold-rgb), 0.2)',
                           border: '1px solid var(--gold)',
                           display: 'flex',
                           alignItems: 'center',
@@ -2317,7 +2317,7 @@ export const DeliveryDashboard: React.FC = () => {
                         <Route size={18} />
                       </div>
                       <div>
-                        <div style={{ fontWeight: 800, color: '#f5efe6', fontSize: '0.9rem' }}>
+                        <div style={{ fontWeight: 800, color: 'var(--cream)', fontSize: '0.9rem' }}>
                           🚚 You have {inProgressOrders.length} active deliveries accepted!
                         </div>
                         <div style={{ fontSize: '0.76rem', color: 'rgba(255,255,255,0.65)', marginTop: '2px' }}>
@@ -2335,8 +2335,8 @@ export const DeliveryDashboard: React.FC = () => {
                       style={{
                         padding: '8px 16px',
                         borderRadius: '8px',
-                        background: 'linear-gradient(135deg, #c9a84c 0%, #a07d2c 100%)',
-                        color: '#0f0c0a',
+                        background: 'var(--gradient-gold)',
+                        color: 'var(--black)',
                         fontWeight: 800,
                         fontSize: '0.82rem',
                         border: 'none',
@@ -2344,7 +2344,7 @@ export const DeliveryDashboard: React.FC = () => {
                         display: 'inline-flex',
                         alignItems: 'center',
                         gap: '6px',
-                        boxShadow: '0 4px 12px rgba(201,168,76,0.25)',
+                        boxShadow: '0 4px 12px rgba(var(--gold-rgb), 0.25)',
                       }}
                     >
                       <Navigation size={14} />
@@ -2381,7 +2381,7 @@ export const DeliveryDashboard: React.FC = () => {
                                 ? 'rgba(52, 152, 219, 0.2)'
                                 : activeMissionOrder.fulfillment_status === 'ACCEPTED'
                                 ? 'rgba(46, 204, 113, 0.2)'
-                                : 'rgba(201, 168, 76, 0.2)',
+                                : 'rgba(var(--gold-rgb),  0.2)',
                             color:
                               activeMissionOrder.fulfillment_status === 'OUT_FOR_DELIVERY'
                                 ? '#e67e22'
@@ -2389,7 +2389,7 @@ export const DeliveryDashboard: React.FC = () => {
                                 ? '#3498db'
                                 : activeMissionOrder.fulfillment_status === 'ACCEPTED'
                                 ? '#2ecc71'
-                                : '#c9a84c',
+                                : 'var(--gold)',
                             fontWeight: 800,
                             fontSize: '0.82rem',
                             letterSpacing: '0.5px',
@@ -2398,9 +2398,9 @@ export const DeliveryDashboard: React.FC = () => {
                         >
                           Status: {activeMissionOrder.fulfillment_status || activeMissionOrder.status}
                         </span>
-                        <div style={{ fontSize: '1.2rem', fontWeight: 800, color: '#f5efe6', marginTop: '6px' }}>
+                        <div style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--cream)', marginTop: '6px' }}>
                           ₹{activeMissionOrder.total?.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                          <span style={{ fontSize: '0.74rem', color: '#c9a84c', marginLeft: '6px' }}>
+                          <span style={{ fontSize: '0.74rem', color: 'var(--gold)', marginLeft: '6px' }}>
                             ({activeMissionOrder.payment_status || 'PAID'})
                           </span>
                         </div>
@@ -2528,7 +2528,7 @@ export const DeliveryDashboard: React.FC = () => {
 
                         <div style={{ marginBottom: '12px', fontSize: '0.84rem' }}>
                           <span style={{ color: 'rgba(255,255,255,0.6)' }}>Pickup Origin: </span>
-                          <strong style={{ color: '#c9a84c' }}>
+                          <strong style={{ color: 'var(--gold)' }}>
                             {activeMissionOrder.store_name || 'Chovique Flagship Store (MVP Colony, Visakhapatnam)'}
                           </strong>
                         </div>
@@ -2546,8 +2546,8 @@ export const DeliveryDashboard: React.FC = () => {
                                 fontSize: '0.84rem',
                               }}
                             >
-                              <span style={{ color: '#f5efe6' }}>
-                                {it.product?.name || 'Artisanal Chocolate'} × <strong style={{ color: '#c9a84c' }}>{it.quantity}</strong>
+                              <span style={{ color: 'var(--cream)' }}>
+                                {it.product?.name || 'Artisanal Chocolate'} × <strong style={{ color: 'var(--gold)' }}>{it.quantity}</strong>
                               </span>
                               <span style={{ color: 'rgba(255,255,255,0.7)', fontWeight: 600 }}>
                                 ₹{(((it as any).price || it.product?.price || 0) * (it.quantity || 1)).toLocaleString('en-IN')}
@@ -2614,7 +2614,7 @@ export const DeliveryDashboard: React.FC = () => {
                       {/* State 3: Picked Up -> On the way to customer -> Trigger Out for Delivery */}
                       {activeMissionOrder.fulfillment_status === 'PICKED_UP' && (
                         <div>
-                          <div style={{ marginBottom: '12px', color: '#c9a84c', fontSize: '0.88rem', fontWeight: 600 }}>
+                          <div style={{ marginBottom: '12px', color: 'var(--gold)', fontSize: '0.88rem', fontWeight: 600 }}>
                             📍 En route to customer. When you reach customer location, mark as Out for Delivery to issue OTP.
                           </div>
                           <button
@@ -2697,8 +2697,8 @@ export const DeliveryDashboard: React.FC = () => {
                     {assignedOrders.length > 0 ? (
                       <div
                         style={{
-                          background: 'linear-gradient(135deg, rgba(201, 168, 76, 0.12) 0%, rgba(26, 17, 14, 0.95) 100%)',
-                          border: '1.5px solid rgba(201, 168, 76, 0.45)',
+                          background: 'linear-gradient(135deg, rgba(var(--gold-rgb),  0.12) 0%, rgba(26, 17, 14, 0.95) 100%)',
+                          border: '1.5px solid rgba(var(--gold-rgb),  0.45)',
                           borderRadius: '16px',
                           padding: '24px 20px',
                           boxShadow: '0 8px 30px rgba(0,0,0,0.5)',
@@ -2722,7 +2722,7 @@ export const DeliveryDashboard: React.FC = () => {
                               <Package size={22} />
                             </div>
                             <div>
-                              <h3 style={{ margin: 0, fontSize: '1.15rem', color: '#f5efe6', fontWeight: 800 }}>
+                              <h3 style={{ margin: 0, fontSize: '1.15rem', color: 'var(--cream)', fontWeight: 800 }}>
                                 {assignedOrders.length} {assignedOrders.length === 1 ? 'Order' : 'Orders'} Waiting in Queue!
                               </h3>
                               <p style={{ margin: '2px 0 0', fontSize: '0.8rem', color: '#f39c12' }}>
@@ -2735,8 +2735,8 @@ export const DeliveryDashboard: React.FC = () => {
                             style={{
                               padding: '8px 16px',
                               borderRadius: '8px',
-                              background: 'rgba(201, 168, 76, 0.2)',
-                              border: '1px solid #c9a84c',
+                              background: 'rgba(var(--gold-rgb),  0.2)',
+                              border: '1px solid var(--gold)',
                               color: '#f5d77f',
                               fontSize: '0.82rem',
                               fontWeight: 700,
@@ -2770,16 +2770,16 @@ export const DeliveryDashboard: React.FC = () => {
                             >
                               <div>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                                  <span style={{ color: '#c9a84c', fontWeight: 800, fontSize: '0.95rem' }}>Order #{ord.id}</span>
+                                  <span style={{ color: 'var(--gold)', fontWeight: 800, fontSize: '0.95rem' }}>Order #{ord.id}</span>
                                   <span style={{ fontSize: '0.72rem', background: 'rgba(230, 126, 34, 0.2)', color: '#f39c12', padding: '2px 8px', borderRadius: '4px', fontWeight: 700 }}>
                                     ASSIGNED
                                   </span>
                                 </div>
-                                <div style={{ color: '#f5efe6', fontWeight: 700, fontSize: '0.9rem', marginBottom: '3px' }}>
+                                <div style={{ color: 'var(--cream)', fontWeight: 700, fontSize: '0.9rem', marginBottom: '3px' }}>
                                   {getCustomerName(ord)}
                                 </div>
                                 <div style={{ color: 'rgba(255, 255, 255, 0.65)', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                                  <MapPin size={13} color="#c9a84c" />
+                                  <MapPin size={13} color="var(--gold)" />
                                   <span>{getFullAddress(ord)}</span>
                                 </div>
                               </div>
@@ -2799,8 +2799,8 @@ export const DeliveryDashboard: React.FC = () => {
                                   style={{
                                     padding: '9px 18px',
                                     borderRadius: '8px',
-                                    background: 'linear-gradient(135deg, #c9a84c 0%, #e5c875 100%)',
-                                    color: '#0f0c0a',
+                                    background: 'var(--gradient-gold)',
+                                    color: 'var(--black)',
                                     border: 'none',
                                     fontWeight: 800,
                                     fontSize: '0.84rem',
@@ -2808,7 +2808,7 @@ export const DeliveryDashboard: React.FC = () => {
                                     display: 'inline-flex',
                                     alignItems: 'center',
                                     gap: '6px',
-                                    boxShadow: '0 4px 12px rgba(201, 168, 76, 0.3)',
+                                    boxShadow: '0 4px 12px rgba(var(--gold-rgb),  0.3)',
                                   }}
                                 >
                                   {isAcceptingOrderId === ord.id ? <RefreshCw size={14} className="spinning" /> : <CheckCircle size={15} />}
@@ -2823,14 +2823,14 @@ export const DeliveryDashboard: React.FC = () => {
                       <div
                         style={{
                           background: 'rgba(24, 19, 15, 0.85)',
-                          border: '1px solid rgba(201, 168, 76, 0.3)',
+                          border: '1px solid rgba(var(--gold-rgb),  0.3)',
                           borderRadius: '16px',
                           padding: '36px 20px',
                           textAlign: 'center',
                         }}
                       >
-                        <Navigation size={42} color="#c9a84c" style={{ margin: '0 auto 14px' }} />
-                        <h3 style={{ fontSize: '1.2rem', color: '#f5efe6', marginBottom: '8px' }}>
+                        <Navigation size={42} color="var(--gold)" style={{ margin: '0 auto 14px' }} />
+                        <h3 style={{ fontSize: '1.2rem', color: 'var(--cream)', marginBottom: '8px' }}>
                           Select an Active Order to Navigate
                         </h3>
                         <p style={{ color: 'rgba(255,255,255,0.65)', maxWidth: '420px', margin: '0 auto 18px', fontSize: '0.86rem' }}>
@@ -2844,8 +2844,8 @@ export const DeliveryDashboard: React.FC = () => {
                               }
                             }}
                             style={{
-                              background: '#c9a84c',
-                              color: '#0f0c0a',
+                              background: 'var(--gold)',
+                              color: 'var(--black)',
                               padding: '10px 20px',
                               borderRadius: '8px',
                               fontWeight: 700,
@@ -2859,7 +2859,7 @@ export const DeliveryDashboard: React.FC = () => {
                             onClick={() => setActiveTab('route')}
                             style={{
                               background: 'rgba(255,255,255,0.08)',
-                              color: '#f5efe6',
+                              color: 'var(--cream)',
                               border: '1px solid rgba(255,255,255,0.2)',
                               padding: '10px 20px',
                               borderRadius: '8px',
@@ -2875,14 +2875,14 @@ export const DeliveryDashboard: React.FC = () => {
                       <div
                         style={{
                           background: 'rgba(24, 19, 15, 0.85)',
-                          border: '1px dashed rgba(201, 168, 76, 0.3)',
+                          border: '1px dashed rgba(var(--gold-rgb),  0.3)',
                           borderRadius: '16px',
                           padding: '50px 20px',
                           textAlign: 'center',
                         }}
                       >
                         <CheckCircle size={48} color="#2ecc71" style={{ margin: '0 auto 16px', opacity: 0.9 }} />
-                        <h3 style={{ fontSize: '1.25rem', color: '#f5efe6', marginBottom: '8px' }}>
+                        <h3 style={{ fontSize: '1.25rem', color: 'var(--cream)', marginBottom: '8px' }}>
                           All Caught Up & On Duty!
                         </h3>
                         <p style={{ color: 'rgba(255,255,255,0.65)', maxWidth: '420px', margin: '0 auto 20px', fontSize: '0.88rem', lineHeight: 1.5 }}>
@@ -2891,14 +2891,14 @@ export const DeliveryDashboard: React.FC = () => {
                         <div style={{ display: 'flex', justifyContent: 'center', gap: '10px', flexWrap: 'wrap' }}>
                           <button
                             className="btn-tab"
-                            style={{ background: '#c9a84c', color: '#0f0c0a', padding: '10px 20px', borderRadius: '8px', fontWeight: 700 }}
+                            style={{ background: 'var(--gold)', color: 'var(--black)', padding: '10px 20px', borderRadius: '8px', fontWeight: 700 }}
                             onClick={() => fetchData()}
                           >
                             <RefreshCw size={14} style={{ marginRight: '6px', verticalAlign: 'middle' }} />
                             Refresh Queue
                           </button>
                           <button
-                            style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)', color: '#f5efe6', padding: '10px 18px', borderRadius: '8px', fontWeight: 600, cursor: 'pointer' }}
+                            style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)', color: 'var(--cream)', padding: '10px 18px', borderRadius: '8px', fontWeight: 600, cursor: 'pointer' }}
                             onClick={() => setActiveTab('history')}
                           >
                             Delivered History ({deliveredOrders.length})
@@ -2919,7 +2919,7 @@ export const DeliveryDashboard: React.FC = () => {
                 {/* ─── Queue Scoped Metric Stats Strip ──────────────────────────────── */}
                 <section className="delivery-stats-grid" style={{ marginBottom: '22px' }}>
                   <div className="delivery-stat-card">
-                    <div className="delivery-stat-icon" style={{ background: 'rgba(201,168,76,0.15)', color: '#c9a84c' }}>
+                    <div className="delivery-stat-icon" style={{ background: 'rgba(var(--gold-rgb), 0.15)', color: 'var(--gold)' }}>
                       <Package size={20} />
                     </div>
                     <div>
@@ -2971,10 +2971,10 @@ export const DeliveryDashboard: React.FC = () => {
                         fontSize: '0.78rem',
                         fontWeight: 700,
                         cursor: 'pointer',
-                        background: statusFilter === st ? '#c9a84c' : 'rgba(255,255,255,0.06)',
-                        color: statusFilter === st ? '#0f0c0a' : 'rgba(255,255,255,0.7)',
+                        background: statusFilter === st ? 'var(--gold)' : 'rgba(255,255,255,0.06)',
+                        color: statusFilter === st ? 'var(--black)' : 'rgba(255,255,255,0.7)',
                         border: '1px solid',
-                        borderColor: statusFilter === st ? '#c9a84c' : 'rgba(255,255,255,0.1)',
+                        borderColor: statusFilter === st ? 'var(--gold)' : 'rgba(255,255,255,0.1)',
                       }}
                     >
                       {st.replace(/_/g, ' ')}
@@ -2986,24 +2986,24 @@ export const DeliveryDashboard: React.FC = () => {
                 {assignedOrders.length > 0 && (
                   <div
                     style={{
-                      background: 'linear-gradient(135deg, rgba(201, 168, 76, 0.18) 0%, rgba(30, 20, 14, 0.95) 100%)',
-                      border: '1.5px solid rgba(201, 168, 76, 0.5)',
+                      background: 'linear-gradient(135deg, rgba(var(--gold-rgb),  0.18) 0%, rgba(30, 20, 14, 0.95) 100%)',
+                      border: '1.5px solid rgba(var(--gold-rgb),  0.5)',
                       borderRadius: '14px',
                       padding: '18px 22px',
                       marginBottom: '20px',
                       boxShadow: '0 8px 30px rgba(0, 0, 0, 0.45)',
                     }}
                   >
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '14px', borderBottom: '1px solid rgba(201,168,76,0.2)', paddingBottom: '14px', marginBottom: '14px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '14px', borderBottom: '1px solid rgba(var(--gold-rgb), 0.2)', paddingBottom: '14px', marginBottom: '14px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: '#c9a84c', color: '#0f0c0a', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '1.2rem', boxShadow: '0 2px 10px rgba(201,168,76,0.3)' }}>
+                        <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'var(--gold)', color: 'var(--black)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '1.2rem', boxShadow: '0 2px 10px rgba(var(--gold-rgb), 0.3)' }}>
                           📦
                         </div>
                         <div>
-                          <h3 style={{ margin: 0, color: '#f5efe6', fontSize: '1.12rem', fontWeight: 800 }}>
+                          <h3 style={{ margin: 0, color: 'var(--cream)', fontSize: '1.12rem', fontWeight: 800 }}>
                             Batch 1: {assignedOrders.length} {assignedOrders.length === 1 ? 'Order' : 'Orders'} Assigned by Admin
                           </h3>
-                          <p style={{ margin: '3px 0 0', color: '#c9a84c', fontSize: '0.82rem', fontWeight: 600 }}>
+                          <p style={{ margin: '3px 0 0', color: 'var(--gold)', fontSize: '0.82rem', fontWeight: 600 }}>
                             In this batch {assignedOrders.length} {assignedOrders.length === 1 ? 'order has' : 'orders have'} been assigned. Do you want to accept these orders or decline?
                           </p>
                         </div>
@@ -3016,8 +3016,8 @@ export const DeliveryDashboard: React.FC = () => {
                           style={{
                             padding: '10px 22px',
                             borderRadius: '8px',
-                            background: 'linear-gradient(135deg, #c9a84c 0%, #e5c875 100%)',
-                            color: '#0f0c0a',
+                            background: 'var(--gradient-gold)',
+                            color: 'var(--black)',
                             fontWeight: 800,
                             fontSize: '0.86rem',
                             border: 'none',
@@ -3025,7 +3025,7 @@ export const DeliveryDashboard: React.FC = () => {
                             display: 'inline-flex',
                             alignItems: 'center',
                             gap: '7px',
-                            boxShadow: '0 4px 14px rgba(201, 168, 76, 0.35)',
+                            boxShadow: '0 4px 14px rgba(var(--gold-rgb),  0.35)',
                           }}
                         >
                           {isBatchAccepting ? <RefreshCw size={15} className="spinning" /> : <CheckCircle2 size={16} />}
@@ -3070,13 +3070,13 @@ export const DeliveryDashboard: React.FC = () => {
                             borderRadius: '8px',
                             border: '1px solid rgba(255,255,255,0.08)',
                             fontSize: '0.8rem',
-                            color: '#f5efe6',
+                            color: 'var(--cream)',
                             display: 'flex',
                             alignItems: 'center',
                             gap: '8px',
                           }}
                         >
-                          <span style={{ color: '#c9a84c', fontWeight: 800 }}>#{ord.id}</span>
+                          <span style={{ color: 'var(--gold)', fontWeight: 800 }}>#{ord.id}</span>
                           <span style={{ color: 'rgba(255,255,255,0.4)' }}>·</span>
                           <span>{getCustomerName(ord)}</span>
                           <span style={{ color: 'rgba(255,255,255,0.4)' }}>·</span>
@@ -3107,7 +3107,7 @@ export const DeliveryDashboard: React.FC = () => {
                                         ? 'rgba(52,152,219,0.2)'
                                         : order.fulfillment_status === 'ACCEPTED'
                                         ? 'rgba(46,204,113,0.2)'
-                                        : 'rgba(201,168,76,0.2)',
+                                        : 'rgba(var(--gold-rgb), 0.2)',
                                     color:
                                       order.fulfillment_status === 'OUT_FOR_DELIVERY'
                                         ? '#e67e22'
@@ -3115,18 +3115,18 @@ export const DeliveryDashboard: React.FC = () => {
                                         ? '#3498db'
                                         : order.fulfillment_status === 'ACCEPTED'
                                         ? '#2ecc71'
-                                        : '#c9a84c',
+                                        : 'var(--gold)',
                                   }}
                                 >
                                   {order.fulfillment_status || order.status}
                                 </span>
                                 {isCurrent && (
-                                  <span style={{ fontSize: '0.68rem', background: '#c9a84c', color: '#0f0c0a', padding: '3px 6px', borderRadius: '4px', fontWeight: 800 }}>
+                                  <span style={{ fontSize: '0.68rem', background: 'var(--gold)', color: 'var(--black)', padding: '3px 6px', borderRadius: '4px', fontWeight: 800 }}>
                                     CURRENT TARGET
                                   </span>
                                 )}
                               </div>
-                              <span style={{ fontSize: '0.82rem', fontWeight: 800, color: '#f5efe6' }}>
+                              <span style={{ fontSize: '0.82rem', fontWeight: 800, color: 'var(--cream)' }}>
                                 ₹{order.total?.toLocaleString('en-IN')}
                               </span>
                             </div>
@@ -3180,7 +3180,7 @@ export const DeliveryDashboard: React.FC = () => {
                 {orders.filter((o) => o.fulfillment_status !== 'DELIVERED').length === 0 && (
                   <div style={{ textAlign: 'center', padding: '60px 20px', color: 'rgba(255,255,255,0.6)' }}>
                     <CheckCircle size={40} color="#2ecc71" style={{ margin: '0 auto 12px' }} />
-                    <div style={{ fontSize: '1.1rem', fontWeight: 700, color: '#f5efe6' }}>Queue Clear!</div>
+                    <div style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--cream)' }}>Queue Clear!</div>
                     <p style={{ fontSize: '0.85rem' }}>All assigned orders have been safely delivered.</p>
                   </div>
                 )}
@@ -3202,8 +3202,8 @@ export const DeliveryDashboard: React.FC = () => {
                     gap: '10px',
                     marginBottom: '16px',
                     padding: '12px 16px',
-                    background: 'rgba(20,16,13,0.9)',
-                    border: '1px solid rgba(201,168,76,0.2)',
+                    background: 'rgba(var(--surface-rgb), 0.9)',
+                    border: '1px solid rgba(var(--gold-rgb), 0.2)',
                     borderRadius: '12px',
                   }}
                 >
@@ -3251,7 +3251,7 @@ export const DeliveryDashboard: React.FC = () => {
                       style={{
                         background: 'rgba(255,255,255,0.07)',
                         border: '1px solid rgba(255,255,255,0.14)',
-                        color: '#f5efe6',
+                        color: 'var(--cream)',
                         padding: '7px 13px',
                         borderRadius: '8px',
                         display: 'flex', alignItems: 'center', gap: '5px',
@@ -3290,11 +3290,11 @@ export const DeliveryDashboard: React.FC = () => {
                 )}
 
                 {/* Route Header */}
-                <div style={{ background: 'rgba(20,16,13,0.9)', border: '1px solid rgba(201,168,76,0.2)', borderRadius: '16px', padding: '18px 20px', marginBottom: '18px' }}>
+                <div style={{ background: 'rgba(var(--surface-rgb), 0.9)', border: '1px solid rgba(var(--gold-rgb), 0.2)', borderRadius: '16px', padding: '18px 20px', marginBottom: '18px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
                     <div>
-                      <h3 style={{ fontSize: '1.05rem', color: '#f5efe6', margin: '0 0 4px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <Route size={18} color="#c9a84c" /> Multi-Stop Delivery Circuit
+                      <h3 style={{ fontSize: '1.05rem', color: 'var(--cream)', margin: '0 0 4px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <Route size={18} color="var(--gold)" /> Multi-Stop Delivery Circuit
                       </h3>
                       <p style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.6)', margin: 0 }}>
                         {locationPermission === 'granted' && liveLocation
@@ -3324,7 +3324,7 @@ export const DeliveryDashboard: React.FC = () => {
                   <div className="proximity-dispatch-banner">
                     <div className="proximity-dispatch-text">
                       <h3>
-                        <Navigation size={18} color="#c9a84c" />
+                        <Navigation size={18} color="var(--gold)" />
                         Proximity Multi-Stop Dispatch
                       </h3>
                       <p>
@@ -3371,9 +3371,9 @@ export const DeliveryDashboard: React.FC = () => {
                             key={order.id}
                             className={`route-stop-card ${isNearest ? 'is-nearest' : ''}`}
                             style={{
-                              border: `1px solid ${isCurrent ? '#c9a84c' : isNearest ? '#2ecc71' : 'rgba(255,255,255,0.08)'}`,
+                              border: `1px solid ${isCurrent ? 'var(--gold)' : isNearest ? '#2ecc71' : 'rgba(255,255,255,0.08)'}`,
                               background: isCurrent
-                                ? 'linear-gradient(135deg, rgba(35,28,22,0.95), rgba(20,16,13,0.95))'
+                                ? 'linear-gradient(135deg, rgba(35,28,22,0.95), rgba(var(--surface-rgb), 0.95))'
                                 : 'rgba(22,17,14,0.85)',
                               opacity: isDelivered ? 0.6 : 1,
                             }}
@@ -3384,9 +3384,9 @@ export const DeliveryDashboard: React.FC = () => {
                               <div
                                 style={{
                                   width: '36px', height: '36px', borderRadius: '50%', flexShrink: 0,
-                                  background: isDelivered ? '#2ecc71' : isCurrent ? '#c9a84c' : isNearest ? 'rgba(46,204,113,0.2)' : 'rgba(255,255,255,0.1)',
+                                  background: isDelivered ? '#2ecc71' : isCurrent ? 'var(--gold)' : isNearest ? 'rgba(46,204,113,0.2)' : 'rgba(255,255,255,0.1)',
                                   border: isNearest && !isDelivered && !isCurrent ? '1.5px solid #2ecc71' : 'none',
-                                  color: isDelivered || isCurrent ? '#0f0c0a' : isNearest ? '#2ecc71' : '#f5efe6',
+                                  color: isDelivered || isCurrent ? 'var(--black)' : isNearest ? '#2ecc71' : '#f5efe6',
                                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                                   fontWeight: 800, fontSize: '0.85rem',
                                 }}
@@ -3395,9 +3395,9 @@ export const DeliveryDashboard: React.FC = () => {
                               </div>
                               <div style={{ flex: 1, minWidth: 0 }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '2px' }}>
-                                  <strong style={{ color: '#f5efe6', fontSize: '0.9rem' }}>{getCustomerName(order)}</strong>
-                                  <span style={{ fontSize: '0.68rem', color: '#c9a84c', fontWeight: 700 }}>#{order.id}</span>
-                                  {isCurrent && <span style={{ fontSize: '0.65rem', background: '#c9a84c', color: '#0f0c0a', padding: '1px 6px', borderRadius: '4px', fontWeight: 800 }}>CURRENT</span>}
+                                  <strong style={{ color: 'var(--cream)', fontSize: '0.9rem' }}>{getCustomerName(order)}</strong>
+                                  <span style={{ fontSize: '0.68rem', color: 'var(--gold)', fontWeight: 700 }}>#{order.id}</span>
+                                  {isCurrent && <span style={{ fontSize: '0.65rem', background: 'var(--gold)', color: 'var(--black)', padding: '1px 6px', borderRadius: '4px', fontWeight: 800 }}>CURRENT</span>}
                                 </div>
                                 <div style={{ fontSize: '0.76rem', color: 'rgba(255,255,255,0.6)', lineHeight: 1.35, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
                                   {getFullAddress(order)}
@@ -3407,8 +3407,8 @@ export const DeliveryDashboard: React.FC = () => {
                                     className="distance-badge"
                                     style={{
                                       marginTop: '6px',
-                                      background: 'rgba(201, 168, 76, 0.14)',
-                                      border: '1px solid rgba(201, 168, 76, 0.3)',
+                                      background: 'rgba(var(--gold-rgb),  0.14)',
+                                      border: '1px solid rgba(var(--gold-rgb),  0.3)',
                                       color: '#f5d77f',
                                     }}
                                   >
@@ -3451,9 +3451,9 @@ export const DeliveryDashboard: React.FC = () => {
                                   style={{
                                     padding: '7px 14px',
                                     borderRadius: '7px',
-                                    background: isCurrent ? '#c9a84c' : 'rgba(255,255,255,0.1)',
+                                    background: isCurrent ? 'var(--gold)' : 'rgba(255,255,255,0.1)',
                                     border: isCurrent ? 'none' : '1px solid rgba(255,255,255,0.15)',
-                                    color: isCurrent ? '#0f0c0a' : '#f5efe6',
+                                    color: isCurrent ? 'var(--black)' : '#f5efe6',
                                     fontSize: '0.78rem',
                                     fontWeight: 700,
                                     cursor: 'pointer',
@@ -3476,8 +3476,8 @@ export const DeliveryDashboard: React.FC = () => {
 
                 {orders.length === 0 && (
                   <div style={{ textAlign: 'center', padding: '60px 20px', color: 'rgba(255,255,255,0.6)' }}>
-                    <Route size={40} color="#c9a84c" style={{ margin: '0 auto 12px' }} />
-                    <div style={{ fontSize: '1rem', fontWeight: 700, color: '#f5efe6' }}>No stops in circuit</div>
+                    <Route size={40} color="var(--gold)" style={{ margin: '0 auto 12px' }} />
+                    <div style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--cream)' }}>No stops in circuit</div>
                     <p style={{ fontSize: '0.85rem' }}>Accept orders from the queue to build your multi-stop route.</p>
                   </div>
                 )}
@@ -3491,11 +3491,11 @@ export const DeliveryDashboard: React.FC = () => {
               <div>
                 {/* Delivery History Stats Grid */}
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '14px', marginBottom: '22px' }}>
-                  <div className="glass-panel" style={{ padding: '14px 18px', borderRadius: '10px', borderTop: '2px solid #c9a84c', background: 'rgba(20,16,13,0.9)' }}>
+                  <div className="glass-panel" style={{ padding: '14px 18px', borderRadius: '10px', borderTop: '2px solid var(--gold)', background: 'rgba(var(--surface-rgb), 0.9)' }}>
                     <div style={{ fontSize: '0.68rem', color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '6px' }}>
                       Total Assigned Orders
                     </div>
-                    <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#c9a84c', fontFamily: 'var(--font-display)' }}>
+                    <div style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--gold)', fontFamily: 'var(--font-number)' }}>
                       {validOrders.length}
                     </div>
                     <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.5)', marginTop: '4px' }}>
@@ -3503,11 +3503,11 @@ export const DeliveryDashboard: React.FC = () => {
                     </div>
                   </div>
 
-                  <div className="glass-panel" style={{ padding: '14px 18px', borderRadius: '10px', borderTop: '2px solid #3498db', background: 'rgba(20,16,13,0.9)' }}>
+                  <div className="glass-panel" style={{ padding: '14px 18px', borderRadius: '10px', borderTop: '2px solid #3498db', background: 'rgba(var(--surface-rgb), 0.9)' }}>
                     <div style={{ fontSize: '0.68rem', color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '6px' }}>
                       Accepted Orders
                     </div>
-                    <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#3498db', fontFamily: 'var(--font-display)' }}>
+                    <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#3498db', fontFamily: 'var(--font-number)' }}>
                       {acceptedOrders.length + pickedOrders.length + outOrders.length + deliveredOrders.length}
                     </div>
                     <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.5)', marginTop: '4px' }}>
@@ -3515,11 +3515,11 @@ export const DeliveryDashboard: React.FC = () => {
                     </div>
                   </div>
 
-                  <div className="glass-panel" style={{ padding: '14px 18px', borderRadius: '10px', borderTop: '2px solid #e67e22', background: 'rgba(20,16,13,0.9)' }}>
+                  <div className="glass-panel" style={{ padding: '14px 18px', borderRadius: '10px', borderTop: '2px solid #e67e22', background: 'rgba(var(--surface-rgb), 0.9)' }}>
                     <div style={{ fontSize: '0.68rem', color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '6px' }}>
                       In-Flight / Out
                     </div>
-                    <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#e67e22', fontFamily: 'var(--font-display)' }}>
+                    <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#e67e22', fontFamily: 'var(--font-number)' }}>
                       {inProgressOrders.length}
                     </div>
                     <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.5)', marginTop: '4px' }}>
@@ -3527,11 +3527,11 @@ export const DeliveryDashboard: React.FC = () => {
                     </div>
                   </div>
 
-                  <div className="glass-panel" style={{ padding: '14px 18px', borderRadius: '10px', borderTop: '2px solid #2ecc71', background: 'rgba(20,16,13,0.9)' }}>
+                  <div className="glass-panel" style={{ padding: '14px 18px', borderRadius: '10px', borderTop: '2px solid #2ecc71', background: 'rgba(var(--surface-rgb), 0.9)' }}>
                     <div style={{ fontSize: '0.68rem', color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '6px' }}>
                       Delivered Successfully
                     </div>
-                    <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#2ecc71', fontFamily: 'var(--font-display)' }}>
+                    <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#2ecc71', fontFamily: 'var(--font-number)' }}>
                       {deliveredOrders.length}
                     </div>
                     <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.5)', marginTop: '4px' }}>
@@ -3552,7 +3552,7 @@ export const DeliveryDashboard: React.FC = () => {
                         <div
                           key={order.id}
                           style={{
-                            background: 'rgba(20, 16, 13, 0.85)',
+                            background: 'rgba(var(--surface-rgb),  0.85)',
                             border: '1px solid rgba(46, 204, 113, 0.25)',
                             borderRadius: '12px',
                             padding: '16px 20px',
@@ -3579,7 +3579,7 @@ export const DeliveryDashboard: React.FC = () => {
                               <CheckCircle size={20} />
                             </div>
                             <div>
-                              <div style={{ fontWeight: 700, fontSize: '0.95rem', color: '#f5efe6' }}>
+                              <div style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--cream)' }}>
                                 Order #{order.id} • {getCustomerName(order)}
                               </div>
                               <div style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.6)' }}>
@@ -3592,7 +3592,7 @@ export const DeliveryDashboard: React.FC = () => {
                             <div style={{ fontWeight: 800, color: '#2ecc71', fontSize: '1rem' }}>
                               ₹{order.total?.toLocaleString('en-IN')}
                             </div>
-                            <div style={{ fontSize: '0.72rem', color: '#c9a84c', marginTop: '2px' }}>
+                            <div style={{ fontSize: '0.72rem', color: 'var(--gold)', marginTop: '2px' }}>
                               OTP Verified & Handed Over
                             </div>
                           </div>
@@ -3601,7 +3601,7 @@ export const DeliveryDashboard: React.FC = () => {
 
                       {deliveredOrders.length === 0 && (
                         <div style={{ textAlign: 'center', padding: '60px 20px', color: 'rgba(255,255,255,0.5)' }}>
-                          <Clock size={36} color="#c9a84c" style={{ margin: '0 auto 12px' }} />
+                          <Clock size={36} color="var(--gold)" style={{ margin: '0 auto 12px' }} />
                           <div style={{ fontWeight: 700, fontSize: '1rem' }}>No delivered orders yet today</div>
                         </div>
                       )}
@@ -3617,15 +3617,15 @@ export const DeliveryDashboard: React.FC = () => {
                             gap: '12px',
                             padding: '14px 18px',
                             marginTop: '8px',
-                            background: 'rgba(20, 16, 13, 0.75)',
-                            border: '1px solid rgba(201, 168, 76, 0.2)',
+                            background: 'rgba(var(--surface-rgb),  0.75)',
+                            border: '1px solid rgba(var(--gold-rgb),  0.2)',
                             borderRadius: '10px',
                           }}
                         >
                           <div style={{ fontSize: '0.8rem', color: 'rgba(255, 255, 255, 0.65)' }}>
-                            Showing <strong style={{ color: '#f5efe6' }}>{startIndex + 1}</strong> to{' '}
-                            <strong style={{ color: '#f5efe6' }}>{Math.min(startIndex + HISTORY_PAGE_SIZE, deliveredOrders.length)}</strong> of{' '}
-                            <strong style={{ color: '#c9a84c' }}>{deliveredOrders.length}</strong> delivered orders
+                            Showing <strong style={{ color: 'var(--cream)' }}>{startIndex + 1}</strong> to{' '}
+                            <strong style={{ color: 'var(--cream)' }}>{Math.min(startIndex + HISTORY_PAGE_SIZE, deliveredOrders.length)}</strong> of{' '}
+                            <strong style={{ color: 'var(--gold)' }}>{deliveredOrders.length}</strong> delivered orders
                           </div>
 
                           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -3636,8 +3636,8 @@ export const DeliveryDashboard: React.FC = () => {
                               style={{
                                 padding: '6px 12px',
                                 borderRadius: '6px',
-                                background: currentHistoryPage === 1 ? 'rgba(255, 255, 255, 0.04)' : 'rgba(201, 168, 76, 0.15)',
-                                border: '1px solid rgba(201, 168, 76, 0.3)',
+                                background: currentHistoryPage === 1 ? 'rgba(255, 255, 255, 0.04)' : 'rgba(var(--gold-rgb),  0.15)',
+                                border: '1px solid rgba(var(--gold-rgb),  0.3)',
                                 color: currentHistoryPage === 1 ? 'rgba(255, 255, 255, 0.3)' : '#f5efe6',
                                 fontSize: '0.78rem',
                                 fontWeight: 700,
@@ -3660,9 +3660,9 @@ export const DeliveryDashboard: React.FC = () => {
                                   width: '32px',
                                   height: '32px',
                                   borderRadius: '6px',
-                                  background: pageNum === currentHistoryPage ? '#c9a84c' : 'rgba(255, 255, 255, 0.05)',
+                                  background: pageNum === currentHistoryPage ? 'var(--gold)' : 'rgba(255, 255, 255, 0.05)',
                                   border: pageNum === currentHistoryPage ? '1px solid #c9a84c' : '1px solid rgba(255, 255, 255, 0.1)',
-                                  color: pageNum === currentHistoryPage ? '#0f0c0a' : '#f5efe6',
+                                  color: pageNum === currentHistoryPage ? 'var(--black)' : '#f5efe6',
                                   fontSize: '0.8rem',
                                   fontWeight: 800,
                                   cursor: 'pointer',
@@ -3679,8 +3679,8 @@ export const DeliveryDashboard: React.FC = () => {
                               style={{
                                 padding: '6px 12px',
                                 borderRadius: '6px',
-                                background: currentHistoryPage === totalHistoryPages ? 'rgba(255, 255, 255, 0.04)' : 'rgba(201, 168, 76, 0.15)',
-                                border: '1px solid rgba(201, 168, 76, 0.3)',
+                                background: currentHistoryPage === totalHistoryPages ? 'rgba(255, 255, 255, 0.04)' : 'rgba(var(--gold-rgb),  0.15)',
+                                border: '1px solid rgba(var(--gold-rgb),  0.3)',
                                 color: currentHistoryPage === totalHistoryPages ? 'rgba(255, 255, 255, 0.3)' : '#f5efe6',
                                 fontSize: '0.78rem',
                                 fontWeight: 700,
@@ -3712,7 +3712,7 @@ export const DeliveryDashboard: React.FC = () => {
                   className="glass-panel"
                   style={{
                     background: 'linear-gradient(135deg, rgba(26, 18, 11, 0.98), rgba(16, 12, 9, 0.98))',
-                    border: '1px solid rgba(201, 168, 76, 0.35)',
+                    border: '1px solid rgba(var(--gold-rgb),  0.35)',
                     borderRadius: '16px',
                     padding: '28px',
                     marginBottom: '24px',
@@ -3728,15 +3728,15 @@ export const DeliveryDashboard: React.FC = () => {
                         width: '74px',
                         height: '74px',
                         borderRadius: '50%',
-                        background: 'linear-gradient(135deg, rgba(201,168,76,0.4), rgba(26,17,14,0.9))',
-                        border: '2px solid #c9a84c',
-                        color: '#c9a84c',
+                        background: 'linear-gradient(135deg, rgba(var(--gold-rgb), 0.4), rgba(26,17,14,0.9))',
+                        border: '2px solid var(--gold)',
+                        color: 'var(--gold)',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
                         fontSize: '1.8rem',
                         fontWeight: 800,
-                        boxShadow: '0 0 20px rgba(201,168,76,0.25)',
+                        boxShadow: '0 0 20px rgba(var(--gold-rgb), 0.25)',
                         cursor: 'pointer',
                         overflow: 'hidden',
                       }}
@@ -3768,16 +3768,16 @@ export const DeliveryDashboard: React.FC = () => {
                     </div>
                     <div style={{ flex: 1, minWidth: '220px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-                        <h3 style={{ fontFamily: 'var(--font-display, serif)', fontSize: '1.4rem', color: '#f5efe6', margin: 0 }}>
+                        <h3 style={{ fontFamily: 'var(--font-display, serif)', fontSize: '1.4rem', color: 'var(--cream)', margin: 0 }}>
                           {profile?.full_name || user?.name || 'Executive'}
                         </h3>
                         <span
                           style={{
                             padding: '3px 8px',
                             borderRadius: '6px',
-                            background: 'rgba(201, 168, 76, 0.15)',
-                            border: '1px solid rgba(201, 168, 76, 0.35)',
-                            color: '#c9a84c',
+                            background: 'rgba(var(--gold-rgb),  0.15)',
+                            border: '1px solid rgba(var(--gold-rgb),  0.35)',
+                            color: 'var(--gold)',
                             fontSize: '0.72rem',
                             fontWeight: 800,
                           }}
@@ -3787,11 +3787,11 @@ export const DeliveryDashboard: React.FC = () => {
                       </div>
                       <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', marginTop: '8px', color: 'rgba(255,255,255,0.7)', fontSize: '0.84rem' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          <Phone size={14} color="#c9a84c" />
+                          <Phone size={14} color="var(--gold)" />
                           <span>{profile?.phone || 'Phone not set'}</span>
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          <Package size={14} color="#c9a84c" />
+                          <Package size={14} color="var(--gold)" />
                           <span>{profile?.email || user?.email || 'N/A'}</span>
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -3807,8 +3807,8 @@ export const DeliveryDashboard: React.FC = () => {
                         style={{
                           padding: '10px 18px',
                           borderRadius: '8px',
-                          background: 'linear-gradient(135deg, rgba(201, 168, 76, 0.25) 0%, rgba(201, 168, 76, 0.1) 100%)',
-                          border: '1px solid rgba(201, 168, 76, 0.5)',
+                          background: 'linear-gradient(135deg, rgba(var(--gold-rgb),  0.25) 0%, rgba(var(--gold-rgb),  0.1) 100%)',
+                          border: '1px solid rgba(var(--gold-rgb),  0.5)',
                           color: '#f5d77f',
                           fontWeight: 700,
                           fontSize: '0.85rem',
@@ -3852,36 +3852,36 @@ export const DeliveryDashboard: React.FC = () => {
                   <div
                     style={{
                       background: 'rgba(22, 17, 14, 0.9)',
-                      border: '1px solid rgba(201, 168, 76, 0.25)',
+                      border: '1px solid rgba(var(--gold-rgb),  0.25)',
                       borderRadius: '12px',
                       padding: '20px',
                     }}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
-                      <Store size={20} color="#c9a84c" />
-                      <h4 style={{ margin: 0, color: '#f5efe6', fontSize: '1rem', fontFamily: 'var(--font-display, serif)' }}>
+                      <Store size={20} color="var(--gold)" />
+                      <h4 style={{ margin: 0, color: 'var(--cream)', fontSize: '1rem', fontFamily: 'var(--font-display, serif)' }}>
                         Assigned Fulfillment Center
                       </h4>
                     </div>
                     <div style={{ fontSize: '0.84rem', color: 'rgba(255,255,255,0.7)', lineHeight: 1.6 }}>
-                      <strong style={{ color: '#f5efe6' }}>Chovique Central Store & Fulfillment Hub</strong><br />
+                      <strong style={{ color: 'var(--cream)' }}>Chovique Central Store & Fulfillment Hub</strong><br />
                       Plot 42, Jubilee Hills Road No. 36<br />
                       Hyderabad, Telangana 500033<br />
-                      <span style={{ color: '#c9a84c' }}>Hub Dispatch Hours: 09:00 AM – 10:00 PM (Daily Express)</span>
+                      <span style={{ color: 'var(--gold)' }}>Hub Dispatch Hours: 09:00 AM – 10:00 PM (Daily Express)</span>
                     </div>
                   </div>
 
                   <div
                     style={{
                       background: 'rgba(22, 17, 14, 0.9)',
-                      border: '1px solid rgba(201, 168, 76, 0.25)',
+                      border: '1px solid rgba(var(--gold-rgb),  0.25)',
                       borderRadius: '12px',
                       padding: '20px',
                     }}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
                       <Award size={20} color="#2ecc71" />
-                      <h4 style={{ margin: 0, color: '#f5efe6', fontSize: '1rem', fontFamily: 'var(--font-display, serif)' }}>
+                      <h4 style={{ margin: 0, color: 'var(--cream)', fontSize: '1rem', fontFamily: 'var(--font-display, serif)' }}>
                         Fulfillment Performance
                       </h4>
                     </div>
@@ -3892,7 +3892,7 @@ export const DeliveryDashboard: React.FC = () => {
                       </div>
                       <div>
                         <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.5)' }}>TOTAL BATCH DELIVERIES</div>
-                        <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#c9a84c' }}>{deliveredOrders.length}</div>
+                        <div style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--gold)' }}>{deliveredOrders.length}</div>
                       </div>
                       <div>
                         <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.5)' }}>MAX MULTI-STOP LIMIT</div>
@@ -3900,7 +3900,7 @@ export const DeliveryDashboard: React.FC = () => {
                       </div>
                       <div>
                         <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.5)' }}>DISPATCH PROTOCOL</div>
-                        <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#f5efe6' }}>OTP Secured</div>
+                        <div style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--cream)' }}>OTP Secured</div>
                       </div>
                     </div>
                   </div>
@@ -3960,12 +3960,12 @@ export const DeliveryDashboard: React.FC = () => {
                     alignItems: 'center',
                     gap: '8px',
                     fontSize: '0.84rem',
-                    color: '#f5efe6',
+                    color: 'var(--cream)',
                     cursor: 'pointer',
                     padding: '8px 12px',
                     borderRadius: '8px',
-                    background: rejectReason === reason ? 'rgba(201,168,76,0.15)' : 'rgba(255,255,255,0.04)',
-                    border: `1px solid ${rejectReason === reason ? '#c9a84c' : 'rgba(255,255,255,0.08)'}`,
+                    background: rejectReason === reason ? 'rgba(var(--gold-rgb), 0.15)' : 'rgba(255,255,255,0.04)',
+                    border: `1px solid ${rejectReason === reason ? 'var(--gold)' : 'rgba(255,255,255,0.08)'}`,
                   }}
                 >
                   <input
@@ -4016,7 +4016,7 @@ export const DeliveryDashboard: React.FC = () => {
                   borderRadius: '8px',
                   background: 'rgba(255,255,255,0.1)',
                   border: 'none',
-                  color: '#f5efe6',
+                  color: 'var(--cream)',
                   fontWeight: 700,
                   cursor: 'pointer',
                 }}
@@ -4093,7 +4093,7 @@ export const DeliveryDashboard: React.FC = () => {
                       borderRadius: '8px',
                       background: 'rgba(255, 255, 255, 0.08)',
                       border: '1px solid rgba(255, 255, 255, 0.12)',
-                      color: '#f5efe6',
+                      color: 'var(--cream)',
                       fontWeight: 700,
                       fontSize: '0.84rem',
                       cursor: 'pointer',
@@ -4133,7 +4133,7 @@ export const DeliveryDashboard: React.FC = () => {
           <div
             style={{
               background: 'linear-gradient(135deg, #18120d 0%, #0e0a08 100%)',
-              border: '1px solid rgba(201, 168, 76, 0.35)',
+              border: '1px solid rgba(var(--gold-rgb),  0.35)',
               borderRadius: '16px',
               width: '100%',
               maxWidth: '480px',
@@ -4145,11 +4145,11 @@ export const DeliveryDashboard: React.FC = () => {
             {/* Modal Header */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <div style={{ width: '36px', height: '36px', borderRadius: '8px', background: 'rgba(201,168,76,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid rgba(201,168,76,0.3)' }}>
-                  <User size={18} color="#c9a84c" />
+                <div style={{ width: '36px', height: '36px', borderRadius: '8px', background: 'rgba(var(--gold-rgb), 0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid rgba(var(--gold-rgb), 0.3)' }}>
+                  <User size={18} color="var(--gold)" />
                 </div>
                 <div>
-                  <h3 style={{ margin: 0, color: '#f5efe6', fontSize: '1.15rem', fontFamily: 'serif' }}>Edit Profile & Photo</h3>
+                  <h3 style={{ margin: 0, color: 'var(--cream)', fontSize: '1.15rem', fontFamily: 'serif' }}>Edit Profile & Photo</h3>
                   <span style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.5)' }}>Update delivery credentials & avatar photo</span>
                 </div>
               </div>
@@ -4163,18 +4163,18 @@ export const DeliveryDashboard: React.FC = () => {
 
             <form onSubmit={handleSaveProfile} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               {/* Avatar Upload Preview Section */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '12px', background: 'rgba(255,255,255,0.02)', borderRadius: '12px', border: '1px solid rgba(201,168,76,0.15)' }}>
-                <div style={{ position: 'relative', width: '64px', height: '64px', borderRadius: '50%', border: '2px solid #c9a84c', overflow: 'hidden', flexShrink: 0, background: '#1a110e', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '12px', background: 'rgba(255,255,255,0.02)', borderRadius: '12px', border: '1px solid rgba(var(--gold-rgb), 0.15)' }}>
+                <div style={{ position: 'relative', width: '64px', height: '64px', borderRadius: '50%', border: '2px solid var(--gold)', overflow: 'hidden', flexShrink: 0, background: 'var(--surface-color)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   {avatarPreview ? (
                     <img src={avatarPreview} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                   ) : (
-                    <span style={{ fontSize: '1.4rem', fontWeight: 800, color: '#c9a84c' }}>
+                    <span style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--gold)' }}>
                       {editFullName.charAt(0) || 'D'}
                     </span>
                   )}
                 </div>
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: '0.84rem', fontWeight: 700, color: '#f5efe6', marginBottom: '4px' }}>Profile Photo</div>
+                  <div style={{ fontSize: '0.84rem', fontWeight: 700, color: 'var(--cream)', marginBottom: '4px' }}>Profile Photo</div>
                   <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                     <input
                       ref={fileInputRef}
@@ -4189,8 +4189,8 @@ export const DeliveryDashboard: React.FC = () => {
                       style={{
                         padding: '6px 12px',
                         borderRadius: '6px',
-                        background: 'rgba(201, 168, 76, 0.2)',
-                        border: '1px solid rgba(201, 168, 76, 0.4)',
+                        background: 'rgba(var(--gold-rgb),  0.2)',
+                        border: '1px solid rgba(var(--gold-rgb),  0.4)',
                         color: '#f5d77f',
                         fontSize: '0.76rem',
                         fontWeight: 700,
@@ -4231,7 +4231,7 @@ export const DeliveryDashboard: React.FC = () => {
 
               {/* Full Name */}
               <div>
-                <label style={{ display: 'block', fontSize: '0.78rem', color: '#c9a84c', fontWeight: 700, marginBottom: '6px' }}>
+                <label style={{ display: 'block', fontSize: '0.78rem', color: 'var(--gold)', fontWeight: 700, marginBottom: '6px' }}>
                   Full Name *
                 </label>
                 <input
@@ -4245,8 +4245,8 @@ export const DeliveryDashboard: React.FC = () => {
                     padding: '10px 14px',
                     borderRadius: '8px',
                     background: 'rgba(255,255,255,0.04)',
-                    border: '1px solid rgba(201,168,76,0.3)',
-                    color: '#f5efe6',
+                    border: '1px solid rgba(var(--gold-rgb), 0.3)',
+                    color: 'var(--cream)',
                     fontSize: '0.88rem',
                     boxSizing: 'border-box',
                   }}
@@ -4255,7 +4255,7 @@ export const DeliveryDashboard: React.FC = () => {
 
               {/* Phone Number */}
               <div>
-                <label style={{ display: 'block', fontSize: '0.78rem', color: '#c9a84c', fontWeight: 700, marginBottom: '6px' }}>
+                <label style={{ display: 'block', fontSize: '0.78rem', color: 'var(--gold)', fontWeight: 700, marginBottom: '6px' }}>
                   Phone Number
                 </label>
                 <input
@@ -4268,8 +4268,8 @@ export const DeliveryDashboard: React.FC = () => {
                     padding: '10px 14px',
                     borderRadius: '8px',
                     background: 'rgba(255,255,255,0.04)',
-                    border: '1px solid rgba(201,168,76,0.3)',
-                    color: '#f5efe6',
+                    border: '1px solid rgba(var(--gold-rgb), 0.3)',
+                    color: 'var(--cream)',
                     fontSize: '0.88rem',
                     boxSizing: 'border-box',
                   }}
@@ -4278,7 +4278,7 @@ export const DeliveryDashboard: React.FC = () => {
 
               {/* Optional Avatar URL */}
               <div>
-                <label style={{ display: 'block', fontSize: '0.78rem', color: '#c9a84c', fontWeight: 700, marginBottom: '6px' }}>
+                <label style={{ display: 'block', fontSize: '0.78rem', color: 'var(--gold)', fontWeight: 700, marginBottom: '6px' }}>
                   Photo URL (Optional)
                 </label>
                 <input
@@ -4294,8 +4294,8 @@ export const DeliveryDashboard: React.FC = () => {
                     padding: '10px 14px',
                     borderRadius: '8px',
                     background: 'rgba(255,255,255,0.04)',
-                    border: '1px solid rgba(201,168,76,0.2)',
-                    color: '#f5efe6',
+                    border: '1px solid rgba(var(--gold-rgb), 0.2)',
+                    color: 'var(--cream)',
                     fontSize: '0.84rem',
                     boxSizing: 'border-box',
                   }}
@@ -4304,7 +4304,7 @@ export const DeliveryDashboard: React.FC = () => {
 
               {/* Optional Password */}
               <div>
-                <label style={{ display: 'block', fontSize: '0.78rem', color: '#c9a84c', fontWeight: 700, marginBottom: '6px' }}>
+                <label style={{ display: 'block', fontSize: '0.78rem', color: 'var(--gold)', fontWeight: 700, marginBottom: '6px' }}>
                   New Password (Leave blank to keep current)
                 </label>
                 <div style={{ position: 'relative' }}>
@@ -4318,8 +4318,8 @@ export const DeliveryDashboard: React.FC = () => {
                       padding: '10px 40px 10px 14px',
                       borderRadius: '8px',
                       background: 'rgba(255,255,255,0.04)',
-                      border: '1px solid rgba(201,168,76,0.2)',
-                      color: '#f5efe6',
+                      border: '1px solid rgba(var(--gold-rgb), 0.2)',
+                      color: 'var(--cream)',
                       fontSize: '0.84rem',
                       boxSizing: 'border-box',
                     }}
@@ -4354,7 +4354,7 @@ export const DeliveryDashboard: React.FC = () => {
                     borderRadius: '8px',
                     background: 'rgba(255,255,255,0.06)',
                     border: '1px solid rgba(255,255,255,0.15)',
-                    color: '#f5efe6',
+                    color: 'var(--cream)',
                     fontWeight: 600,
                     fontSize: '0.84rem',
                     cursor: 'pointer',
@@ -4369,9 +4369,9 @@ export const DeliveryDashboard: React.FC = () => {
                     flex: 2,
                     padding: '11px',
                     borderRadius: '8px',
-                    background: 'linear-gradient(135deg, #c9a84c 0%, #a07d2c 100%)',
+                    background: 'var(--gradient-gold)',
                     border: 'none',
-                    color: '#0f0c0a',
+                    color: 'var(--black)',
                     fontWeight: 800,
                     fontSize: '0.86rem',
                     cursor: isSavingProfile ? 'not-allowed' : 'pointer',
@@ -4379,7 +4379,7 @@ export const DeliveryDashboard: React.FC = () => {
                     alignItems: 'center',
                     justifyContent: 'center',
                     gap: '6px',
-                    boxShadow: '0 4px 14px rgba(201,168,76,0.3)',
+                    boxShadow: '0 4px 14px rgba(var(--gold-rgb), 0.3)',
                   }}
                 >
                   {isSavingProfile ? <RefreshCw size={15} className="spinning" /> : <Check size={15} />}

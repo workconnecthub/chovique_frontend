@@ -1457,38 +1457,38 @@ export const CheckoutPage: React.FC = () => {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', paddingBottom: '20px', borderBottom: '1px solid var(--glass-border)', marginBottom: '20px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--beige)', fontSize: '0.9rem' }}>
                     <span>Items Subtotal:</span>
-                    <span>₹{subtotal.toLocaleString()}</span>
+                    <span className="font-number" data-number="true" style={{ fontFamily: 'var(--font-number, var(--font-body))', fontVariantNumeric: 'tabular-nums' }}>₹{subtotal.toLocaleString()}</span>
                   </div>
 
                   {appliedCoupon && discountAmount > 0 && (
                     <div style={{ display: 'flex', justifyContent: 'space-between', color: '#2ecc71', fontSize: '0.9rem', fontWeight: 600 }}>
                       <span>Coupon Discount ({appliedCoupon.code}):</span>
-                      <span>-₹{discountAmount.toLocaleString()}</span>
+                      <span className="font-number" data-number="true" style={{ fontFamily: 'var(--font-number, var(--font-body))', fontVariantNumeric: 'tabular-nums' }}>-₹{discountAmount.toLocaleString()}</span>
                     </div>
                   )}
 
                   {coinsToUse > 0 && coinDiscountAmount > 0 && (
                     <div style={{ display: 'flex', justifyContent: 'space-between', color: '#2ecc71', fontSize: '0.9rem', fontWeight: 600 }}>
                       <span>Coins Discount ({coinsToUse} coins):</span>
-                      <span>-₹{coinDiscountAmount.toFixed(2)}</span>
+                      <span className="font-number" data-number="true" style={{ fontFamily: 'var(--font-number, var(--font-body))', fontVariantNumeric: 'tabular-nums' }}>-₹{coinDiscountAmount.toFixed(2)}</span>
                     </div>
                   )}
 
                   <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--beige)', fontSize: '0.9rem' }}>
                     <span>Delivery Charges:</span>
-                    <span>{shippingFee === 0 ? `Free (Order over ₹${freeShippingMin.toLocaleString()})` : `₹${shippingFee.toFixed(2)}`}</span>
+                    <span className="font-number" data-number="true" style={{ fontFamily: 'var(--font-number, var(--font-body))', fontVariantNumeric: 'tabular-nums' }}>{shippingFee === 0 ? `Free (Order over ₹${freeShippingMin.toLocaleString()})` : `₹${shippingFee.toFixed(2)}`}</span>
                   </div>
 
                   {taxAmount > 0 && (
                     <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--beige)', fontSize: '0.9rem' }}>
                       <span>Tax (GST):</span>
-                      <span>₹{taxAmount.toLocaleString()}</span>
+                      <span className="font-number" data-number="true" style={{ fontFamily: 'var(--font-number, var(--font-body))', fontVariantNumeric: 'tabular-nums' }}>₹{taxAmount.toLocaleString()}</span>
                     </div>
                   )}
 
                   <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--cream)', fontSize: '1.25rem', fontWeight: 700, marginTop: '8px', paddingTop: '10px', borderTop: '1px dashed rgba(255,255,255,0.1)' }}>
                     <span>Total:</span>
-                    <span style={{ color: 'var(--gold)' }}>₹{total.toLocaleString()}</span>
+                    <span className="font-number" data-number="true" style={{ color: 'var(--gold)', fontFamily: 'var(--font-number, var(--font-body))', fontVariantNumeric: 'tabular-nums' }}>₹{total.toLocaleString()}</span>
                   </div>
                 </div>
 
@@ -1731,38 +1731,38 @@ export const CheckoutPage: React.FC = () => {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', paddingBottom: '20px', borderBottom: '1px solid var(--glass-border)', marginBottom: '20px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--beige)', fontSize: '0.9rem' }}>
                     <span>Items Subtotal:</span>
-                    <span>₹{subtotal.toLocaleString()}</span>
+                    <span className="font-number" data-number="true" style={{ fontFamily: 'var(--font-number, var(--font-body))', fontVariantNumeric: 'tabular-nums' }}>₹{subtotal.toLocaleString()}</span>
                   </div>
 
                   {appliedCoupon && discountAmount > 0 && (
                     <div style={{ display: 'flex', justifyContent: 'space-between', color: '#2ecc71', fontSize: '0.9rem', fontWeight: 600 }}>
                       <span>Coupon Discount ({appliedCoupon.code}):</span>
-                      <span>-₹{discountAmount.toLocaleString()}</span>
+                      <span className="font-number" data-number="true" style={{ fontFamily: 'var(--font-number, var(--font-body))', fontVariantNumeric: 'tabular-nums' }}>-₹{discountAmount.toLocaleString()}</span>
                     </div>
                   )}
 
                   {coinsToUse > 0 && coinDiscountAmount > 0 && (
                     <div style={{ display: 'flex', justifyContent: 'space-between', color: '#2ecc71', fontSize: '0.9rem', fontWeight: 600 }}>
                       <span>Coins Discount ({coinsToUse} coins):</span>
-                      <span>-₹{coinDiscountAmount.toFixed(2)}</span>
+                      <span className="font-number" data-number="true" style={{ fontFamily: 'var(--font-number, var(--font-body))', fontVariantNumeric: 'tabular-nums' }}>-₹{coinDiscountAmount.toFixed(2)}</span>
                     </div>
                   )}
 
                   <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--beige)', fontSize: '0.9rem' }}>
                     <span>Delivery Charges:</span>
-                    <span>{shippingFee === 0 ? `Free (Order over ₹${freeShippingMin.toLocaleString()})` : `₹${shippingFee}`}</span>
+                    <span className="font-number" data-number="true" style={{ fontFamily: 'var(--font-number, var(--font-body))', fontVariantNumeric: 'tabular-nums' }}>{shippingFee === 0 ? `Free (Order over ₹${freeShippingMin.toLocaleString()})` : `₹${shippingFee}`}</span>
                   </div>
 
                   {taxAmount > 0 && (
                     <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--beige)', fontSize: '0.9rem' }}>
                       <span>Tax (GST):</span>
-                      <span>₹{taxAmount.toLocaleString()}</span>
+                      <span className="font-number" data-number="true" style={{ fontFamily: 'var(--font-number, var(--font-body))', fontVariantNumeric: 'tabular-nums' }}>₹{taxAmount.toLocaleString()}</span>
                     </div>
                   )}
 
                   <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--cream)', fontSize: '1.25rem', fontWeight: 700, marginTop: '8px', paddingTop: '10px', borderTop: '1px dashed rgba(255,255,255,0.1)' }}>
                     <span>Final Payable Amount:</span>
-                    <span style={{ color: 'var(--gold)' }}>₹{total.toLocaleString()}</span>
+                    <span className="font-number" data-number="true" style={{ color: 'var(--gold)', fontFamily: 'var(--font-number, var(--font-body))', fontVariantNumeric: 'tabular-nums' }}>₹{total.toLocaleString()}</span>
                   </div>
                 </div>
 

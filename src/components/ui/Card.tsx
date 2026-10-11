@@ -78,8 +78,9 @@ export const Card: React.FC<CardProps> = ({ product }) => {
         display: 'flex',
         flexDirection: 'column',
         height: '100%',
-        transition: 'border-color 0.3s ease, box-shadow 0.3s ease',
-        border: '1px solid var(--glass-border)',
+        transition: 'border-color 0.3s ease, box-shadow 0.3s ease, background 0.3s ease',
+        border: '1px solid var(--product-card-border, var(--glass-border))',
+        background: 'var(--product-card-bg, rgba(20, 16, 13, 0.75))',
       }}
     >
       {/* Product Image Container */}
@@ -275,15 +276,17 @@ export const Card: React.FC<CardProps> = ({ product }) => {
             }}
           >
             <div style={{ display: 'flex', flexDirection: 'column' }}>
-              <span style={{ fontSize: '1.2rem', fontWeight: 600, color: 'var(--cream)' }}>
+              <span className="font-number" style={{ fontSize: '1.2rem', fontWeight: 600, color: 'var(--product-card-text, var(--cream))', fontFamily: 'var(--font-number, var(--font-body))' }}>
                 ₹{product.price.toLocaleString()}
               </span>
               {product.originalPrice && (
                 <span
+                  className="font-number"
                   style={{
                     fontSize: '0.85rem',
                     color: 'var(--grey-light)',
                     textDecoration: 'line-through',
+                    fontFamily: 'var(--font-number, var(--font-body))',
                   }}
                 >
                   ₹{product.originalPrice.toLocaleString()}
@@ -292,7 +295,7 @@ export const Card: React.FC<CardProps> = ({ product }) => {
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.85rem' }}>
               <span style={{ color: 'var(--gold)' }}>★</span>
-              <span style={{ color: 'var(--cream)', fontWeight: 600 }}>
+              <span className="font-number" style={{ color: 'var(--product-card-text, var(--cream))', fontWeight: 600, fontFamily: 'var(--font-number, var(--font-body))' }}>
                 {product.rating ? Number(product.rating).toFixed(1) : '4.8'}
               </span>
             </div>

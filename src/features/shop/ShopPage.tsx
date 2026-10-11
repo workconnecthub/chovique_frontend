@@ -208,7 +208,7 @@ export const ShopPage: React.FC = () => {
 
             {/* Top Category Dropdown */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', flex: 1, justifyContent: 'flex-start' }}>
-              <span style={{ fontSize: '0.82rem', color: '#c9a84c', fontWeight: 600 }}>
+              <span style={{ fontSize: '0.82rem', color: 'var(--gold)', fontWeight: 600 }}>
                 Category:
               </span>
               <select
@@ -224,14 +224,14 @@ export const ShopPage: React.FC = () => {
                   borderRadius: '4px',
                   background: 'rgba(0,0,0,0.4)',
                   border: '1px solid rgba(201, 168, 76, 0.3)',
-                  color: '#f5efe6',
+                  color: 'var(--cream)',
                   fontSize: '0.9rem',
                   outline: 'none',
                   cursor: 'pointer'
                 }}
               >
                 {categoryChips.map((chip) => (
-                  <option key={chip.id} value={chip.id} style={{ background: '#14100d', color: '#f5efe6' }}>
+                  <option key={chip.id} value={chip.id} style={{ background: '#14100d', color: 'var(--cream)' }}>
                     {chip.label}
                   </option>
                 ))}
@@ -252,13 +252,13 @@ export const ShopPage: React.FC = () => {
               borderRadius: '4px',
               background: 'rgba(20, 16, 13, 0.9)',
               border: '1px solid rgba(201, 168, 76, 0.4)',
-              color: '#f5efe6',
+              color: 'var(--cream)',
               fontSize: '0.85rem',
               fontWeight: 600,
               cursor: 'pointer',
             }}
           >
-            <SlidersHorizontal size={16} color="#c9a84c" />
+            <SlidersHorizontal size={16} color="var(--gold)" />
             <span>Filters {activeFiltersCount > 0 && `(${activeFiltersCount})`}</span>
           </button>
 
@@ -271,7 +271,7 @@ export const ShopPage: React.FC = () => {
                 borderRadius: '4px',
                 background: 'rgba(20, 16, 13, 0.9)',
                 border: '1px solid rgba(201, 168, 76, 0.4)',
-                color: '#f5efe6',
+                color: 'var(--cream)',
                 fontSize: '0.82rem',
                 outline: 'none',
               }}
@@ -306,7 +306,7 @@ export const ShopPage: React.FC = () => {
           {/* DESKTOP FILTERS SIDEBAR */}
           <aside className="filter-sidebar-desktop">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '22px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#c9a84c' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--gold)' }}>
                 <SlidersHorizontal size={16} />
                 <span style={{ fontSize: '0.85rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1.5px' }}>FILTERS</span>
               </div>
@@ -339,7 +339,7 @@ export const ShopPage: React.FC = () => {
             <div className="filter-group">
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '14px' }}>
                 <h4 className="filter-group-title" style={{ margin: 0 }}>CATEGORY</h4>
-                <Info size={14} color="#c9a84c" style={{ cursor: 'pointer', opacity: 0.8 }} />
+                <Info size={14} color="var(--gold)" style={{ cursor: 'pointer', opacity: 0.8 }} />
               </div>
               <select
                 value={selectedCategory}
@@ -354,13 +354,13 @@ export const ShopPage: React.FC = () => {
                   background: 'rgba(0, 0, 0, 0.4)',
                   border: '1px solid rgba(201, 168, 76, 0.3)',
                   borderRadius: '4px',
-                  color: '#f5efe6',
+                  color: 'var(--cream)',
                   fontSize: '0.88rem',
                   outline: 'none',
                 }}
               >
                 {categoriesList.map((cat) => (
-                  <option key={cat.value} value={cat.value} style={{ background: '#0f0c0a', color: '#f5efe6' }}>
+                  <option key={cat.value} value={cat.value} style={{ background: 'var(--black)', color: 'var(--cream)' }}>
                     {cat.label}
                   </option>
                 ))}
@@ -390,7 +390,7 @@ export const ShopPage: React.FC = () => {
                       background: 'rgba(0,0,0,0.4)',
                       border: '1px solid rgba(201, 168, 76, 0.3)',
                       borderRadius: '4px',
-                      color: '#f5efe6',
+                      color: 'var(--cream)',
                       fontSize: '0.82rem',
                       outline: 'none',
                     }}
@@ -416,7 +416,7 @@ export const ShopPage: React.FC = () => {
                       background: 'rgba(0,0,0,0.4)',
                       border: '1px solid rgba(201, 168, 76, 0.3)',
                       borderRadius: '4px',
-                      color: '#f5efe6',
+                      color: 'var(--cream)',
                       fontSize: '0.82rem',
                       outline: 'none',
                     }}
@@ -433,7 +433,7 @@ export const ShopPage: React.FC = () => {
                   setPriceRange((prev) => ({ ...prev, max: parseInt(e.target.value) }));
                   setCurrentPage(1);
                 }}
-                style={{ width: '100%', accentColor: '#c9a84c', cursor: 'pointer', marginBottom: '8px' }}
+                style={{ width: '100%', accentColor: 'var(--gold)', cursor: 'pointer', marginBottom: '8px' }}
               />
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem', color: 'rgba(255,255,255,0.7)', fontWeight: 600 }}>
                 <span>Min: ₹{priceRange.min.toLocaleString()}</span>
@@ -474,7 +474,7 @@ export const ShopPage: React.FC = () => {
                         transition: 'all 0.2s ease',
                       }}
                     >
-                      <Star size={15} fill="#c9a84c" color="#c9a84c" />
+                      <Star size={15} fill="var(--gold)" color="var(--gold)" />
                       <span>{rating === 4.0 ? '4' : rating === 3.0 ? '3' : rating}★ &amp; above</span>
                     </button>
                   );
@@ -489,11 +489,11 @@ export const ShopPage: React.FC = () => {
             <div className="shop-toolbar hide-on-mobile">
               <span style={{ fontSize: '0.88rem', color: 'rgba(255,255,255,0.7)' }}>
                 {isLoading ? (
-                  <Loader2 size={16} style={{ display: 'inline', animation: 'spin 1s linear infinite', color: '#c9a84c' }} />
+                  <Loader2 size={16} style={{ display: 'inline', animation: 'spin 1s linear infinite', color: 'var(--gold)' }} />
                 ) : (
                   <>
-                    Showing <strong style={{ color: '#f5efe6' }}>{indexOfFirstItem} - {indexOfLastItem}</strong> of{' '}
-                    <strong style={{ color: '#f5efe6' }}>{totalProducts}</strong> products
+                    Showing <strong style={{ color: 'var(--cream)' }}>{indexOfFirstItem} - {indexOfLastItem}</strong> of{' '}
+                    <strong style={{ color: 'var(--cream)' }}>{totalProducts}</strong> products
                   </>
                 )}
               </span>
@@ -533,7 +533,7 @@ export const ShopPage: React.FC = () => {
 
                 {/* Sort Dropdown */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span style={{ fontSize: '0.85rem', color: '#f5efe6', fontWeight: 600 }}>Sort by:</span>
+                  <span style={{ fontSize: '0.85rem', color: 'var(--cream)', fontWeight: 600 }}>Sort by:</span>
                   <select
                     value={sortOption}
                     onChange={(e) => { setSortOption(e.target.value); setCurrentPage(1); }}
@@ -542,18 +542,18 @@ export const ShopPage: React.FC = () => {
                       borderRadius: '4px',
                       background: 'rgba(0, 0, 0, 0.4)',
                       border: '1px solid rgba(201, 168, 76, 0.3)',
-                      color: '#f5efe6',
+                      color: 'var(--cream)',
                       fontSize: '0.85rem',
                       outline: 'none',
                       cursor: 'pointer',
                     }}
                   >
-                    <option value="featured" style={{ background: '#0f0c0a' }}>Default</option>
-                    <option value="popularity" style={{ background: '#0f0c0a' }}>Popularity</option>
-                    <option value="price_asc" style={{ background: '#0f0c0a' }}>Price: Low to High</option>
-                    <option value="price_desc" style={{ background: '#0f0c0a' }}>Price: High to Low</option>
-                    <option value="newest" style={{ background: '#0f0c0a' }}>Newest</option>
-                    <option value="rating" style={{ background: '#0f0c0a' }}>Rating</option>
+                    <option value="featured" style={{ background: 'var(--black)' }}>Default</option>
+                    <option value="popularity" style={{ background: 'var(--black)' }}>Popularity</option>
+                    <option value="price_asc" style={{ background: 'var(--black)' }}>Price: Low to High</option>
+                    <option value="price_desc" style={{ background: 'var(--black)' }}>Price: High to Low</option>
+                    <option value="newest" style={{ background: 'var(--black)' }}>Newest</option>
+                    <option value="rating" style={{ background: 'var(--black)' }}>Rating</option>
                   </select>
                 </div>
               </div>
@@ -561,7 +561,7 @@ export const ShopPage: React.FC = () => {
 
             {/* PRODUCT DISPLAY GRID / LIST */}
             {isLoading ? (
-              <div style={{ textAlign: 'center', padding: '80px 0', color: '#c9a84c' }}>
+              <div style={{ textAlign: 'center', padding: '80px 0', color: 'var(--gold)' }}>
                 <Loader2 size={42} style={{ animation: 'spin 1s linear infinite' }} />
                 <p style={{ marginTop: '16px', color: 'rgba(255,255,255,0.7)', fontSize: '0.9rem' }}>Loading chocolates...</p>
               </div>
@@ -576,8 +576,8 @@ export const ShopPage: React.FC = () => {
                   borderRadius: '12px',
                 }}
               >
-                <ShoppingBag size={48} color="#c9a84c" style={{ marginBottom: '16px', opacity: 0.8 }} />
-                <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1.6rem', color: '#f5efe6', marginBottom: '8px' }}>
+                <ShoppingBag size={48} color="var(--gold)" style={{ marginBottom: '16px', opacity: 0.8 }} />
+                <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1.6rem', color: 'var(--cream)', marginBottom: '8px' }}>
                   No chocolates found
                 </h3>
                 <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.88rem', marginBottom: '24px', maxWidth: '380px', margin: '0 auto 24px auto' }}>
@@ -649,15 +649,15 @@ export const ShopPage: React.FC = () => {
                         <div>
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                             <div>
-                              <span style={{ fontSize: '0.72rem', color: '#c9a84c', letterSpacing: '1px', textTransform: 'uppercase', fontWeight: 700 }}>
+                              <span style={{ fontSize: '0.72rem', color: 'var(--gold)', letterSpacing: '1px', textTransform: 'uppercase', fontWeight: 700 }}>
                                 {prod.category} Collection
                               </span>
-                              <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1.3rem', color: '#f5efe6', margin: '4px 0 8px 0', fontWeight: 700 }}>
+                              <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1.3rem', color: 'var(--cream)', margin: '4px 0 8px 0', fontWeight: 700 }}>
                                 {prod.name}
                               </h3>
                             </div>
                             {prod.badge && (
-                              <span style={{ background: '#c9a84c', color: '#0f0c0a', fontSize: '0.68rem', padding: '3px 8px', fontWeight: 800, textTransform: 'uppercase', borderRadius: '2px' }}>
+                              <span style={{ background: 'var(--gold)', color: 'var(--black)', fontSize: '0.68rem', padding: '3px 8px', fontWeight: 800, textTransform: 'uppercase', borderRadius: '2px' }}>
                                 {prod.badge}
                               </span>
                             )}
@@ -669,7 +669,7 @@ export const ShopPage: React.FC = () => {
 
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-                            <span style={{ fontSize: '1.3rem', fontWeight: 700, color: '#f5efe6' }}>
+                            <span style={{ fontSize: '1.3rem', fontWeight: 700, color: 'var(--cream)' }}>
                               ₹{prod.price.toLocaleString()}
                             </span>
                             <span style={{ color: 'var(--gold)', fontSize: '0.85rem', fontWeight: 600 }}>
@@ -743,9 +743,9 @@ export const ShopPage: React.FC = () => {
               >
                 {/* Showing Count Info */}
                 <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.85rem' }}>
-                  Showing <strong style={{ color: '#c9a84c' }}>{indexOfFirstItem}</strong> to{' '}
-                  <strong style={{ color: '#c9a84c' }}>{indexOfLastItem}</strong> of{' '}
-                  <strong style={{ color: '#c9a84c' }}>{totalProducts}</strong> products
+                  Showing <strong style={{ color: 'var(--gold)' }}>{indexOfFirstItem}</strong> to{' '}
+                  <strong style={{ color: 'var(--gold)' }}>{indexOfLastItem}</strong> of{' '}
+                  <strong style={{ color: 'var(--gold)' }}>{totalProducts}</strong> products
                 </div>
 
                 {/* Page Number Buttons */}
@@ -787,7 +787,7 @@ export const ShopPage: React.FC = () => {
                             fontSize: '0.88rem',
                             fontWeight: 700,
                             background: isActive
-                              ? 'linear-gradient(135deg, #c9a84c 0%, #e5c875 100%)'
+                              ? 'var(--gradient-gold)'
                               : 'rgba(20, 16, 13, 0.9)',
                             color: isActive ? '#0f0c0a' : '#f5efe6',
                             border: isActive ? 'none' : '1px solid rgba(201, 168, 76, 0.3)',
@@ -839,7 +839,7 @@ export const ShopPage: React.FC = () => {
                       borderRadius: '6px',
                       background: 'rgba(20, 16, 13, 0.9)',
                       border: '1px solid rgba(201, 168, 76, 0.4)',
-                      color: '#f5efe6',
+                      color: 'var(--cream)',
                       fontSize: '0.82rem',
                       outline: 'none',
                       cursor: 'pointer',
@@ -875,7 +875,7 @@ export const ShopPage: React.FC = () => {
                 className="mobile-filter-drawer-content"
               >
                 <div className="mobile-filter-drawer-header">
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#c9a84c' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--gold)' }}>
                     <SlidersHorizontal size={18} />
                     <span style={{ fontWeight: 700, fontSize: '1rem', textTransform: 'uppercase' }}>FILTERS</span>
                   </div>
@@ -891,10 +891,10 @@ export const ShopPage: React.FC = () => {
                     <select
                       value={selectedCategory}
                       onChange={(e) => setSelectedCategory(e.target.value)}
-                      style={{ width: '100%', padding: '12px', background: 'rgba(0,0,0,0.4)', border: '1px solid rgba(201,168,76,0.3)', borderRadius: '6px', color: '#f5efe6', fontSize: '0.9rem' }}
+                      style={{ width: '100%', padding: '12px', background: 'rgba(0,0,0,0.4)', border: '1px solid rgba(201,168,76,0.3)', borderRadius: '6px', color: 'var(--cream)', fontSize: '0.9rem' }}
                     >
                       {categoriesList.map((cat) => (
-                        <option key={cat.value} value={cat.value} style={{ background: '#0f0c0a', color: '#f5efe6' }}>
+                        <option key={cat.value} value={cat.value} style={{ background: 'var(--black)', color: 'var(--cream)' }}>
                           {cat.label}
                         </option>
                       ))}
@@ -924,7 +924,7 @@ export const ShopPage: React.FC = () => {
                             background: 'rgba(0,0,0,0.4)',
                             border: '1px solid rgba(201, 168, 76, 0.3)',
                             borderRadius: '4px',
-                            color: '#f5efe6',
+                            color: 'var(--cream)',
                             fontSize: '0.82rem',
                             outline: 'none',
                           }}
@@ -950,7 +950,7 @@ export const ShopPage: React.FC = () => {
                             background: 'rgba(0,0,0,0.4)',
                             border: '1px solid rgba(201, 168, 76, 0.3)',
                             borderRadius: '4px',
-                            color: '#f5efe6',
+                            color: 'var(--cream)',
                             fontSize: '0.82rem',
                             outline: 'none',
                           }}
@@ -967,7 +967,7 @@ export const ShopPage: React.FC = () => {
                         setPriceRange((prev) => ({ ...prev, max: parseInt(e.target.value) }));
                         setCurrentPage(1);
                       }}
-                      style={{ width: '100%', accentColor: '#c9a84c', cursor: 'pointer', marginBottom: '8px' }}
+                      style={{ width: '100%', accentColor: 'var(--gold)', cursor: 'pointer', marginBottom: '8px' }}
                     />
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', color: 'rgba(255,255,255,0.7)' }}>
                       <span>Min: ₹{priceRange.min.toLocaleString()}</span>
@@ -1005,7 +1005,7 @@ export const ShopPage: React.FC = () => {
                               transition: 'all 0.2s ease',
                             }}
                           >
-                            <Star size={14} fill="#c9a84c" color="#c9a84c" />
+                            <Star size={14} fill="var(--gold)" color="var(--gold)" />
                             <span>{rating === 4.0 ? '4' : rating === 3.0 ? '3' : rating}★ &amp; above</span>
                           </button>
                         );

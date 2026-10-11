@@ -197,8 +197,8 @@ export const CartPage: React.FC = () => {
         initial="initial"
         animate="animate"
         exit="exit"
+        className="cart-page"
         style={{
-          paddingTop: '120px',
           minHeight: '80vh',
           display: 'flex',
           flexDirection: 'column',
@@ -206,7 +206,7 @@ export const CartPage: React.FC = () => {
           justifyContent: 'center',
           textAlign: 'center',
           background: 'var(--gradient-hero)',
-          padding: '120px 20px 60px 20px',
+          padding: '24px 20px 60px 20px',
         }}
       >
         <ShoppingBag size={64} style={{ color: 'var(--gold)', marginBottom: '24px' }} />
@@ -232,8 +232,8 @@ export const CartPage: React.FC = () => {
         initial="initial"
         animate="animate"
         exit="exit"
+        className="cart-page"
         style={{
-          paddingTop: '120px',
           minHeight: '80vh',
           display: 'flex',
           flexDirection: 'column',
@@ -241,6 +241,7 @@ export const CartPage: React.FC = () => {
           justifyContent: 'center',
           textAlign: 'center',
           background: 'var(--gradient-hero)',
+          padding: '24px 20px 60px 20px',
         }}
       >
         <ShoppingBag size={64} style={{ color: 'var(--gold)', marginBottom: '24px' }} />
@@ -265,8 +266,8 @@ export const CartPage: React.FC = () => {
       initial="initial"
       animate="animate"
       exit="exit"
+      className="cart-page"
       style={{
-        paddingTop: '120px',
         minHeight: '100vh',
         background: 'var(--gradient-hero)',
         paddingBottom: '60px',
@@ -300,13 +301,17 @@ export const CartPage: React.FC = () => {
             {cart.map((item) => (
               <div
                 key={item.product.id}
-                className="glass-panel cart-item-card"
+                className="cart-item-card"
                 style={{
-                  border: '1px solid var(--glass-border)',
+                  background: 'var(--product-card-bg, rgba(26, 18, 13, 0.75))',
+                  border: '1px solid var(--product-card-border, var(--glass-border))',
+                  borderRadius: '12px',
+                  color: 'var(--product-card-text, var(--cream))',
+                  boxShadow: '0 8px 24px rgba(0, 0, 0, 0.35)',
                 }}
               >
                 {/* Product image */}
-                <div style={{ width: '100px', height: '100px', borderRadius: '4px', overflow: 'hidden' }}>
+                <div style={{ width: '100px', height: '100px', borderRadius: '8px', overflow: 'hidden', border: '1px solid rgba(var(--gold-rgb), 0.25)', boxShadow: '0 4px 12px rgba(0,0,0,0.3)', flexShrink: 0 }}>
                   <img
                     src={getImageUrl(item.product.image)}
                     alt={item.product.name}
@@ -320,10 +325,10 @@ export const CartPage: React.FC = () => {
 
                 {/* Details */}
                 <div>
-                  <h3 style={{ fontSize: '1.15rem', color: 'var(--cream)', fontWeight: 600, margin: '0 0 6px 0' }}>
+                  <h3 style={{ fontSize: '1.15rem', color: 'var(--product-card-text, var(--cream))', fontWeight: 600, margin: '0 0 6px 0' }}>
                     {item.product.name}
                   </h3>
-                  <span style={{ fontSize: '0.8rem', color: 'var(--gold)', textTransform: 'uppercase' }}>
+                  <span style={{ fontSize: '0.8rem', color: 'var(--gold)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                     {item.product.weight} · {item.product.category}
                   </span>
                 </div>
@@ -333,10 +338,11 @@ export const CartPage: React.FC = () => {
                   style={{
                     display: 'flex',
                     alignItems: 'center',
-                    border: '1px solid var(--glass-border)',
-                    borderRadius: '4px',
-                    background: 'rgba(0,0,0,0.2)',
+                    border: '1px solid var(--product-card-border, var(--glass-border))',
+                    borderRadius: '6px',
+                    background: 'rgba(0,0,0,0.3)',
                     width: 'fit-content',
+                    overflow: 'hidden',
                   }}
                 >
                   <button
@@ -347,17 +353,33 @@ export const CartPage: React.FC = () => {
                         updateCartQuantity(item.product.id, item.quantity - 1);
                       }
                     }}
-                    style={{ padding: '8px 12px', color: 'var(--beige)' }}
+                    style={{ padding: '8px 12px', color: 'var(--beige)', background: 'transparent', border: 'none', cursor: 'pointer', transition: 'color 0.2s ease' }}
+                    onMouseEnter={(e) => e.currentTarget.style.color = 'var(--gold)'}
+                    onMouseLeave={(e) => e.currentTarget.style.color = 'var(--beige)'}
                     aria-label="Decrease quantity"
                   >
                     <Minus size={14} />
                   </button>
-                  <span style={{ width: '30px', textAlign: 'center', fontWeight: 600, color: 'var(--cream)', fontSize: '0.9rem' }}>
+                  <span
+                    className="font-number cart-item-quantity"
+                    data-number="true"
+                    style={{
+                      width: '34px',
+                      textAlign: 'center',
+                      fontWeight: 700,
+                      color: 'var(--cream)',
+                      fontSize: '0.95rem',
+                      fontFamily: 'var(--font-number, var(--font-body))',
+                      fontVariantNumeric: 'tabular-nums',
+                    }}
+                  >
                     {item.quantity}
                   </span>
                   <button
                     onClick={() => updateCartQuantity(item.product.id, item.quantity + 1)}
-                    style={{ padding: '8px 12px', color: 'var(--beige)' }}
+                    style={{ padding: '8px 12px', color: 'var(--beige)', background: 'transparent', border: 'none', cursor: 'pointer', transition: 'color 0.2s ease' }}
+                    onMouseEnter={(e) => e.currentTarget.style.color = 'var(--gold)'}
+                    onMouseLeave={(e) => e.currentTarget.style.color = 'var(--beige)'}
                     aria-label="Increase quantity"
                   >
                     <Plus size={14} />
@@ -366,7 +388,17 @@ export const CartPage: React.FC = () => {
 
                 {/* Pricing & remove */}
                 <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', gap: '8px', minWidth: '100px' }}>
-                  <span style={{ fontSize: '1.2rem', fontWeight: 700, color: 'var(--cream)' }}>
+                  <span
+                    className="font-number cart-item-price"
+                    data-number="true"
+                    style={{
+                      fontSize: '1.25rem',
+                      fontWeight: 800,
+                      color: 'var(--gold)',
+                      fontFamily: 'var(--font-number, var(--font-body))',
+                      fontVariantNumeric: 'tabular-nums',
+                    }}
+                  >
                     ₹{(item.product.price * item.quantity).toLocaleString()}
                   </span>
                   <button
@@ -378,6 +410,18 @@ export const CartPage: React.FC = () => {
                       alignItems: 'center',
                       gap: '4px',
                       justifyContent: 'flex-end',
+                      background: 'none',
+                      border: 'none',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.color = '#ff6b6b';
+                      e.currentTarget.style.transform = 'scale(1.05)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.color = 'var(--rose-gold)';
+                      e.currentTarget.style.transform = 'scale(1)';
                     }}
                     aria-label={`Remove ${item.product.name}`}
                   >
@@ -391,10 +435,12 @@ export const CartPage: React.FC = () => {
 
           {/* Pricing Summary Sidepanel */}
           <aside
-            className="glass-panel cart-summary"
+            className="cart-summary"
             style={{
-              border: '1px solid var(--glass-border)',
-              background: 'rgba(var(--dark-chocolate-rgb), 0.4)',
+              border: '1px solid var(--product-card-border, var(--glass-border))',
+              background: 'var(--product-card-bg, rgba(26, 18, 13, 0.75))',
+              borderRadius: '12px',
+              boxShadow: '0 8px 30px rgba(0, 0, 0, 0.4)',
             }}
           >
             <h3 style={{ fontSize: '1.2rem', fontWeight: 600, color: 'var(--cream)', marginBottom: '20px' }}>
@@ -405,19 +451,19 @@ export const CartPage: React.FC = () => {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', marginBottom: '24px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.95rem', color: 'var(--beige)' }}>
                 <span>Subtotal</span>
-                <span>₹{subtotal.toLocaleString()}</span>
+                <span className="font-number" data-number="true" style={{ fontWeight: 600, fontFamily: 'var(--font-number, var(--font-body))', fontVariantNumeric: 'tabular-nums', color: 'var(--cream)' }}>₹{subtotal.toLocaleString()}</span>
               </div>
               {couponData && discountAmount > 0 && (
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.95rem', color: '#2ecc71' }}>
                   <span>Promo Discount{discountPercent > 0 ? ` (${discountPercent}%)` : ''}</span>
-                  <span>-₹{discountAmount.toLocaleString()}</span>
+                  <span className="font-number" data-number="true" style={{ fontWeight: 600, fontFamily: 'var(--font-number, var(--font-body))', fontVariantNumeric: 'tabular-nums' }}>-₹{discountAmount.toLocaleString()}</span>
                 </div>
               )}
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.95rem', color: 'var(--beige)' }}>
                 <span>Shipping</span>
                 <span>
                   {isFreeDelivery ? (
-                    <span style={{ color: '#4ade80', fontWeight: 600 }}>FREE (Order ₹500+)</span>
+                    <span className="font-number" data-number="true" style={{ color: '#4ade80', fontWeight: 700, fontFamily: 'var(--font-number, var(--font-body))' }}>FREE (Order ₹500+)</span>
                   ) : (
                     <span style={{ color: 'var(--gold)', fontSize: '0.85rem' }}>Calculated at checkout</span>
                   )}
@@ -425,28 +471,29 @@ export const CartPage: React.FC = () => {
               </div>
               {!isFreeDelivery && (
                 <p style={{ fontSize: '0.75rem', color: 'var(--grey-light)', margin: '-8px 0 0 0' }}>
-                  Delivery charge calculated based on your address. Free on orders above ₹{freeShippingMin.toLocaleString()}.
+                  Delivery charge calculated based on your address. Free on orders above <span className="font-number" data-number="true" style={{ fontFamily: 'var(--font-number, var(--font-body))', fontWeight: 600, color: 'var(--gold)' }}>₹{freeShippingMin.toLocaleString()}</span>.
                 </p>
               )}
               {taxAmount > 0 && (
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.95rem', color: 'var(--beige)', marginTop: '8px' }}>
                   <span>Tax (GST)</span>
-                  <span>₹{taxAmount.toLocaleString()}</span>
+                  <span className="font-number" data-number="true" style={{ fontWeight: 600, fontFamily: 'var(--font-number, var(--font-body))', fontVariantNumeric: 'tabular-nums', color: 'var(--cream)' }}>₹{taxAmount.toLocaleString()}</span>
                 </div>
               )}
               <div
                 style={{
-                  borderTop: '1px solid var(--glass-border)',
+                  borderTop: '1px solid var(--product-card-border, var(--glass-border))',
                   paddingTop: '14px',
                   display: 'flex',
                   justifyContent: 'space-between',
+                  alignItems: 'center',
                   fontSize: '1.25rem',
                   fontWeight: 700,
                   color: 'var(--cream)',
                 }}
               >
                 <span>Total</span>
-                <span>₹{totalAmount.toLocaleString()}</span>
+                <span className="font-number cart-total-price" data-number="true" style={{ fontSize: '1.35rem', fontWeight: 800, color: 'var(--gold)', fontFamily: 'var(--font-number, var(--font-body))', fontVariantNumeric: 'tabular-nums' }}>₹{totalAmount.toLocaleString()}</span>
               </div>
             </div>
 
@@ -530,7 +577,7 @@ export const CartPage: React.FC = () => {
                     <span>Coupon Applied: {couponData.code}</span>
                   </div>
                   <div style={{ color: 'var(--cream)', fontSize: '0.85rem', marginTop: '4px', fontWeight: 600 }}>
-                    Discount: -₹{discountAmount.toFixed(2)} {couponData.discount_percent ? `(${couponData.discount_percent}% OFF)` : ''}
+                    Discount: <span className="font-number" data-number="true" style={{ fontFamily: 'var(--font-number, var(--font-body))', fontVariantNumeric: 'tabular-nums' }}>-₹{discountAmount.toFixed(2)}</span> {couponData.discount_percent ? `(${couponData.discount_percent}% OFF)` : ''}
                   </div>
                 </div>
                 <button
@@ -579,7 +626,20 @@ export const CartPage: React.FC = () => {
             )}
 
             {/* Checkout proceed */}
-            <Button variant="gold" fullWidth size="lg" glow onClick={handleCheckout}>
+            <Button
+              variant="gold"
+              fullWidth
+              size="lg"
+              glow
+              onClick={handleCheckout}
+              style={{
+                background: 'var(--cart-color, var(--gold))',
+                color: 'var(--cart-text, #0f0c0a)',
+                fontWeight: 800,
+                border: 'none',
+                boxShadow: '0 4px 18px rgba(0,0,0,0.4)',
+              }}
+            >
               Proceed to Checkout
               <ArrowRight size={16} />
             </Button>

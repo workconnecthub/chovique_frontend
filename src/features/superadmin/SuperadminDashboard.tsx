@@ -43,7 +43,11 @@ import {
   Bell,
   Package,
   BarChart3,
-  Copy
+  Copy,
+  Type,
+  Sparkles,
+  Truck,
+  User
 } from 'lucide-react';
 import {
   BarChart,
@@ -62,7 +66,7 @@ import {
   Pie,
   Cell
 } from 'recharts';
-import { useApp } from '../../app/providers';
+import { useApp, normalizeTheme } from '../../app/providers';
 import { Sidebar } from '../../components/Sidebar';
 import { Input, Select } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
@@ -146,14 +150,18 @@ import { getImageUrl } from '../../utils/imageUrl';
 import { exportToCSV } from '../../utils/exportCsv';
 import type { SystemUser, Order, InstagramReel, Testimonial } from '../../types';
 import { ReportsAnalyticsView } from '../admin/ReportsAnalyticsView';
+import { RewardCoinsView } from '../admin/RewardCoinsView';
+import { CouponsManagementView } from '../admin/CouponsManagementView';
 import {
   trimValue,
   isValidEmail,
   isValidPhone,
+  isValidIndianPhone,
   isNonEmpty,
   isValidNumber,
   isDuplicate
 } from '../../utils/adminFormValidation';
+import { formatApiErrorMessage } from '../../utils/errorUtils';
 
 
 // Theme Presets interface
@@ -256,6 +264,11 @@ export const SuperadminDashboard: React.FC = () => {
         'logistics': 'logistics',
         'shipping': 'logistics',
         'stores': 'logistics',
+        'reward-settings': 'reward-settings',
+        'rewards': 'reward-settings',
+        'coins': 'reward-settings',
+        'coupons': 'coupons',
+        'coupon': 'coupons',
       };
       if (mapping[tabParam]) {
         setActiveTab(mapping[tabParam]);
@@ -298,6 +311,51 @@ export const SuperadminDashboard: React.FC = () => {
     setSelectedPaymentMetric(metric);
     setPaymentMetricPage(1);
     fetchPaymentMetricOrders(metric, 1);
+  };
+
+  // --- Toast Notifications State ---
+  const [toasts, setToasts] = useState<ToastMessage[]>([]);
+  const addToast = (type: 'success' | 'error' | 'info', message: string, title?: string) => {
+    const id = Math.random().toString(36).substring(2, 9);
+    setToasts((prev) => [...prev, { id, type, message, title }]);
+  };
+  const dismissToast = (id: string) => {
+    setToasts((prev) => prev.filter((t) => t.id !== id));
+  };
+
+  // --- Confirmation Modal State ---
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    confirmText?: string;
+    onConfirm: () => void;
+    isConfirming?: boolean;
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    confirmText: 'Delete',
+    onConfirm: () => {},
+    isConfirming: false,
+  });
+
+  const openConfirmation = (title: string, message: string, onConfirm: () => void | Promise<void>, confirmText = 'Delete') => {
+    setConfirmModal({
+      isOpen: true,
+      title,
+      message,
+      confirmText,
+      onConfirm: async () => {
+        setConfirmModal((prev) => ({ ...prev, isConfirming: true }));
+        try {
+          await onConfirm();
+        } finally {
+          setConfirmModal({ isOpen: false, title: '', message: '', onConfirm: () => {}, isConfirming: false });
+        }
+      },
+      isConfirming: false,
+    });
   };
 
   // --- Logout Modal State ---
@@ -874,7 +932,7 @@ export const SuperadminDashboard: React.FC = () => {
       setRegFormError('Please enter a valid email address.');
       return;
     }
-    if (!regPhone || !isValidPhone(regPhone)) {
+    if (!regPhone || !isValidIndianPhone(regPhone)) {
       setRegFormError('Please enter a valid 10-digit Indian phone number starting with 6, 7, 8, or 9.');
       return;
     }
@@ -910,7 +968,7 @@ export const SuperadminDashboard: React.FC = () => {
       setRegStatus('active');
       fetchAdmins();
     } catch (err: any) {
-      setRegFormError(err?.detail || err?.message || 'Failed to register administrator.');
+      setRegFormError(formatApiErrorMessage(err, 'Failed to register administrator.'));
     } finally {
       setRegSubmitting(false);
     }
@@ -939,8 +997,8 @@ export const SuperadminDashboard: React.FC = () => {
       setEditFormError('Please enter a valid email address.');
       return;
     }
-    if (editPhone && !isValidPhone(editPhone)) {
-      setEditFormError('Please enter a valid 10-digit Indian phone number.');
+    if (editPhone && !isValidIndianPhone(editPhone)) {
+      setEditFormError('Please enter a valid 10-digit Indian phone number starting with 6, 7, 8, or 9.');
       return;
     }
 
@@ -957,7 +1015,7 @@ export const SuperadminDashboard: React.FC = () => {
       setEditingAdmin(null);
       fetchAdmins();
     } catch (err: any) {
-      setEditFormError(err?.detail || err?.message || 'Failed to update administrator.');
+      setEditFormError(formatApiErrorMessage(err, 'Failed to update administrator.'));
     } finally {
       setEditSubmitting(false);
     }
@@ -967,12 +1025,10 @@ export const SuperadminDashboard: React.FC = () => {
     const nextStatus = adm.is_active ? 'inactive' : 'active';
     const actionLabel = adm.is_active ? 'Deactivate' : 'Activate';
 
-    setConfirmModal({
-      isOpen: true,
-      title: `${actionLabel} Administrator?`,
-      message: `Are you sure you want to ${actionLabel.toLowerCase()} '${adm.full_name}' (${adm.email})?`,
-      confirmText: actionLabel,
-      onConfirm: async () => {
+    openConfirmation(
+      `${actionLabel} Administrator?`,
+      `Are you sure you want to ${actionLabel.toLowerCase()} '${adm.full_name}' (${adm.email})?`,
+      async () => {
         try {
           await adminService.updateSuperadminAdminStatus(adm.id, nextStatus as 'active' | 'inactive');
           addToast('success', `Administrator '${adm.full_name}' ${actionLabel.toLowerCase()}d successfully.`, 'Status Updated');
@@ -981,10 +1037,9 @@ export const SuperadminDashboard: React.FC = () => {
           addToast('error', err?.detail || err?.message || 'Failed to update admin status.', 'Error');
         }
       },
-    });
+      actionLabel
+    );
   };
-
-
 
   const handleDeleteAdmin = (adm: AdminUserRecord) => {
     if (user?.email === adm.email || user?.id === adm.id) {
@@ -992,12 +1047,10 @@ export const SuperadminDashboard: React.FC = () => {
       return;
     }
 
-    setConfirmModal({
-      isOpen: true,
-      title: `Delete Administrator Account?`,
-      message: `Are you sure you want to permanently delete '${adm.full_name}' (${adm.email})? This action cannot be undone.`,
-      confirmText: 'Delete Account',
-      onConfirm: async () => {
+    openConfirmation(
+      `Delete Administrator Account?`,
+      `Are you sure you want to permanently delete '${adm.full_name}' (${adm.email})? This action cannot be undone.`,
+      async () => {
         try {
           await adminService.deleteSuperadminAdmin(adm.id);
           addToast('success', `Administrator '${adm.full_name}' deleted successfully.`, 'Admin Deleted');
@@ -1006,7 +1059,8 @@ export const SuperadminDashboard: React.FC = () => {
           addToast('error', err?.detail || err?.message || 'Failed to delete administrator.', 'Delete Failed');
         }
       },
-    });
+      'Delete Account'
+    );
   };
 
   const displayAdmins = adminsData || defaultAdminsList;
@@ -1036,6 +1090,69 @@ export const SuperadminDashboard: React.FC = () => {
 
   const [selectedAuditLog, setSelectedAuditLog] = useState<SuperadminAuditLogRecord | null>(null);
   const [auditExporting, setAuditExporting] = useState(false);
+  const [selectedAuditLogIds, setSelectedAuditLogIds] = useState<string[]>([]);
+  const [isBatchDeletingAuditLogs, setIsBatchDeletingAuditLogs] = useState(false);
+  const [deletingSingleAuditLogId, setDeletingSingleAuditLogId] = useState<string | null>(null);
+
+  const handleToggleSelectAllAuditLogs = () => {
+    if (!displayAuditLogs.items || displayAuditLogs.items.length === 0) return;
+    const currentIds = displayAuditLogs.items.map((i) => i.id);
+    const allSelected = currentIds.every((id) => selectedAuditLogIds.includes(id));
+    if (allSelected) {
+      setSelectedAuditLogIds((prev) => prev.filter((id) => !currentIds.includes(id)));
+    } else {
+      setSelectedAuditLogIds((prev) => Array.from(new Set([...prev, ...currentIds])));
+    }
+  };
+
+  const handleToggleAuditLogSelection = (logId: string) => {
+    setSelectedAuditLogIds((prev) =>
+      prev.includes(logId) ? prev.filter((id) => id !== logId) : [...prev, logId]
+    );
+  };
+
+  const handleDeleteSingleAuditLog = async (logId: string) => {
+    if (!window.confirm('Are you sure you want to delete this audit log record? This action cannot be undone.')) {
+      return;
+    }
+    setDeletingSingleAuditLogId(logId);
+    try {
+      await adminService.deleteSuperadminAuditLog(logId);
+      addToast('success', 'Audit log record deleted successfully.', 'Deleted');
+      setSelectedAuditLogIds((prev) => prev.filter((id) => id !== logId));
+      if (selectedAuditLog?.id === logId) {
+        setSelectedAuditLog(null);
+      }
+      fetchAuditLogs();
+    } catch (err: any) {
+      console.error('Failed to delete audit log:', err);
+      addToast('error', err?.detail || err?.message || 'Failed to delete audit log.', 'Delete Error');
+    } finally {
+      setDeletingSingleAuditLogId(null);
+    }
+  };
+
+  const handleBulkDeleteAuditLogs = async () => {
+    if (selectedAuditLogIds.length === 0) return;
+    if (!window.confirm(`Are you sure you want to delete ${selectedAuditLogIds.length} selected audit log records? This action cannot be undone.`)) {
+      return;
+    }
+    setIsBatchDeletingAuditLogs(true);
+    try {
+      const res = await adminService.bulkDeleteSuperadminAuditLogs(selectedAuditLogIds);
+      addToast('success', res.message || `Deleted ${selectedAuditLogIds.length} audit logs.`, 'Bulk Deleted');
+      setSelectedAuditLogIds([]);
+      if (selectedAuditLog && selectedAuditLogIds.includes(selectedAuditLog.id)) {
+        setSelectedAuditLog(null);
+      }
+      fetchAuditLogs();
+    } catch (err: any) {
+      console.error('Failed to bulk delete audit logs:', err);
+      addToast('error', err?.detail || err?.message || 'Failed to delete selected audit logs.', 'Delete Error');
+    } finally {
+      setIsBatchDeletingAuditLogs(false);
+    }
+  };
 
   const fetchAuditLogs = async () => {
     setAuditLogsLoading(true);
@@ -1101,18 +1218,34 @@ export const SuperadminDashboard: React.FC = () => {
   const displayAuditLogs = auditLogsData || defaultAuditLogsList;
 
   // --- Theme Builder Default Preset Fallback ---
+  // --- Theme Builder Default Preset Fallback ---
   const defaultPresetThemes: SuperadminThemeListResponse = {
     items: [
       {
         id: 'preset-chovique-classic',
         name: 'Chovique Classic',
-        description: 'Signature chocolate & gold luxury palette',
+        description: 'Signature chocolate & gold luxury palette with artisanal warmth',
         primary_brand_color: '#5A3825',
         background_color: '#0D090A',
         luxury_gold_color: '#D4AF37',
         secondary_accent_color: '#B76E79',
         text_color: '#F7F7F7',
         surface_color: '#1A1716',
+        button_color: '#5A3825',
+        button_text_color: '#FFFFFF',
+        secondary_button_color: '#D4AF37',
+        cart_color: '#D4AF37',
+        cart_text_color: '#0D090A',
+        product_card_color: '#1A1716',
+        product_card_border_color: '#D4AF37',
+        product_card_text_color: '#F7F7F7',
+        navbar_color: '#0D090A',
+        navbar_text_color: '#F7F7F7',
+        footer_color: '#0A0A0A',
+        footer_text_color: '#F7F7F7',
+        font_family: 'Outfit',
+        heading_font_family: 'Playfair Display',
+        number_font_family: 'Outfit',
         is_active: true,
         is_preset: true,
         created_at: '2026-08-12',
@@ -1121,13 +1254,28 @@ export const SuperadminDashboard: React.FC = () => {
       {
         id: 'preset-slate-noir',
         name: 'Slate Noir',
-        description: 'Sophisticated gradient from dark slate to charcoal gray',
+        description: 'Sophisticated gradient from dark slate to charcoal gray with crisp accents',
         primary_brand_color: '#2C3E50',
         background_color: '#1A252F',
         luxury_gold_color: '#BDC3C7',
         secondary_accent_color: '#7F8C8D',
         text_color: '#ECF0F1',
         surface_color: '#2C3E50',
+        button_color: '#34495E',
+        button_text_color: '#FFFFFF',
+        secondary_button_color: '#BDC3C7',
+        cart_color: '#BDC3C7',
+        cart_text_color: '#1A252F',
+        product_card_color: '#243342',
+        product_card_border_color: '#34495E',
+        product_card_text_color: '#ECF0F1',
+        navbar_color: '#1A252F',
+        navbar_text_color: '#ECF0F1',
+        footer_color: '#141D26',
+        footer_text_color: '#BDC3C7',
+        font_family: 'Inter',
+        heading_font_family: 'Montserrat',
+        number_font_family: 'Inter',
         is_active: false,
         is_preset: true,
         created_at: '2026-08-12',
@@ -1136,13 +1284,28 @@ export const SuperadminDashboard: React.FC = () => {
       {
         id: 'preset-dark-elegance',
         name: 'Dark Elegance',
-        description: 'Black-to-gray gradient with warm gold accents',
-        primary_brand_color: '#111111',
-        background_color: '#050505',
+        description: 'Deep velvet black with rich warm gold highlights and royal flair',
+        primary_brand_color: '#1E1B18',
+        background_color: '#080706',
         luxury_gold_color: '#E6C687',
         secondary_accent_color: '#8A734C',
         text_color: '#F0E6D2',
-        surface_color: '#1A1A1A',
+        surface_color: '#181512',
+        button_color: '#E6C687',
+        button_text_color: '#080706',
+        secondary_button_color: '#8A734C',
+        cart_color: '#E6C687',
+        cart_text_color: '#080706',
+        product_card_color: '#181512',
+        product_card_border_color: '#8A734C',
+        product_card_text_color: '#F0E6D2',
+        navbar_color: '#080706',
+        navbar_text_color: '#F0E6D2',
+        footer_color: '#050403',
+        footer_text_color: '#C4BAA9',
+        font_family: 'Plus Jakarta Sans',
+        heading_font_family: 'Playfair Display',
+        number_font_family: 'Plus Jakarta Sans',
         is_active: false,
         is_preset: true,
         created_at: '2026-08-12',
@@ -1151,13 +1314,88 @@ export const SuperadminDashboard: React.FC = () => {
       {
         id: 'preset-midnight-premium',
         name: 'Midnight Premium',
-        description: 'Deep navy with silver tones — sophisticated & cool',
+        description: 'Deep navy with vivid cyan accents and monospaced numerical clarity',
         primary_brand_color: '#0F172A',
         background_color: '#020617',
-        luxury_gold_color: '#94A3B8',
-        secondary_accent_color: '#38BDF8',
+        luxury_gold_color: '#38BDF8',
+        secondary_accent_color: '#94A3B8',
         text_color: '#F8FAFC',
         surface_color: '#1E293B',
+        button_color: '#2563EB',
+        button_text_color: '#FFFFFF',
+        secondary_button_color: '#38BDF8',
+        cart_color: '#38BDF8',
+        cart_text_color: '#020617',
+        product_card_color: '#0F172A',
+        product_card_border_color: '#1E293B',
+        product_card_text_color: '#F8FAFC',
+        navbar_color: '#020617',
+        navbar_text_color: '#F8FAFC',
+        footer_color: '#01040D',
+        footer_text_color: '#94A3B8',
+        font_family: 'Poppins',
+        heading_font_family: 'Outfit',
+        number_font_family: 'JetBrains Mono',
+        is_active: false,
+        is_preset: true,
+        created_at: '2026-08-12',
+        updated_at: '2026-08-12',
+      },
+      {
+        id: 'preset-royal-emerald',
+        name: 'Royal Emerald',
+        description: 'Deep imperial emerald green paired with radiant champagne gold',
+        primary_brand_color: '#064E3B',
+        background_color: '#022C22',
+        luxury_gold_color: '#FBBF24',
+        secondary_accent_color: '#10B981',
+        text_color: '#F0FDF4',
+        surface_color: '#065F46',
+        button_color: '#047857',
+        button_text_color: '#FFFFFF',
+        secondary_button_color: '#FBBF24',
+        cart_color: '#FBBF24',
+        cart_text_color: '#022C22',
+        product_card_color: '#064E3B',
+        product_card_border_color: '#047857',
+        product_card_text_color: '#F0FDF4',
+        navbar_color: '#022C22',
+        navbar_text_color: '#F0FDF4',
+        footer_color: '#011C15',
+        footer_text_color: '#A7F3D0',
+        font_family: 'Outfit',
+        heading_font_family: 'Cormorant Garamond',
+        number_font_family: 'Space Grotesk',
+        is_active: false,
+        is_preset: true,
+        created_at: '2026-08-12',
+        updated_at: '2026-08-12',
+      },
+      {
+        id: 'preset-rose-champagne',
+        name: 'Rose Champagne',
+        description: 'Warm luxury blush, velvety dark cacao, and radiant rose gold accents',
+        primary_brand_color: '#4A1525',
+        background_color: '#1A0A10',
+        luxury_gold_color: '#F472B6',
+        secondary_accent_color: '#FB7185',
+        text_color: '#FFF1F2',
+        surface_color: '#2D0F1C',
+        button_color: '#BE185D',
+        button_text_color: '#FFFFFF',
+        secondary_button_color: '#F472B6',
+        cart_color: '#F472B6',
+        cart_text_color: '#1A0A10',
+        product_card_color: '#2D0F1C',
+        product_card_border_color: '#BE185D',
+        product_card_text_color: '#FFF1F2',
+        navbar_color: '#1A0A10',
+        navbar_text_color: '#FFF1F2',
+        footer_color: '#10050A',
+        footer_text_color: '#FDA4AF',
+        font_family: 'Outfit',
+        heading_font_family: 'Playfair Display',
+        number_font_family: 'Outfit',
         is_active: false,
         is_preset: true,
         created_at: '2026-08-12',
@@ -1174,6 +1412,8 @@ export const SuperadminDashboard: React.FC = () => {
 
   const [selectedThemeId, setSelectedThemeId] = useState<string>('preset-chovique-classic');
   const [activeThemeId, setActiveThemeId] = useState<string>('preset-chovique-classic');
+  const [themeActiveSection, setThemeActiveSection] = useState<'components' | 'palette' | 'typography' | 'presets'>('components');
+  const [themePreviewTab, setThemePreviewTab] = useState<'storefront' | 'superadmin' | 'admin' | 'delivery' | 'customer'>('storefront');
 
   const [customColors, setCustomColors] = useState({
     primary_brand_color: '#5A3825',
@@ -1182,6 +1422,23 @@ export const SuperadminDashboard: React.FC = () => {
     secondary_accent_color: '#B76E79',
     text_color: '#F7F7F7',
     surface_color: '#1A1716',
+
+    button_color: '#5A3825',
+    button_text_color: '#FFFFFF',
+    secondary_button_color: '#D4AF37',
+    cart_color: '#D4AF37',
+    cart_text_color: '#0D090A',
+    product_card_color: '#1A1716',
+    product_card_border_color: '#D4AF37',
+    product_card_text_color: '#F7F7F7',
+    navbar_color: '#0D090A',
+    navbar_text_color: '#F7F7F7',
+    footer_color: '#0A0A0A',
+    footer_text_color: '#F7F7F7',
+
+    font_family: 'Outfit',
+    heading_font_family: 'Playfair Display',
+    number_font_family: 'Outfit',
   });
 
   const [isApplyingTheme, setIsApplyingTheme] = useState(false);
@@ -1191,7 +1448,7 @@ export const SuperadminDashboard: React.FC = () => {
   const [customThemeForm, setCustomThemeForm] = useState({ name: '', description: '' });
 
   const hexRegex = /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/;
-  const isValidHex = (val: string) => hexRegex.test(val.trim());
+  const isValidHex = (val: string) => hexRegex.test((val || '').trim());
 
   const isFormValid =
     isValidHex(customColors.primary_brand_color) &&
@@ -1199,7 +1456,31 @@ export const SuperadminDashboard: React.FC = () => {
     isValidHex(customColors.luxury_gold_color) &&
     isValidHex(customColors.secondary_accent_color) &&
     isValidHex(customColors.text_color) &&
-    isValidHex(customColors.surface_color);
+    isValidHex(customColors.surface_color) &&
+    isValidHex(customColors.button_color) &&
+    isValidHex(customColors.button_text_color) &&
+    isValidHex(customColors.secondary_button_color) &&
+    isValidHex(customColors.cart_color) &&
+    isValidHex(customColors.cart_text_color) &&
+    isValidHex(customColors.product_card_color) &&
+    isValidHex(customColors.product_card_border_color) &&
+    isValidHex(customColors.product_card_text_color) &&
+    isValidHex(customColors.navbar_color) &&
+    isValidHex(customColors.navbar_text_color) &&
+    isValidHex(customColors.footer_color) &&
+    isValidHex(customColors.footer_text_color);
+
+  const handleCustomColorChange = (key: string, val: string) => {
+    let updated = { ...customColors, [key]: val };
+    // Synchronize navbar_color with background_color to keep top navbar and overview background unified
+    if (key === 'background_color' && customColors.navbar_color === customColors.background_color) {
+      updated.navbar_color = val;
+    }
+    setCustomColors(updated);
+    if (!key.includes('font') ? isValidHex(val) : true) {
+      updateThemeColors(normalizeTheme(updated));
+    }
+  };
 
   const fetchThemes = async () => {
     setThemesLoading(true);
@@ -1218,6 +1499,21 @@ export const SuperadminDashboard: React.FC = () => {
           secondary_accent_color: act.secondary_accent_color,
           text_color: act.text_color,
           surface_color: act.surface_color,
+          button_color: act.button_color || act.primary_brand_color,
+          button_text_color: act.button_text_color || '#FFFFFF',
+          secondary_button_color: act.secondary_button_color || act.luxury_gold_color,
+          cart_color: act.cart_color || act.luxury_gold_color,
+          cart_text_color: act.cart_text_color || act.background_color,
+          product_card_color: act.product_card_color || act.surface_color,
+          product_card_border_color: act.product_card_border_color || act.luxury_gold_color,
+          product_card_text_color: act.product_card_text_color || act.text_color,
+          navbar_color: act.navbar_color || act.background_color,
+          navbar_text_color: act.navbar_text_color || act.text_color,
+          footer_color: act.footer_color || '#0A0A0A',
+          footer_text_color: act.footer_text_color || act.text_color,
+          font_family: act.font_family || 'Outfit',
+          heading_font_family: act.heading_font_family || 'Playfair Display',
+          number_font_family: act.number_font_family || 'Outfit',
         });
       }
     } catch (err: any) {
@@ -1238,14 +1534,31 @@ export const SuperadminDashboard: React.FC = () => {
 
   const handleSelectPreset = (theme: SuperadminThemeRecord) => {
     setSelectedThemeId(theme.id);
-    setCustomColors({
+    const updated = {
       primary_brand_color: theme.primary_brand_color,
       background_color: theme.background_color,
       luxury_gold_color: theme.luxury_gold_color,
       secondary_accent_color: theme.secondary_accent_color,
       text_color: theme.text_color,
       surface_color: theme.surface_color,
-    });
+      button_color: theme.button_color || theme.primary_brand_color,
+      button_text_color: theme.button_text_color || '#FFFFFF',
+      secondary_button_color: theme.secondary_button_color || theme.luxury_gold_color,
+      cart_color: theme.cart_color || theme.luxury_gold_color,
+      cart_text_color: theme.cart_text_color || theme.background_color,
+      product_card_color: theme.product_card_color || theme.surface_color,
+      product_card_border_color: theme.product_card_border_color || theme.luxury_gold_color,
+      product_card_text_color: theme.product_card_text_color || theme.text_color,
+      navbar_color: theme.navbar_color || theme.background_color,
+      navbar_text_color: theme.navbar_text_color || theme.text_color,
+      footer_color: theme.footer_color || '#0A0A0A',
+      footer_text_color: theme.footer_text_color || theme.text_color,
+      font_family: theme.font_family || 'Outfit',
+      heading_font_family: theme.heading_font_family || 'Playfair Display',
+      number_font_family: theme.number_font_family || 'Outfit',
+    };
+    setCustomColors(updated);
+    updateThemeColors(normalizeTheme(updated));
   };
 
   const handleApplyTheme = async () => {
@@ -1257,21 +1570,37 @@ export const SuperadminDashboard: React.FC = () => {
     setConfirmModal({
       isOpen: true,
       title: 'Apply Theme Globally?',
-      message: 'Are you sure you want to apply this theme palette across all pages live?',
+      message: 'Are you sure you want to apply this theme palette, component styling, and typography across all panels (Super Admin, Admin, Customer, Delivery Boy, and Landing Page) live?',
       confirmText: 'Apply Theme',
       onConfirm: async () => {
         setConfirmModal((prev) => ({ ...prev, isOpen: false }));
         setIsApplyingTheme(true);
         try {
           const targetPreset = displayThemes.items.find((t) => t.id === selectedThemeId);
-          if (targetPreset) {
-            await adminService.applySuperadminTheme(targetPreset.id);
-            setActiveThemeId(targetPreset.id);
-            addToast('success', `Theme '${targetPreset.name}' applied live globally!`, 'Theme Applied');
-          } else {
-            addToast('success', 'Custom theme palette applied live!', 'Theme Applied');
+          const targetId = targetPreset?.id || selectedThemeId;
+
+          // 1. Persist the chosen fonts, colors, and styling directly to backend database
+          if (targetId) {
+            await adminService.updateSuperadminTheme(targetId, {
+              ...customColors,
+              name: targetPreset?.name || 'Active Theme',
+              description: targetPreset?.description || undefined,
+            });
+            await adminService.applySuperadminTheme(targetId);
+            setActiveThemeId(targetId);
           }
-          fetchThemes();
+
+          // 2. Immediately update state and localStorage for instant visual change
+          const normalized = normalizeTheme(customColors);
+          updateThemeColors(normalized);
+          try {
+            localStorage.setItem('chovique_theme', JSON.stringify(normalized));
+          } catch {}
+
+          // 3. Broadcast to all open tabs and active listeners
+          window.dispatchEvent(new CustomEvent('chovique:theme-updated', { detail: customColors }));
+          addToast('success', `Theme and typography applied live across all panels!`, 'Theme Applied');
+          await fetchThemes();
         } catch (err: any) {
           addToast('error', err?.detail || err?.message || 'Failed to apply theme live.', 'Apply Failed');
         } finally {
@@ -1285,7 +1614,7 @@ export const SuperadminDashboard: React.FC = () => {
     setConfirmModal({
       isOpen: true,
       title: 'Reset Theme to Default?',
-      message: 'Are you sure you want to restore the signature Chovique Classic theme palette?',
+      message: 'Are you sure you want to restore the signature Chovique Classic theme palette and typography?',
       confirmText: 'Reset Defaults',
       onConfirm: async () => {
         setConfirmModal((prev) => ({ ...prev, isOpen: false }));
@@ -1295,14 +1624,32 @@ export const SuperadminDashboard: React.FC = () => {
           if (res) {
             setActiveThemeId(res.id);
             setSelectedThemeId(res.id);
-            setCustomColors({
+            const resetValues = {
               primary_brand_color: res.primary_brand_color,
               background_color: res.background_color,
               luxury_gold_color: res.luxury_gold_color,
               secondary_accent_color: res.secondary_accent_color,
               text_color: res.text_color,
               surface_color: res.surface_color,
-            });
+              button_color: res.button_color || res.primary_brand_color,
+              button_text_color: res.button_text_color || '#FFFFFF',
+              secondary_button_color: res.secondary_button_color || res.luxury_gold_color,
+              cart_color: res.cart_color || res.luxury_gold_color,
+              cart_text_color: res.cart_text_color || res.background_color,
+              product_card_color: res.product_card_color || res.surface_color,
+              product_card_border_color: res.product_card_border_color || res.luxury_gold_color,
+              product_card_text_color: res.product_card_text_color || res.text_color,
+              navbar_color: res.navbar_color || res.background_color,
+              navbar_text_color: res.navbar_text_color || res.text_color,
+              footer_color: res.footer_color || '#0A0A0A',
+              footer_text_color: res.footer_text_color || res.text_color,
+              font_family: res.font_family || 'Outfit',
+              heading_font_family: res.heading_font_family || 'Playfair Display',
+              number_font_family: res.number_font_family || 'Outfit',
+            };
+            setCustomColors(resetValues);
+            updateThemeColors(normalizeTheme(resetValues));
+            window.dispatchEvent(new CustomEvent('chovique:theme-updated', { detail: resetValues }));
             addToast('success', 'Restored signature Chovique Classic theme palette!', 'Theme Reset');
             fetchThemes();
           }
@@ -1331,12 +1678,7 @@ export const SuperadminDashboard: React.FC = () => {
       const res = await adminService.createSuperadminTheme({
         name: customThemeForm.name.trim(),
         description: customThemeForm.description.trim() || undefined,
-        primary_brand_color: customColors.primary_brand_color,
-        background_color: customColors.background_color,
-        luxury_gold_color: customColors.luxury_gold_color,
-        secondary_accent_color: customColors.secondary_accent_color,
-        text_color: customColors.text_color,
-        surface_color: customColors.surface_color,
+        ...customColors,
       });
       if (res) {
         addToast('success', `Custom theme '${res.name}' created successfully!`, 'Theme Saved');
@@ -1351,50 +1693,7 @@ export const SuperadminDashboard: React.FC = () => {
     }
   };
 
-  // --- Toast Notifications State ---
-  const [toasts, setToasts] = useState<ToastMessage[]>([]);
-  const addToast = (type: 'success' | 'error' | 'info', message: string, title?: string) => {
-    const id = Math.random().toString(36).substring(2, 9);
-    setToasts((prev) => [...prev, { id, type, message, title }]);
-  };
-  const dismissToast = (id: string) => {
-    setToasts((prev) => prev.filter((t) => t.id !== id));
-  };
-
-  // --- Confirmation Modal State ---
-  const [confirmModal, setConfirmModal] = useState<{
-    isOpen: boolean;
-    title: string;
-    message: string;
-    confirmText?: string;
-    onConfirm: () => void;
-    isConfirming?: boolean;
-  }>({
-    isOpen: false,
-    title: '',
-    message: '',
-    confirmText: 'Delete',
-    onConfirm: () => {},
-    isConfirming: false,
-  });
-
-  const openConfirmation = (title: string, message: string, onConfirm: () => void | Promise<void>, confirmText = 'Delete') => {
-    setConfirmModal({
-      isOpen: true,
-      title,
-      message,
-      confirmText,
-      onConfirm: async () => {
-        setConfirmModal((prev) => ({ ...prev, isConfirming: true }));
-        try {
-          await onConfirm();
-        } finally {
-          setConfirmModal({ isOpen: false, title: '', message: '', onConfirm: () => {}, isConfirming: false });
-        }
-      },
-      isConfirming: false,
-    });
-  };
+  // --- Additional Form State ---
 
   const [adminFormErrors, setAdminFormErrors] = useState<Record<string, string>>({});
   const [analyticsSubTab, setAnalyticsSubTab] = useState<'total' | 'online' | 'offline'>('total');
@@ -2579,7 +2878,7 @@ export const SuperadminDashboard: React.FC = () => {
 
   return (
 
-    <div style={{ minHeight: '100vh', background: 'var(--black)', color: 'var(--cream)', fontFamily: 'var(--font-body)' }}>
+    <div style={{ minHeight: '100vh', background: 'var(--bg-color, var(--black))', color: 'var(--cream)', fontFamily: 'var(--font-body)' }}>
       {/* Sidebar Navigation */}
       <Sidebar activeTab={activeTab} setActiveTab={handleTabNavigation} onRequestLogout={() => setShowLogoutConfirmModal(true)} />
 
@@ -2603,8 +2902,8 @@ export const SuperadminDashboard: React.FC = () => {
               height: '42px',
               padding: '0 14px',
               borderRadius: '10px',
-              background: 'rgba(20, 16, 13, 0.9)',
-              border: '1px solid rgba(201, 168, 76, 0.3)',
+              background: 'var(--surface-color)',
+              border: '1px solid rgba(var(--gold-rgb), 0.25)',
               boxShadow: '0 4px 12px rgba(0,0,0,0.4)',
               cursor: 'pointer',
               color: '#f5efe6',
@@ -2615,17 +2914,17 @@ export const SuperadminDashboard: React.FC = () => {
               flexShrink: 0,
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.borderColor = 'rgba(201, 168, 76, 0.6)';
-              e.currentTarget.style.background = 'rgba(30, 24, 19, 0.95)';
+              e.currentTarget.style.borderColor = 'rgba(var(--gold-rgb), 0.6)';
+              e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)';
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.borderColor = 'rgba(201, 168, 76, 0.3)';
-              e.currentTarget.style.background = 'rgba(20, 16, 13, 0.9)';
+              e.currentTarget.style.borderColor = 'rgba(var(--gold-rgb), 0.25)';
+              e.currentTarget.style.background = 'var(--surface-color)';
             }}
             title="View Live Public Storefront"
             aria-label="Live Home"
           >
-            <Home size={16} color="#c9a84c" />
+            <Home size={16} color="var(--gold)" />
             <span>Live Home</span>
           </button>
 
@@ -2651,7 +2950,7 @@ export const SuperadminDashboard: React.FC = () => {
 
               {/* Timeframe Selector Pills & Custom Date Range */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                <div style={{ display: 'flex', background: 'rgba(20, 16, 13, 0.9)', border: '1px solid rgba(201, 168, 76, 0.3)', borderRadius: '8px', padding: '4px', gap: '4px' }}>
+                <div style={{ display: 'flex', background: 'var(--surface-color)', border: '1px solid rgba(var(--gold-rgb), 0.25)', borderRadius: '10px', padding: '6px', gap: '6px' }}>
                   {[
                     { id: 'today', label: 'Today' },
                     { id: '7days', label: '7 Days' },
@@ -2681,7 +2980,7 @@ export const SuperadminDashboard: React.FC = () => {
                 </div>
 
                 {overviewTimeframe === 'custom' && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(20, 16, 13, 0.9)', border: '1px solid rgba(201, 168, 76, 0.3)', borderRadius: '8px', padding: '4px 10px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'var(--surface-color)', border: '1px solid rgba(var(--gold-rgb), 0.25)', borderRadius: '10px', padding: '6px 12px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                       <span style={{ color: 'var(--beige)', fontSize: '0.75rem', fontWeight: 600 }}>From:</span>
                       <input
@@ -2780,11 +3079,11 @@ export const SuperadminDashboard: React.FC = () => {
                 {/* 4 KPI Cards Grid */}
                 <div className="enterprise-kpi-grid">
                   {/* Card 1: TOTAL REVENUE */}
-                  <div className="dashboard-stat-card glass-panel" style={{ padding: '20px', border: '1px solid rgba(201, 168, 76, 0.25)', borderRadius: '12px' }}>
+                  <div className="dashboard-stat-card glass-panel" style={{ background: 'var(--surface-color)', border: '1.5px solid rgba(var(--gold-rgb), 0.45)', borderRadius: '14px' }}>
                     <span style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 600, display: 'block', marginBottom: '8px' }}>
                       TOTAL REVENUE
                     </span>
-                    <span style={{ fontSize: '1.8rem', fontWeight: 800, color: '#f5efe6', display: 'block', fontFamily: 'var(--font-display)' }}>
+                    <span style={{ fontSize: '1.8rem', fontWeight: 800, color: '#f5efe6', display: 'block', fontFamily: 'var(--font-number)' }}>
                       ₹{displayOverview.total_revenue.current_value.toLocaleString('en-IN')}
                     </span>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '8px', fontSize: '0.75rem', fontWeight: 600, color: displayOverview.total_revenue.percentage_change >= 0 ? '#2ecc71' : '#e74c3c' }}>
@@ -2794,11 +3093,11 @@ export const SuperadminDashboard: React.FC = () => {
                   </div>
 
                   {/* Card 2: ONLINE ORDERS */}
-                  <div className="dashboard-stat-card glass-panel" style={{ padding: '20px', border: '1px solid rgba(201, 168, 76, 0.25)', borderRadius: '12px' }}>
+                  <div className="dashboard-stat-card glass-panel" style={{ background: 'var(--surface-color)', border: '1px solid rgba(var(--gold-rgb), 0.22)', borderRadius: '14px' }}>
                     <span style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 600, display: 'block', marginBottom: '8px' }}>
                       ONLINE ORDERS
                     </span>
-                    <span style={{ fontSize: '1.8rem', fontWeight: 800, color: '#f5efe6', display: 'block', fontFamily: 'var(--font-display)' }}>
+                    <span style={{ fontSize: '1.8rem', fontWeight: 800, color: '#f5efe6', display: 'block', fontFamily: 'var(--font-number)' }}>
                       {(displayOverview.online_orders?.current_value ?? 0).toLocaleString()}
                     </span>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '8px', fontSize: '0.75rem', fontWeight: 600, color: ((displayOverview.online_orders?.percentage_change ?? 0) >= 0 ? '#2ecc71' : '#e74c3c') }}>
@@ -2808,11 +3107,11 @@ export const SuperadminDashboard: React.FC = () => {
                   </div>
 
                   {/* Card 3: OFFLINE ORDERS */}
-                  <div className="dashboard-stat-card glass-panel" style={{ padding: '20px', border: '1px solid rgba(201, 168, 76, 0.25)', borderRadius: '12px' }}>
+                  <div className="dashboard-stat-card glass-panel" style={{ background: 'var(--surface-color)', border: '1px solid rgba(var(--gold-rgb), 0.22)', borderRadius: '14px' }}>
                     <span style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 600, display: 'block', marginBottom: '8px' }}>
                       OFFLINE ORDERS
                     </span>
-                    <span style={{ fontSize: '1.8rem', fontWeight: 800, color: '#f5efe6', display: 'block', fontFamily: 'var(--font-display)' }}>
+                    <span style={{ fontSize: '1.8rem', fontWeight: 800, color: '#f5efe6', display: 'block', fontFamily: 'var(--font-number)' }}>
                       {(displayOverview.offline_orders?.current_value ?? 0).toLocaleString()}
                     </span>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '8px', fontSize: '0.75rem', fontWeight: 600, color: ((displayOverview.offline_orders?.percentage_change ?? 0) >= 0 ? '#2ecc71' : '#e74c3c') }}>
@@ -2821,12 +3120,12 @@ export const SuperadminDashboard: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* Card 3: TOTAL CUSTOMERS */}
-                  <div className="dashboard-stat-card glass-panel" style={{ padding: '20px', border: '1px solid rgba(201, 168, 76, 0.25)', borderRadius: '12px' }}>
+                  {/* Card 4: TOTAL CUSTOMERS */}
+                  <div className="dashboard-stat-card glass-panel" style={{ background: 'var(--surface-color)', border: '1px solid rgba(var(--gold-rgb), 0.22)', borderRadius: '14px' }}>
                     <span style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 600, display: 'block', marginBottom: '8px' }}>
                       TOTAL CUSTOMERS
                     </span>
-                    <span style={{ fontSize: '1.8rem', fontWeight: 800, color: '#f5efe6', display: 'block', fontFamily: 'var(--font-display)' }}>
+                    <span style={{ fontSize: '1.8rem', fontWeight: 800, color: '#f5efe6', display: 'block', fontFamily: 'var(--font-number)' }}>
                       {displayOverview.total_customers.current_value.toLocaleString()}
                     </span>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '8px', fontSize: '0.75rem', fontWeight: 600, color: displayOverview.total_customers.percentage_change >= 0 ? '#2ecc71' : '#e74c3c' }}>
@@ -2835,12 +3134,12 @@ export const SuperadminDashboard: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* Card 4: ACTIVE ADMINS */}
-                  <div className="dashboard-stat-card glass-panel" style={{ padding: '20px', border: '1px solid rgba(201, 168, 76, 0.25)', borderRadius: '12px' }}>
+                  {/* Card 5: ACTIVE ADMINS */}
+                  <div className="dashboard-stat-card glass-panel" style={{ background: 'var(--surface-color)', border: '1px solid rgba(var(--gold-rgb), 0.22)', borderRadius: '14px' }}>
                     <span style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 600, display: 'block', marginBottom: '8px' }}>
                       ACTIVE ADMINS
                     </span>
-                    <span style={{ fontSize: '1.8rem', fontWeight: 800, color: '#f5efe6', display: 'block', fontFamily: 'var(--font-display)' }}>
+                    <span style={{ fontSize: '1.8rem', fontWeight: 800, color: '#f5efe6', display: 'block', fontFamily: 'var(--font-number)' }}>
                       {displayOverview.active_admins.current_value.toLocaleString()}
                     </span>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '8px', fontSize: '0.75rem', fontWeight: 600, color: displayOverview.active_admins.percentage_change >= 0 ? '#2ecc71' : '#e74c3c' }}>
@@ -2858,31 +3157,31 @@ export const SuperadminDashboard: React.FC = () => {
                     </h3>
                     <div className="enterprise-payment-grid">
                       {/* Completed Payments */}
-                      <div className="glass-panel" onClick={() => handlePaymentMetricClick('completed')} style={{ cursor: 'pointer', padding: '16px', border: '1px solid rgba(46, 204, 113, 0.3)', borderRadius: '12px', background: 'rgba(46, 204, 113, 0.05)' }}>
+                      <div className="glass-panel" onClick={() => handlePaymentMetricClick('completed')} style={{ cursor: 'pointer', padding: '16px', border: '1px solid rgba(46, 204, 113, 0.35)', borderRadius: '12px', background: 'var(--surface-color)' }}>
                         <span style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.7)', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>
                           Completed
                         </span>
-                        <span style={{ fontSize: '1.6rem', fontWeight: 800, color: '#2ecc71', display: 'block', fontFamily: 'var(--font-display)' }}>
+                        <span style={{ fontSize: '1.6rem', fontWeight: 800, color: '#2ecc71', display: 'block', fontFamily: 'var(--font-number)' }}>
                           {displayOverview.payment_metrics.completed.toLocaleString()}
                         </span>
                       </div>
 
                       {/* Pending Payments */}
-                      <div className="glass-panel" onClick={() => handlePaymentMetricClick('pending')} style={{ cursor: 'pointer', padding: '16px', border: '1px solid rgba(243, 156, 18, 0.3)', borderRadius: '12px', background: 'rgba(243, 156, 18, 0.05)' }}>
+                      <div className="glass-panel" onClick={() => handlePaymentMetricClick('pending')} style={{ cursor: 'pointer', padding: '16px', border: '1px solid rgba(243, 156, 18, 0.35)', borderRadius: '12px', background: 'var(--surface-color)' }}>
                         <span style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.7)', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>
                           Pending
                         </span>
-                        <span style={{ fontSize: '1.6rem', fontWeight: 800, color: '#f39c12', display: 'block', fontFamily: 'var(--font-display)' }}>
+                        <span style={{ fontSize: '1.6rem', fontWeight: 800, color: '#f39c12', display: 'block', fontFamily: 'var(--font-number)' }}>
                           {displayOverview.payment_metrics.pending.toLocaleString()}
                         </span>
                       </div>
 
                       {/* Cancelled/Failed Payments */}
-                      <div className="glass-panel" onClick={() => handlePaymentMetricClick('cancelled')} style={{ cursor: 'pointer', padding: '16px', border: '1px solid rgba(231, 76, 60, 0.3)', borderRadius: '12px', background: 'rgba(231, 76, 60, 0.05)' }}>
+                      <div className="glass-panel" onClick={() => handlePaymentMetricClick('cancelled')} style={{ cursor: 'pointer', padding: '16px', border: '1px solid rgba(231, 76, 60, 0.35)', borderRadius: '12px', background: 'var(--surface-color)' }}>
                         <span style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.7)', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>
                           Cancelled / Failed
                         </span>
-                        <span style={{ fontSize: '1.6rem', fontWeight: 800, color: '#e74c3c', display: 'block', fontFamily: 'var(--font-display)' }}>
+                        <span style={{ fontSize: '1.6rem', fontWeight: 800, color: '#e74c3c', display: 'block', fontFamily: 'var(--font-number)' }}>
                           {displayOverview.payment_metrics.cancelled.toLocaleString()}
                         </span>
                       </div>
@@ -2893,9 +3192,9 @@ export const SuperadminDashboard: React.FC = () => {
                 {/* ROW 1: Revenue Trend Chart & Sales Source Donut Chart */}
                 <div className="enterprise-charts-row">
                   {/* Revenue Trend Chart */}
-                  <div className="glass-panel" style={{ padding: '24px', border: '1px solid rgba(201, 168, 76, 0.25)', borderRadius: '12px', background: 'rgba(15, 12, 10, 0.85)' }}>
+                  <div className="glass-panel" style={{ padding: '24px', border: '1px solid rgba(var(--gold-rgb), 0.25)', borderRadius: '12px', background: 'var(--surface-color)' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                      <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1.15rem', color: '#f5efe6', margin: 0, fontWeight: 700 }}>
+                      <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1.15rem', color: 'var(--cream)', margin: 0, fontWeight: 700 }}>
                         REVENUE TREND ({overviewTimeframe === 'today' ? 'TODAY' : overviewTimeframe === '30days' ? 'THIS MONTH' : overviewTimeframe.toUpperCase()})
                       </h3>
                     </div>
@@ -2904,26 +3203,26 @@ export const SuperadminDashboard: React.FC = () => {
                         <AreaChart data={displayOverview.revenue_trend}>
                           <defs>
                             <linearGradient id="goldGradientOverview" x1="0" y1="0" x2="0" y2="1">
-                              <stop offset="5%" stopColor="#c9a84c" stopOpacity={0.6} />
-                              <stop offset="95%" stopColor="#c9a84c" stopOpacity={0.0} />
+                              <stop offset="5%" stopColor="var(--gold)" stopOpacity={0.6} />
+                              <stop offset="95%" stopColor="var(--gold)" stopOpacity={0.0} />
                             </linearGradient>
                           </defs>
                           <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.08)" />
                           <XAxis dataKey="date" stroke="rgba(255,255,255,0.5)" tick={{ fontSize: 11 }} />
                           <YAxis stroke="rgba(255,255,255,0.5)" tick={{ fontSize: 11 }} tickFormatter={(v) => `₹${v >= 1000 ? `${(v/1000).toFixed(0)}k` : v}`} />
                           <Tooltip
-                            contentStyle={{ background: '#14100d', borderColor: '#c9a84c', borderRadius: '8px', color: '#f5efe6' }}
+                            contentStyle={{ background: 'var(--black)', borderColor: 'var(--gold)', borderRadius: '8px', color: 'var(--cream)' }}
                             formatter={(val: any) => [`₹${Number(val).toLocaleString('en-IN')}`, 'Revenue']}
                           />
-                          <Area type="monotone" dataKey="revenue" stroke="#c9a84c" strokeWidth={2.5} fillOpacity={1} fill="url(#goldGradientOverview)" />
+                          <Area type="monotone" dataKey="revenue" stroke="var(--gold)" strokeWidth={2.5} fillOpacity={1} fill="url(#goldGradientOverview)" />
                         </AreaChart>
                       </ResponsiveContainer>
                     </div>
                   </div>
 
                   {/* Sales Source Donut Chart */}
-                  <div className="glass-panel" style={{ padding: '24px', border: '1px solid rgba(201, 168, 76, 0.25)', borderRadius: '12px', background: 'rgba(15, 12, 10, 0.85)', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-                    <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1.15rem', color: '#f5efe6', marginBottom: '16px', fontWeight: 700 }}>
+                  <div className="glass-panel" style={{ padding: '24px', border: '1px solid rgba(var(--gold-rgb), 0.25)', borderRadius: '12px', background: 'var(--surface-color)', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                    <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1.15rem', color: 'var(--cream)', marginBottom: '16px', fontWeight: 700 }}>
                       SALES SOURCE
                     </h3>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-around', flex: 1, flexWrap: 'wrap', gap: '16px' }}>
@@ -2954,7 +3253,7 @@ export const SuperadminDashboard: React.FC = () => {
                           <div style={{ width: '12px', height: '12px', borderRadius: '50%', background: '#b76e79' }} />
                           <div>
                             <span style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.6)', display: 'block' }}>Online Sales</span>
-                            <span style={{ fontSize: '0.95rem', fontWeight: 700, color: '#f5efe6' }}>
+                            <span style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--cream)' }}>
                               ₹{displayOverview.sales_source.online_revenue.toLocaleString('en-IN')} ({displayOverview.sales_source.online_percentage}%)
                             </span>
                           </div>
@@ -2963,7 +3262,7 @@ export const SuperadminDashboard: React.FC = () => {
                           <div style={{ width: '12px', height: '12px', borderRadius: '50%', background: '#80343f' }} />
                           <div>
                             <span style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.6)', display: 'block' }}>Offline Sales</span>
-                            <span style={{ fontSize: '0.95rem', fontWeight: 700, color: '#f5efe6' }}>
+                            <span style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--cream)' }}>
                               ₹{displayOverview.sales_source.offline_revenue.toLocaleString('en-IN')} ({displayOverview.sales_source.offline_percentage}%)
                             </span>
                           </div>
@@ -2976,9 +3275,9 @@ export const SuperadminDashboard: React.FC = () => {
                 {/* ROW 2: Top Selling Product & Recent Activity */}
                 <div className="enterprise-bottom-row">
                   {/* Top Selling Product */}
-                  <div className="glass-panel" style={{ padding: '24px', border: '1px solid rgba(201, 168, 76, 0.25)', borderRadius: '12px', background: 'rgba(15, 12, 10, 0.85)', display: 'flex', flexDirection: 'column' }}>
+                  <div className="glass-panel" style={{ padding: '24px', border: '1px solid rgba(var(--gold-rgb), 0.25)', borderRadius: '12px', background: 'var(--surface-color)', display: 'flex', flexDirection: 'column' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                      <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1.15rem', color: '#f5efe6', margin: 0, fontWeight: 700 }}>
+                      <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1.15rem', color: 'var(--cream)', margin: 0, fontWeight: 700 }}>
                         TOP SELLING PRODUCTS
                       </h3>
                       {displayOverview.top_selling_products.length > TOP_SELLING_PER_PAGE && (
@@ -3002,25 +3301,25 @@ export const SuperadminDashboard: React.FC = () => {
                                 padding: '12px',
                                 background: 'rgba(255, 255, 255, 0.03)',
                                 borderRadius: '10px',
-                                border: '1px solid rgba(201, 168, 76, 0.15)',
+                                border: '1px solid rgba(var(--gold-rgb), 0.15)',
                               }}
                             >
                               <img
                                 src={getImageUrl(prod.image_url)}
                                 alt={prod.name}
-                                style={{ width: '54px', height: '54px', borderRadius: '8px', objectFit: 'cover', border: '1px solid rgba(201, 168, 76, 0.3)', flexShrink: 0 }}
+                                style={{ width: '54px', height: '54px', borderRadius: '8px', objectFit: 'cover', border: '1px solid rgba(var(--gold-rgb), 0.3)', flexShrink: 0 }}
                                 onError={(e) => {
                                   (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1549007994-cb92caebd54b?auto=format&fit=crop&w=150&q=80';
                                 }}
                               />
                               <div style={{ flex: 1, minWidth: 0 }}>
-                                <h4 style={{ fontSize: '0.9rem', fontWeight: 700, color: '#f5efe6', margin: '0 0 3px 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                <h4 style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--cream)', margin: '0 0 3px 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                   {prod.name}
                                 </h4>
                                 <span style={{ fontSize: '0.76rem', color: 'rgba(255,255,255,0.55)', display: 'block', marginBottom: '2px' }}>
                                   Sold: {prod.units_sold} units
                                 </span>
-                                <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#c9a84c' }}>
+                                <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--gold)' }}>
                                   ₹{prod.revenue.toLocaleString('en-IN')}
                                 </span>
                               </div>
@@ -3058,14 +3357,14 @@ export const SuperadminDashboard: React.FC = () => {
                   </div>
 
                   {/* Recent Activity */}
-                  <div className="glass-panel" style={{ padding: '24px', border: '1px solid rgba(201, 168, 76, 0.25)', borderRadius: '12px', background: 'rgba(15, 12, 10, 0.85)', display: 'flex', flexDirection: 'column' }}>
+                  <div className="glass-panel" style={{ padding: '24px', border: '1px solid rgba(var(--gold-rgb), 0.25)', borderRadius: '12px', background: 'var(--surface-color)', display: 'flex', flexDirection: 'column' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                      <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1.15rem', color: '#f5efe6', margin: 0, fontWeight: 700 }}>
+                      <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1.15rem', color: 'var(--cream)', margin: 0, fontWeight: 700 }}>
                         RECENT ACTIVITY
                       </h3>
                       <button
                         onClick={() => setActiveTab('audit-logs')}
-                        style={{ background: 'none', border: 'none', color: '#c9a84c', fontSize: '0.82rem', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}
+                        style={{ background: 'none', border: 'none', color: 'var(--gold)', fontSize: '0.82rem', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}
                       >
                         View All
                       </button>
@@ -3086,11 +3385,11 @@ export const SuperadminDashboard: React.FC = () => {
                                 padding: '10px 12px',
                                 background: 'rgba(255, 255, 255, 0.02)',
                                 borderRadius: '8px',
-                                borderLeft: '3px solid #c9a84c',
+                                borderLeft: '3px solid var(--gold)',
                               }}
                             >
                               <div style={{ flex: 1 }}>
-                                <p style={{ margin: '0 0 3px 0', fontSize: '0.82rem', color: '#f5efe6', fontWeight: 600, lineHeight: 1.4 }}>
+                                <p style={{ margin: '0 0 3px 0', fontSize: '0.82rem', color: 'var(--cream)', fontWeight: 600, lineHeight: 1.4 }}>
                                   {act.description || act.action}
                                 </p>
                                 <span style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.45)' }}>
@@ -3189,10 +3488,10 @@ export const SuperadminDashboard: React.FC = () => {
                 gap: '16px',
                 marginBottom: '24px',
                 flexWrap: 'wrap',
-                background: 'rgba(20, 16, 13, 0.85)',
+                background: 'var(--surface-color)',
                 padding: '14px 18px',
                 borderRadius: '12px',
-                border: '1px solid rgba(201, 168, 76, 0.25)',
+                border: '1px solid rgba(var(--gold-rgb), 0.25)',
               }}
             >
               <div className="revenue-filter-timeframe-row" style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
@@ -3207,9 +3506,9 @@ export const SuperadminDashboard: React.FC = () => {
                       fetchRevenueAnalytics(e.target.value, revenueDateFrom, revenueDateTo, revenueDateBasis);
                     }}
                     style={{
-                      background: '#14100d',
-                      color: '#f5efe6',
-                      border: '1px solid rgba(201, 168, 76, 0.4)',
+                      background: 'var(--black)',
+                      color: 'var(--cream)',
+                      border: '1px solid rgba(var(--gold-rgb), 0.4)',
                       borderRadius: '8px',
                       padding: '8px 14px',
                       fontSize: '0.85rem',
@@ -3235,10 +3534,10 @@ export const SuperadminDashboard: React.FC = () => {
                       value={revenueDateFrom}
                       onChange={(e) => setRevenueDateFrom(e.target.value)}
                       style={{
-                        background: '#14100d',
-                        color: '#f5efe6',
+                        background: 'var(--black)',
+                        color: 'var(--cream)',
                         colorScheme: 'dark',
-                        border: '1px solid rgba(201, 168, 76, 0.4)',
+                        border: '1px solid rgba(var(--gold-rgb), 0.4)',
                         borderRadius: '6px',
                         padding: '6px 10px',
                         fontSize: '0.82rem',
@@ -3253,10 +3552,10 @@ export const SuperadminDashboard: React.FC = () => {
                       value={revenueDateTo}
                       onChange={(e) => setRevenueDateTo(e.target.value)}
                       style={{
-                        background: '#14100d',
-                        color: '#f5efe6',
+                        background: 'var(--black)',
+                        color: 'var(--cream)',
                         colorScheme: 'dark',
-                        border: '1px solid rgba(201, 168, 76, 0.4)',
+                        border: '1px solid rgba(var(--gold-rgb), 0.4)',
                         borderRadius: '6px',
                         padding: '6px 10px',
                         fontSize: '0.82rem',
@@ -3295,9 +3594,9 @@ export const SuperadminDashboard: React.FC = () => {
                       fontWeight: 600,
                       cursor: 'pointer',
                       border: 'none',
-                      background: revenueDateBasis === 'order_date' ? 'rgba(201, 168, 76, 0.25)' : 'transparent',
+                      background: revenueDateBasis === 'order_date' ? 'rgba(var(--gold-rgb), 0.25)' : 'transparent',
                       color: revenueDateBasis === 'order_date' ? 'var(--gold)' : 'var(--beige)',
-                      boxShadow: revenueDateBasis === 'order_date' ? '0 0 10px rgba(201, 168, 76, 0.2)' : 'none',
+                      boxShadow: revenueDateBasis === 'order_date' ? '0 0 10px rgba(var(--gold-rgb), 0.2)' : 'none',
                       transition: 'all 0.2s',
                     }}
                   >
@@ -3316,9 +3615,9 @@ export const SuperadminDashboard: React.FC = () => {
                       fontWeight: 600,
                       cursor: 'pointer',
                       border: 'none',
-                      background: revenueDateBasis === 'payment_date' ? 'rgba(201, 168, 76, 0.25)' : 'transparent',
+                      background: revenueDateBasis === 'payment_date' ? 'rgba(var(--gold-rgb), 0.25)' : 'transparent',
                       color: revenueDateBasis === 'payment_date' ? 'var(--gold)' : 'var(--beige)',
-                      boxShadow: revenueDateBasis === 'payment_date' ? '0 0 10px rgba(201, 168, 76, 0.2)' : 'none',
+                      boxShadow: revenueDateBasis === 'payment_date' ? '0 0 10px rgba(var(--gold-rgb), 0.2)' : 'none',
                       transition: 'all 0.2s',
                     }}
                   >
@@ -3326,7 +3625,7 @@ export const SuperadminDashboard: React.FC = () => {
                   </button>
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#c9a84c', fontSize: '0.82rem', fontWeight: 600 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--gold)', fontSize: '0.82rem', fontWeight: 600 }}>
                   <Calendar size={14} />
                   <span>{displayRevenue.display_range}</span>
                 </div>
@@ -3376,11 +3675,11 @@ export const SuperadminDashboard: React.FC = () => {
                 </div>
                 <div className="stats-grid-dashboard revenue-kpi-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(145px, 1fr))', gap: '16px', marginBottom: '20px' }}>
                   {/* Card 1: TOTAL REVENUE */}
-                  <div className="dashboard-stat-card glass-panel revenue-kpi-card" style={{ padding: '20px', border: '1px solid rgba(201, 168, 76, 0.35)', borderRadius: '12px', borderTop: '3px solid #c9a84c' }}>
+                  <div className="dashboard-stat-card glass-panel revenue-kpi-card" style={{ padding: '20px', border: '1px solid rgba(var(--gold-rgb), 0.35)', borderRadius: '12px', borderTop: '3px solid var(--gold)' }}>
                     <span style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 600, display: 'block', marginBottom: '6px' }}>
                       TOTAL REVENUE (RECEIVED)
                     </span>
-                    <span className="revenue-kpi-val" style={{ fontSize: '1.85rem', fontWeight: 800, color: 'var(--gold)', display: 'block', fontFamily: 'var(--font-display)' }}>
+                    <span className="revenue-kpi-val" style={{ fontSize: '1.85rem', fontWeight: 800, color: 'var(--gold)', display: 'block', fontFamily: 'var(--font-number)' }}>
                       ₹{(displayRevenue.total_revenue?.current_value ?? 0).toLocaleString('en-IN')}
                     </span>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '8px', fontSize: '0.75rem', fontWeight: 600, color: (displayRevenue.total_revenue?.percentage_change ?? 0) >= 0 ? '#2ecc71' : '#e74c3c' }}>
@@ -3394,7 +3693,7 @@ export const SuperadminDashboard: React.FC = () => {
                     <span style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 600, display: 'block', marginBottom: '6px' }}>
                       ONLINE REVENUE
                     </span>
-                    <span className="revenue-kpi-val" style={{ fontSize: '1.85rem', fontWeight: 800, color: '#2ecc71', display: 'block', fontFamily: 'var(--font-display)' }}>
+                    <span className="revenue-kpi-val" style={{ fontSize: '1.85rem', fontWeight: 800, color: '#2ecc71', display: 'block', fontFamily: 'var(--font-number)' }}>
                       ₹{(displayRevenue.online_revenue?.current_value ?? 0).toLocaleString('en-IN')}
                     </span>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '8px', fontSize: '0.75rem', fontWeight: 600, color: (displayRevenue.online_revenue?.percentage_change ?? 0) >= 0 ? '#2ecc71' : '#e74c3c' }}>
@@ -3408,7 +3707,7 @@ export const SuperadminDashboard: React.FC = () => {
                     <span style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 600, display: 'block', marginBottom: '6px' }}>
                       COD COLLECTED (PAID)
                     </span>
-                    <span className="revenue-kpi-val" style={{ fontSize: '1.85rem', fontWeight: 800, color: '#e67e22', display: 'block', fontFamily: 'var(--font-display)' }}>
+                    <span className="revenue-kpi-val" style={{ fontSize: '1.85rem', fontWeight: 800, color: '#e67e22', display: 'block', fontFamily: 'var(--font-number)' }}>
                       ₹{(displayRevenue.cod_collected?.current_value ?? 0).toLocaleString('en-IN')}
                     </span>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '8px', fontSize: '0.75rem', fontWeight: 600, color: (displayRevenue.cod_collected?.percentage_change ?? 0) >= 0 ? '#2ecc71' : '#e74c3c' }}>
@@ -3422,7 +3721,7 @@ export const SuperadminDashboard: React.FC = () => {
                     <span style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 600, display: 'block', marginBottom: '6px' }}>
                       PENDING PAYMENTS (₹)
                     </span>
-                    <span className="revenue-kpi-val" style={{ fontSize: '1.85rem', fontWeight: 800, color: '#e74c3c', display: 'block', fontFamily: 'var(--font-display)' }}>
+                    <span className="revenue-kpi-val" style={{ fontSize: '1.85rem', fontWeight: 800, color: '#e74c3c', display: 'block', fontFamily: 'var(--font-number)' }}>
                       ₹{(displayRevenue.pending_payment?.current_value ?? 0).toLocaleString('en-IN')}
                     </span>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '8px', fontSize: '0.75rem', fontWeight: 600, color: '#f39c12' }}>
@@ -3443,7 +3742,7 @@ export const SuperadminDashboard: React.FC = () => {
                     <span style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 600, display: 'block', marginBottom: '6px' }}>
                       TOTAL ORDERS PLACED
                     </span>
-                    <span className="revenue-kpi-val" style={{ fontSize: '1.85rem', fontWeight: 800, color: '#3498db', display: 'block', fontFamily: 'var(--font-display)' }}>
+                    <span className="revenue-kpi-val" style={{ fontSize: '1.85rem', fontWeight: 800, color: '#3498db', display: 'block', fontFamily: 'var(--font-number)' }}>
                       {Math.round(displayRevenue.total_orders?.current_value ?? 0)}
                     </span>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '8px', fontSize: '0.75rem', fontWeight: 600, color: (displayRevenue.total_orders?.percentage_change ?? 0) >= 0 ? '#2ecc71' : '#e74c3c' }}>
@@ -3457,7 +3756,7 @@ export const SuperadminDashboard: React.FC = () => {
                     <span style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 600, display: 'block', marginBottom: '6px' }}>
                       PAID ORDERS
                     </span>
-                    <span className="revenue-kpi-val" style={{ fontSize: '1.85rem', fontWeight: 800, color: '#2ecc71', display: 'block', fontFamily: 'var(--font-display)' }}>
+                    <span className="revenue-kpi-val" style={{ fontSize: '1.85rem', fontWeight: 800, color: '#2ecc71', display: 'block', fontFamily: 'var(--font-number)' }}>
                       {Math.round(displayRevenue.paid_orders?.current_value ?? 0)}
                     </span>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '8px', fontSize: '0.75rem', fontWeight: 600, color: (displayRevenue.paid_orders?.percentage_change ?? 0) >= 0 ? '#2ecc71' : '#e74c3c' }}>
@@ -3471,7 +3770,7 @@ export const SuperadminDashboard: React.FC = () => {
                     <span style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 600, display: 'block', marginBottom: '6px' }}>
                       COD ORDERS (TOTAL)
                     </span>
-                    <span className="revenue-kpi-val" style={{ fontSize: '1.85rem', fontWeight: 800, color: '#9b59b6', display: 'block', fontFamily: 'var(--font-display)' }}>
+                    <span className="revenue-kpi-val" style={{ fontSize: '1.85rem', fontWeight: 800, color: '#9b59b6', display: 'block', fontFamily: 'var(--font-number)' }}>
                       {Math.round(displayRevenue.cod_orders?.current_value ?? 0)}
                     </span>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '8px', fontSize: '0.75rem', fontWeight: 600, color: (displayRevenue.cod_orders?.percentage_change ?? 0) >= 0 ? '#2ecc71' : '#e74c3c' }}>
@@ -3485,7 +3784,7 @@ export const SuperadminDashboard: React.FC = () => {
                     <span style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 600, display: 'block', marginBottom: '6px' }}>
                       PENDING ORDERS
                     </span>
-                    <span className="revenue-kpi-val" style={{ fontSize: '1.85rem', fontWeight: 800, color: '#f39c12', display: 'block', fontFamily: 'var(--font-display)' }}>
+                    <span className="revenue-kpi-val" style={{ fontSize: '1.85rem', fontWeight: 800, color: '#f39c12', display: 'block', fontFamily: 'var(--font-number)' }}>
                       {Math.round(displayRevenue.pending_orders?.current_value ?? 0)}
                     </span>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '8px', fontSize: '0.75rem', fontWeight: 600, color: (displayRevenue.pending_orders?.percentage_change ?? 0) >= 0 ? '#e74c3c' : '#2ecc71' }}>
@@ -3496,10 +3795,10 @@ export const SuperadminDashboard: React.FC = () => {
                 </div>
 
                 {/* ── INTERACTIVE MULTI-METRIC CHART ──────────────────────── */}
-                <div className="glass-panel" style={{ padding: '24px', border: '1px solid rgba(201, 168, 76, 0.25)', borderRadius: '12px', background: 'rgba(15, 12, 10, 0.85)', marginBottom: '24px' }}>
+                <div className="glass-panel" style={{ padding: '24px', border: '1px solid rgba(var(--gold-rgb), 0.25)', borderRadius: '12px', background: 'var(--surface-color)', marginBottom: '24px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '14px' }}>
                     <div>
-                      <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1.2rem', color: '#f5efe6', margin: 0, fontWeight: 700 }}>
+                      <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1.2rem', color: 'var(--cream)', margin: 0, fontWeight: 700 }}>
                         PERFORMANCE TREND CURVE
                       </h3>
                       <span style={{ fontSize: '0.75rem', color: 'var(--grey-light)' }}>
@@ -3526,7 +3825,7 @@ export const SuperadminDashboard: React.FC = () => {
                             fontWeight: revenueChartMetric === tab.id ? 700 : 500,
                             cursor: 'pointer',
                             border: 'none',
-                            background: revenueChartMetric === tab.id ? 'rgba(201, 168, 76, 0.2)' : 'transparent',
+                            background: revenueChartMetric === tab.id ? 'rgba(var(--gold-rgb), 0.2)' : 'transparent',
                             color: revenueChartMetric === tab.id ? 'var(--gold)' : 'var(--beige)',
                             borderBottom: revenueChartMetric === tab.id ? '2px solid var(--gold)' : '2px solid transparent',
                             transition: 'all 0.2s',
@@ -3545,8 +3844,8 @@ export const SuperadminDashboard: React.FC = () => {
                         <AreaChart data={displayRevenue.revenue_trend}>
                           <defs>
                             <linearGradient id="goldGradient" x1="0" y1="0" x2="0" y2="1">
-                              <stop offset="5%" stopColor="#c9a84c" stopOpacity={0.6} />
-                              <stop offset="95%" stopColor="#c9a84c" stopOpacity={0.0} />
+                              <stop offset="5%" stopColor="var(--gold)" stopOpacity={0.6} />
+                              <stop offset="95%" stopColor="var(--gold)" stopOpacity={0.0} />
                             </linearGradient>
                             <linearGradient id="greenGradient" x1="0" y1="0" x2="0" y2="1">
                               <stop offset="5%" stopColor="#2ecc71" stopOpacity={0.5} />
@@ -3561,11 +3860,11 @@ export const SuperadminDashboard: React.FC = () => {
                           <XAxis dataKey="date" stroke="rgba(255,255,255,0.5)" tick={{ fontSize: 11 }} />
                           <YAxis stroke="rgba(255,255,255,0.5)" tick={{ fontSize: 11 }} tickFormatter={(v) => `₹${v >= 1000 ? `${(v/1000).toFixed(0)}k` : v}`} />
                           <Tooltip
-                            contentStyle={{ background: '#14100d', borderColor: '#c9a84c', borderRadius: '8px', color: '#f5efe6' }}
+                            contentStyle={{ background: 'var(--black)', borderColor: 'var(--gold)', borderRadius: '8px', color: 'var(--cream)' }}
                             formatter={(val: any, name: any) => [`₹${Number(val).toLocaleString('en-IN')}`, name]}
                           />
                           <Legend />
-                          <Area type="monotone" dataKey="total_revenue" name="Total Revenue (₹)" stroke="#c9a84c" strokeWidth={2.5} fillOpacity={1} fill="url(#goldGradient)" />
+                          <Area type="monotone" dataKey="total_revenue" name="Total Revenue (₹)" stroke="var(--gold)" strokeWidth={2.5} fillOpacity={1} fill="url(#goldGradient)" />
                           <Area type="monotone" dataKey="online_revenue" name="Online Revenue (₹)" stroke="#2ecc71" strokeWidth={2} fillOpacity={1} fill="url(#greenGradient)" />
                           <Area type="monotone" dataKey="cod_collected" name="COD Collected (₹)" stroke="#e67e22" strokeWidth={2} fillOpacity={1} fill="url(#orangeGradient)" />
                         </AreaChart>
@@ -3633,7 +3932,7 @@ export const SuperadminDashboard: React.FC = () => {
                 {/* ── PAYMENT METHOD DISTRIBUTION ─────────────────────────── */}
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 280px), 1fr))', gap: '20px', marginBottom: '24px' }}>
                   {/* Revenue by Payment Method */}
-                  <div className="glass-panel" style={{ padding: '24px', border: '1px solid rgba(201, 168, 76, 0.25)', borderRadius: '12px', background: 'rgba(15, 12, 10, 0.85)' }}>
+                  <div className="glass-panel" style={{ padding: '24px', border: '1px solid rgba(var(--gold-rgb), 0.25)', borderRadius: '12px', background: 'var(--surface-color)' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
                       <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1.15rem', color: '#f5efe6', margin: 0, fontWeight: 700 }}>
                         REVENUE BY PAYMENT METHOD
@@ -3648,9 +3947,9 @@ export const SuperadminDashboard: React.FC = () => {
                         (displayRevenue.revenue_by_payment_method || []).map((pm, i) => (
                           <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.88rem' }}>
-                              <span style={{ color: '#f5efe6', fontWeight: 600 }}>{pm.method}</span>
+                              <span style={{ color: 'var(--cream)', fontWeight: 600 }}>{pm.method}</span>
                               <div style={{ textAlign: 'right' }}>
-                                <span style={{ color: '#c9a84c', fontWeight: 700 }}>
+                                <span style={{ color: 'var(--gold)', fontWeight: 700 }}>
                                   ₹{(pm.amount || 0).toLocaleString('en-IN')}
                                 </span>
                                 <span style={{ color: 'var(--grey-light)', fontSize: '0.75rem', marginLeft: '6px' }}>
@@ -3680,9 +3979,9 @@ export const SuperadminDashboard: React.FC = () => {
                   </div>
 
                   {/* Accounting Logic & Compliance Note Card */}
-                  <div className="glass-panel" style={{ padding: '24px', border: '1px solid rgba(201, 168, 76, 0.25)', borderRadius: '12px', background: 'rgba(15, 12, 10, 0.85)', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                  <div className="glass-panel" style={{ padding: '24px', border: '1px solid rgba(var(--gold-rgb), 0.25)', borderRadius: '12px', background: 'var(--surface-color)', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
                     <div>
-                      <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1.15rem', color: '#f5efe6', marginBottom: '12px', fontWeight: 700 }}>
+                      <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1.15rem', color: 'var(--cream)', marginBottom: '12px', fontWeight: 700 }}>
                         ACCOUNTING &amp; COD RECOGNITION RULES
                       </h3>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '0.82rem', color: 'var(--beige)', lineHeight: 1.5 }}>
@@ -3704,10 +4003,10 @@ export const SuperadminDashboard: React.FC = () => {
                 </div>
 
                 {/* ── DETAILED ORDER TRANSACTIONS TABLE ─────────────────────── */}
-                <div className="glass-panel" style={{ padding: '24px', border: '1px solid rgba(201, 168, 76, 0.25)', borderRadius: '12px', background: 'rgba(15, 12, 10, 0.85)', marginBottom: '24px' }}>
+                <div className="glass-panel" style={{ padding: '24px', border: '1px solid rgba(var(--gold-rgb), 0.25)', borderRadius: '12px', background: 'var(--surface-color)', marginBottom: '24px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px', flexWrap: 'wrap', gap: '14px' }}>
                     <div>
-                      <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1.2rem', color: '#f5efe6', margin: 0, fontWeight: 700 }}>
+                      <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1.2rem', color: 'var(--cream)', margin: 0, fontWeight: 700 }}>
                         ORDER &amp; TRANSACTION BREAKDOWN
                       </h3>
                       <span style={{ fontSize: '0.75rem', color: 'var(--grey-light)' }}>
@@ -3741,8 +4040,8 @@ export const SuperadminDashboard: React.FC = () => {
                         onChange={(e) => { setTransactionStatusFilter(e.target.value); setTransactionPage(1); }}
                         style={{
                           padding: '6px 12px',
-                          background: '#14100d',
-                          border: '1px solid rgba(201,168,76,0.35)',
+                          background: 'var(--black)',
+                          border: '1px solid rgba(var(--gold-rgb), 0.35)',
                           borderRadius: '6px',
                           color: 'var(--gold)',
                           fontSize: '0.8rem',
@@ -3778,9 +4077,9 @@ export const SuperadminDashboard: React.FC = () => {
                     return (
                       <>
                         <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
-                          <table style={{ width: '100%', minWidth: '850px', borderCollapse: 'collapse', fontSize: '0.84rem', color: '#f5efe6' }}>
+                          <table style={{ width: '100%', minWidth: '850px', borderCollapse: 'collapse', fontSize: '0.84rem', color: 'var(--cream)' }}>
                             <thead>
-                              <tr style={{ borderBottom: '1px solid rgba(201, 168, 76, 0.3)', color: '#c9a84c', textAlign: 'left' }}>
+                              <tr style={{ borderBottom: '1px solid rgba(var(--gold-rgb), 0.3)', color: 'var(--gold)', textAlign: 'left' }}>
                                 <th style={{ padding: '12px' }}>Order ID</th>
                                 <th style={{ padding: '12px' }}>Customer</th>
                                 <th style={{ padding: '12px' }}>Order Date</th>
@@ -3909,9 +4208,9 @@ export const SuperadminDashboard: React.FC = () => {
                 </div>
 
                 {/* ── DAILY REVENUE SUMMARY TABLE ─────────────────────────── */}
-                <div className="glass-panel" style={{ padding: '24px', border: '1px solid rgba(201, 168, 76, 0.25)', borderRadius: '12px', background: 'rgba(15, 12, 10, 0.85)' }}>
+                <div className="glass-panel" style={{ padding: '24px', border: '1px solid rgba(var(--gold-rgb), 0.25)', borderRadius: '12px', background: 'var(--surface-color)' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' }}>
-                    <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1.15rem', color: '#f5efe6', margin: 0, fontWeight: 700 }}>
+                    <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1.15rem', color: 'var(--cream)', margin: 0, fontWeight: 700 }}>
                       DAILY SUMMARY BREAKDOWN
                     </h3>
                     <Button variant="secondary" size="sm" onClick={handleExportRevenueCsv} disabled={revenueExporting}>
@@ -3921,9 +4220,9 @@ export const SuperadminDashboard: React.FC = () => {
                   </div>
 
                   <div style={{ overflowX: 'auto' }}>
-                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.84rem', color: '#f5efe6' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.84rem', color: 'var(--cream)' }}>
                       <thead>
-                        <tr style={{ borderBottom: '1px solid rgba(201, 168, 76, 0.3)', color: '#c9a84c', textAlign: 'left' }}>
+                        <tr style={{ borderBottom: '1px solid rgba(var(--gold-rgb), 0.3)', color: 'var(--gold)', textAlign: 'left' }}>
                           <th style={{ padding: '12px' }}>Date</th>
                           <th style={{ padding: '12px' }}>Total Orders</th>
                           <th style={{ padding: '12px' }}>Paid Orders</th>
@@ -3950,7 +4249,7 @@ export const SuperadminDashboard: React.FC = () => {
                                 <td style={{ padding: '12px' }}>₹{row.online_revenue.toLocaleString('en-IN')}</td>
                                 <td style={{ padding: '12px', color: '#e67e22' }}>₹{row.cod_collected.toLocaleString('en-IN')}</td>
                                 <td style={{ padding: '12px', color: '#e74c3c' }}>₹{row.pending_payment.toLocaleString('en-IN')}</td>
-                                <td style={{ padding: '12px', fontWeight: 700, color: '#c9a84c' }}>₹{row.total_revenue.toLocaleString('en-IN')}</td>
+                                <td style={{ padding: '12px', fontWeight: 700, color: 'var(--gold)' }}>₹{row.total_revenue.toLocaleString('en-IN')}</td>
                                 <td style={{ padding: '12px' }}>₹{row.avg_order_value.toLocaleString('en-IN')}</td>
                               </tr>
                             ))
@@ -4033,10 +4332,10 @@ export const SuperadminDashboard: React.FC = () => {
             <div
               style={{
                 marginBottom: '20px',
-                background: 'rgba(20, 16, 13, 0.85)',
+                background: 'var(--surface-color)',
                 padding: '14px 18px',
                 borderRadius: '10px',
-                border: '1px solid rgba(201, 168, 76, 0.25)',
+                border: '1px solid rgba(var(--gold-rgb), 0.25)',
               }}
             >
               {/* MOBILE: Dropdown selector */}
@@ -4089,8 +4388,8 @@ export const SuperadminDashboard: React.FC = () => {
                         padding: '6px 14px',
                         fontSize: '0.82rem',
                         fontWeight: isActive ? 700 : 500,
-                        color: isActive ? '#14100d' : '#f5efe6',
-                        background: isActive ? 'var(--gold)' : 'rgba(255,255,255,0.05)',
+                        color: isActive ? 'var(--black)' : 'var(--cream)',
+                        background: isActive ? 'var(--gradient-gold)' : 'rgba(255,255,255,0.05)',
                         border: isActive ? '1px solid var(--gold)' : '1px solid rgba(255,255,255,0.1)',
                         borderRadius: '6px',
                         cursor: 'pointer',
@@ -4112,10 +4411,10 @@ export const SuperadminDashboard: React.FC = () => {
                     value={salesDateFrom}
                     onChange={(e) => setSalesDateFrom(e.target.value)}
                     style={{
-                      background: '#14100d',
-                      color: '#f5efe6',
+                      background: 'var(--black)',
+                      color: 'var(--cream)',
                       colorScheme: 'dark',
-                      border: '1px solid rgba(201, 168, 76, 0.4)',
+                      border: '1px solid rgba(var(--gold-rgb), 0.4)',
                       borderRadius: '6px',
                       padding: '6px 10px',
                       fontSize: '0.82rem',
@@ -4130,10 +4429,10 @@ export const SuperadminDashboard: React.FC = () => {
                     value={salesDateTo}
                     onChange={(e) => setSalesDateTo(e.target.value)}
                     style={{
-                      background: '#14100d',
-                      color: '#f5efe6',
+                      background: 'var(--black)',
+                      color: 'var(--cream)',
                       colorScheme: 'dark',
-                      border: '1px solid rgba(201, 168, 76, 0.4)',
+                      border: '1px solid rgba(var(--gold-rgb), 0.4)',
                       borderRadius: '6px',
                       padding: '6px 10px',
                       fontSize: '0.82rem',
@@ -4159,7 +4458,19 @@ export const SuperadminDashboard: React.FC = () => {
             </div>
 
             {/* Sub-tab Navigation */}
-            <div className="sales-sub-tab-strip">
+            <div
+              className="sales-sub-tab-strip glass-panel"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px',
+                background: 'var(--surface-color)',
+                border: '1px solid rgba(var(--gold-rgb), 0.25)',
+                borderRadius: '12px',
+                padding: '12px 18px',
+                marginBottom: '24px',
+              }}
+            >
               {[
                 { id: 'products' as const, label: 'Overview', icon: BarChart3 },
                 { id: 'online' as const, label: 'Online Orders', icon: Globe },
@@ -4183,18 +4494,18 @@ export const SuperadminDashboard: React.FC = () => {
                       padding: '10px 20px',
                       fontSize: '0.88rem',
                       fontWeight: 600,
-                      color: isSubActive ? '#14100d' : '#f5efe6',
-                      background: isSubActive ? 'linear-gradient(135deg, #c9a84c 0%, #e0c878 100%)' : 'rgba(20, 16, 13, 0.7)',
-                      border: isSubActive ? '1px solid #e0c878' : '1px solid rgba(255,255,255,0.1)',
+                      color: isSubActive ? 'var(--black)' : 'var(--cream)',
+                      background: isSubActive ? 'var(--gradient-gold)' : 'rgba(255,255,255,0.04)',
+                      border: isSubActive ? '1px solid var(--gold)' : '1px solid rgba(var(--gold-rgb), 0.2)',
                       borderRadius: '8px',
                       cursor: 'pointer',
                       transition: 'all 0.2s ease',
                       outline: 'none',
                       whiteSpace: 'nowrap',
-                      boxShadow: isSubActive ? '0 4px 14px rgba(201, 168, 76, 0.3)' : 'none',
+                      boxShadow: isSubActive ? '0 4px 14px rgba(var(--gold-rgb), 0.3)' : 'none',
                     }}
                   >
-                    <IconComp size={16} color={isSubActive ? '#14100d' : '#c9a84c'} />
+                    <IconComp size={16} color={isSubActive ? 'var(--black)' : 'var(--gold)'} />
                     <span>{sub.label}</span>
                   </button>
                 );
@@ -4242,8 +4553,8 @@ export const SuperadminDashboard: React.FC = () => {
                     
                     {/* 10 SALES, ORDERS & STOCK KPI CARDS (STRICTLY NO REVENUE) */}
                     <div>
-                      <h3 style={{ fontSize: '0.88rem', color: '#c9a84c', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 700, margin: '0 0 12px 0' }}>
-                        Core Sales &amp; Orders KPIs
+                      <h3 style={{ fontSize: '0.88rem', color: 'var(--gold)', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 700, margin: '0 0 12px 0' }}>
+                        Sales &amp; Orders Overview
                       </h3>
 
                       <div className="sales-kpi-grid">
@@ -4252,22 +4563,22 @@ export const SuperadminDashboard: React.FC = () => {
                           className="dashboard-stat-card glass-panel"
                           style={{
                             padding: '18px',
-                            border: '1px solid rgba(201, 168, 76, 0.3)',
+                            border: '1px solid rgba(var(--gold-rgb), 0.3)',
                             borderRadius: '12px',
-                            background: 'rgba(20, 16, 13, 0.7)',
+                            background: 'var(--surface-color)',
                           }}
                         >
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '6px' }}>
                             <span className="sales-kpi-label">Total Orders</span>
-                            <span style={{ fontSize: '0.68rem', padding: '2px 6px', borderRadius: '4px', background: 'rgba(201, 168, 76, 0.15)', color: '#c9a84c', fontWeight: 600, whiteSpace: 'nowrap', flexShrink: 0 }}>
+                            <span style={{ fontSize: '0.68rem', padding: '2px 6px', borderRadius: '4px', background: 'rgba(var(--gold-rgb), 0.15)', color: 'var(--gold)', fontWeight: 600, whiteSpace: 'nowrap', flexShrink: 0 }}>
                               All
                             </span>
                           </div>
-                          <span style={{ fontSize: '1.8rem', fontWeight: 800, color: '#f5efe6', display: 'block', margin: '6px 0 2px 0', fontFamily: 'var(--font-display)' }}>
+                          <span className="font-number sales-kpi-val" style={{ fontSize: '1.8rem', fontWeight: 800, color: 'var(--cream)', display: 'block', margin: '6px 0 2px 0', fontFamily: 'var(--font-number)' }}>
                             {Math.round(displaySalesProducts.kpis?.total_orders?.current_value ?? 0).toLocaleString()}
                           </span>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.72rem', fontWeight: 600, color: (displaySalesProducts.kpis?.total_orders?.percentage_change ?? 0) >= 0 ? '#2ecc71' : '#e74c3c', flexWrap: 'wrap' }}>
-                            <span>{(displaySalesProducts.kpis?.total_orders?.percentage_change ?? 0) >= 0 ? `+${displaySalesProducts.kpis?.total_orders?.percentage_change}%` : `${displaySalesProducts.kpis?.total_orders?.percentage_change}%`}</span>
+                            <span className="font-number" style={{ fontFamily: 'var(--font-number)' }}>{(displaySalesProducts.kpis?.total_orders?.percentage_change ?? 0) >= 0 ? `+${displaySalesProducts.kpis?.total_orders?.percentage_change}%` : `${displaySalesProducts.kpis?.total_orders?.percentage_change}%`}</span>
                             <span style={{ color: 'rgba(255,255,255,0.4)', fontWeight: 400, fontSize: '0.68rem' }}>{displaySalesProducts.kpis?.total_orders?.comparison_label}</span>
                           </div>
                         </div>
@@ -4277,22 +4588,22 @@ export const SuperadminDashboard: React.FC = () => {
                           className="dashboard-stat-card glass-panel"
                           style={{
                             padding: '18px',
-                            border: '1px solid rgba(201, 168, 76, 0.3)',
+                            border: '1px solid rgba(var(--gold-rgb), 0.3)',
                             borderRadius: '12px',
-                            background: 'rgba(20, 16, 13, 0.7)',
+                            background: 'var(--surface-color)',
                           }}
                         >
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '6px' }}>
                             <span className="sales-kpi-label">Units Sold</span>
-                            <span style={{ fontSize: '0.68rem', padding: '2px 6px', borderRadius: '4px', background: 'rgba(201, 168, 76, 0.15)', color: '#c9a84c', fontWeight: 600, whiteSpace: 'nowrap', flexShrink: 0 }}>
+                            <span style={{ fontSize: '0.68rem', padding: '2px 6px', borderRadius: '4px', background: 'rgba(var(--gold-rgb), 0.15)', color: 'var(--gold)', fontWeight: 600, whiteSpace: 'nowrap', flexShrink: 0 }}>
                               Total
                             </span>
                           </div>
-                          <span style={{ fontSize: '1.8rem', fontWeight: 800, color: '#f5efe6', display: 'block', margin: '6px 0 2px 0', fontFamily: 'var(--font-display)' }}>
+                          <span className="font-number sales-kpi-val" style={{ fontSize: '1.8rem', fontWeight: 800, color: 'var(--cream)', display: 'block', margin: '6px 0 2px 0', fontFamily: 'var(--font-number)' }}>
                             {Math.round(displaySalesProducts.kpis?.total_units_sold?.current_value ?? 0).toLocaleString()}
                           </span>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.72rem', fontWeight: 600, color: (displaySalesProducts.kpis?.total_units_sold?.percentage_change ?? 0) >= 0 ? '#2ecc71' : '#e74c3c', flexWrap: 'wrap' }}>
-                            <span>{(displaySalesProducts.kpis?.total_units_sold?.percentage_change ?? 0) >= 0 ? `+${displaySalesProducts.kpis?.total_units_sold?.percentage_change}%` : `${displaySalesProducts.kpis?.total_units_sold?.percentage_change}%`}</span>
+                            <span className="font-number" style={{ fontFamily: 'var(--font-number)' }}>{(displaySalesProducts.kpis?.total_units_sold?.percentage_change ?? 0) >= 0 ? `+${displaySalesProducts.kpis?.total_units_sold?.percentage_change}%` : `${displaySalesProducts.kpis?.total_units_sold?.percentage_change}%`}</span>
                             <span style={{ color: 'rgba(255,255,255,0.4)', fontWeight: 400, fontSize: '0.68rem' }}>{displaySalesProducts.kpis?.total_units_sold?.comparison_label}</span>
                           </div>
                         </div>
@@ -4302,9 +4613,9 @@ export const SuperadminDashboard: React.FC = () => {
                           className="dashboard-stat-card glass-panel"
                           style={{
                             padding: '18px',
-                            border: '1px solid rgba(93, 173, 226, 0.35)',
+                            border: '1px solid rgba(93, 173, 226, 0.4)',
                             borderRadius: '12px',
-                            background: 'rgba(93, 173, 226, 0.05)',
+                            background: 'var(--surface-color)',
                           }}
                         >
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '6px' }}>
@@ -4313,11 +4624,11 @@ export const SuperadminDashboard: React.FC = () => {
                               Web
                             </span>
                           </div>
-                          <span style={{ fontSize: '1.8rem', fontWeight: 800, color: '#f5efe6', display: 'block', margin: '6px 0 2px 0', fontFamily: 'var(--font-display)' }}>
+                          <span className="font-number sales-kpi-val" style={{ fontSize: '1.8rem', fontWeight: 800, color: '#f5efe6', display: 'block', margin: '6px 0 2px 0', fontFamily: 'var(--font-number)' }}>
                             {Math.round(displaySalesProducts.kpis?.online_orders?.current_value ?? 0).toLocaleString()}
                           </span>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.72rem', fontWeight: 600, color: (displaySalesProducts.kpis?.online_orders?.percentage_change ?? 0) >= 0 ? '#2ecc71' : '#e74c3c', flexWrap: 'wrap' }}>
-                            <span>{(displaySalesProducts.kpis?.online_orders?.percentage_change ?? 0) >= 0 ? `+${displaySalesProducts.kpis?.online_orders?.percentage_change}%` : `${displaySalesProducts.kpis?.online_orders?.percentage_change}%`}</span>
+                            <span className="font-number" style={{ fontFamily: 'var(--font-number)' }}>{(displaySalesProducts.kpis?.online_orders?.percentage_change ?? 0) >= 0 ? `+${displaySalesProducts.kpis?.online_orders?.percentage_change}%` : `${displaySalesProducts.kpis?.online_orders?.percentage_change}%`}</span>
                             <span style={{ color: 'rgba(255,255,255,0.4)', fontWeight: 400, fontSize: '0.68rem' }}>{displaySalesProducts.kpis?.online_orders?.comparison_label}</span>
                           </div>
                         </div>
@@ -4327,9 +4638,9 @@ export const SuperadminDashboard: React.FC = () => {
                           className="dashboard-stat-card glass-panel"
                           style={{
                             padding: '18px',
-                            border: '1px solid rgba(93, 173, 226, 0.35)',
+                            border: '1px solid rgba(93, 173, 226, 0.4)',
                             borderRadius: '12px',
-                            background: 'rgba(93, 173, 226, 0.05)',
+                            background: 'var(--surface-color)',
                           }}
                         >
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '6px' }}>
@@ -4338,11 +4649,11 @@ export const SuperadminDashboard: React.FC = () => {
                               Digital
                             </span>
                           </div>
-                          <span style={{ fontSize: '1.8rem', fontWeight: 800, color: '#f5efe6', display: 'block', margin: '6px 0 2px 0', fontFamily: 'var(--font-display)' }}>
+                          <span className="font-number sales-kpi-val" style={{ fontSize: '1.8rem', fontWeight: 800, color: '#f5efe6', display: 'block', margin: '6px 0 2px 0', fontFamily: 'var(--font-number)' }}>
                             {Math.round(displaySalesProducts.kpis?.online_units_sold?.current_value ?? 0).toLocaleString()}
                           </span>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.72rem', fontWeight: 600, color: (displaySalesProducts.kpis?.online_units_sold?.percentage_change ?? 0) >= 0 ? '#2ecc71' : '#e74c3c', flexWrap: 'wrap' }}>
-                            <span>{(displaySalesProducts.kpis?.online_units_sold?.percentage_change ?? 0) >= 0 ? `+${displaySalesProducts.kpis?.online_units_sold?.percentage_change}%` : `${displaySalesProducts.kpis?.online_units_sold?.percentage_change}%`}</span>
+                            <span className="font-number" style={{ fontFamily: 'var(--font-number)' }}>{(displaySalesProducts.kpis?.online_units_sold?.percentage_change ?? 0) >= 0 ? `+${displaySalesProducts.kpis?.online_units_sold?.percentage_change}%` : `${displaySalesProducts.kpis?.online_units_sold?.percentage_change}%`}</span>
                             <span style={{ color: 'rgba(255,255,255,0.4)', fontWeight: 400, fontSize: '0.68rem' }}>{displaySalesProducts.kpis?.online_units_sold?.comparison_label}</span>
                           </div>
                         </div>
@@ -4352,9 +4663,9 @@ export const SuperadminDashboard: React.FC = () => {
                           className="dashboard-stat-card glass-panel"
                           style={{
                             padding: '18px',
-                            border: '1px solid rgba(230, 126, 34, 0.35)',
+                            border: '1px solid rgba(230, 126, 34, 0.4)',
                             borderRadius: '12px',
-                            background: 'rgba(230, 126, 34, 0.05)',
+                            background: 'var(--surface-color)',
                           }}
                         >
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '6px' }}>
@@ -4363,11 +4674,11 @@ export const SuperadminDashboard: React.FC = () => {
                               POS
                             </span>
                           </div>
-                          <span style={{ fontSize: '1.8rem', fontWeight: 800, color: '#f5efe6', display: 'block', margin: '6px 0 2px 0', fontFamily: 'var(--font-display)' }}>
+                          <span className="font-number sales-kpi-val" style={{ fontSize: '1.8rem', fontWeight: 800, color: '#f5efe6', display: 'block', margin: '6px 0 2px 0', fontFamily: 'var(--font-number)' }}>
                             {Math.round(displaySalesProducts.kpis?.offline_orders?.current_value ?? 0).toLocaleString()}
                           </span>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.72rem', fontWeight: 600, color: (displaySalesProducts.kpis?.offline_orders?.percentage_change ?? 0) >= 0 ? '#2ecc71' : '#e74c3c', flexWrap: 'wrap' }}>
-                            <span>{(displaySalesProducts.kpis?.offline_orders?.percentage_change ?? 0) >= 0 ? `+${displaySalesProducts.kpis?.offline_orders?.percentage_change}%` : `${displaySalesProducts.kpis?.offline_orders?.percentage_change}%`}</span>
+                            <span className="font-number" style={{ fontFamily: 'var(--font-number)' }}>{(displaySalesProducts.kpis?.offline_orders?.percentage_change ?? 0) >= 0 ? `+${displaySalesProducts.kpis?.offline_orders?.percentage_change}%` : `${displaySalesProducts.kpis?.offline_orders?.percentage_change}%`}</span>
                             <span style={{ color: 'rgba(255,255,255,0.4)', fontWeight: 400, fontSize: '0.68rem' }}>{displaySalesProducts.kpis?.offline_orders?.comparison_label}</span>
                           </div>
                         </div>
@@ -4377,9 +4688,9 @@ export const SuperadminDashboard: React.FC = () => {
                           className="dashboard-stat-card glass-panel"
                           style={{
                             padding: '18px',
-                            border: '1px solid rgba(230, 126, 34, 0.35)',
+                            border: '1px solid rgba(230, 126, 34, 0.4)',
                             borderRadius: '12px',
-                            background: 'rgba(230, 126, 34, 0.05)',
+                            background: 'var(--surface-color)',
                           }}
                         >
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '6px' }}>
@@ -4388,11 +4699,11 @@ export const SuperadminDashboard: React.FC = () => {
                               POS
                             </span>
                           </div>
-                          <span style={{ fontSize: '1.8rem', fontWeight: 800, color: '#f5efe6', display: 'block', margin: '6px 0 2px 0', fontFamily: 'var(--font-display)' }}>
+                          <span className="font-number sales-kpi-val" style={{ fontSize: '1.8rem', fontWeight: 800, color: '#f5efe6', display: 'block', margin: '6px 0 2px 0', fontFamily: 'var(--font-number)' }}>
                             {Math.round(displaySalesProducts.kpis?.offline_units_sold?.current_value ?? 0).toLocaleString()}
                           </span>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.72rem', fontWeight: 600, color: (displaySalesProducts.kpis?.offline_units_sold?.percentage_change ?? 0) >= 0 ? '#2ecc71' : '#e74c3c', flexWrap: 'wrap' }}>
-                            <span>{(displaySalesProducts.kpis?.offline_units_sold?.percentage_change ?? 0) >= 0 ? `+${displaySalesProducts.kpis?.offline_units_sold?.percentage_change}%` : `${displaySalesProducts.kpis?.offline_units_sold?.percentage_change}%`}</span>
+                            <span className="font-number" style={{ fontFamily: 'var(--font-number)' }}>{(displaySalesProducts.kpis?.offline_units_sold?.percentage_change ?? 0) >= 0 ? `+${displaySalesProducts.kpis?.offline_units_sold?.percentage_change}%` : `${displaySalesProducts.kpis?.offline_units_sold?.percentage_change}%`}</span>
                             <span style={{ color: 'rgba(255,255,255,0.4)', fontWeight: 400, fontSize: '0.68rem' }}>{displaySalesProducts.kpis?.offline_units_sold?.comparison_label}</span>
                           </div>
                         </div>
@@ -4402,9 +4713,9 @@ export const SuperadminDashboard: React.FC = () => {
                           className="dashboard-stat-card glass-panel"
                           style={{
                             padding: '18px',
-                            border: '1px solid rgba(241, 196, 15, 0.35)',
+                            border: '1px solid rgba(241, 196, 15, 0.4)',
                             borderRadius: '12px',
-                            background: 'rgba(241, 196, 15, 0.05)',
+                            background: 'var(--surface-color)',
                           }}
                         >
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '6px' }}>
@@ -4413,11 +4724,11 @@ export const SuperadminDashboard: React.FC = () => {
                               Queue
                             </span>
                           </div>
-                          <span style={{ fontSize: '1.8rem', fontWeight: 800, color: '#f5efe6', display: 'block', margin: '6px 0 2px 0', fontFamily: 'var(--font-display)' }}>
+                          <span className="font-number sales-kpi-val" style={{ fontSize: '1.8rem', fontWeight: 800, color: '#f5efe6', display: 'block', margin: '6px 0 2px 0', fontFamily: 'var(--font-number)' }}>
                             {Math.round(displaySalesProducts.kpis?.pending_orders?.current_value ?? 0).toLocaleString()}
                           </span>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.72rem', fontWeight: 600, color: (displaySalesProducts.kpis?.pending_orders?.percentage_change ?? 0) <= 0 ? '#2ecc71' : '#e74c3c', flexWrap: 'wrap' }}>
-                            <span>{(displaySalesProducts.kpis?.pending_orders?.percentage_change ?? 0) >= 0 ? `+${displaySalesProducts.kpis?.pending_orders?.percentage_change}%` : `${displaySalesProducts.kpis?.pending_orders?.percentage_change}%`}</span>
+                            <span className="font-number" style={{ fontFamily: 'var(--font-number)' }}>{(displaySalesProducts.kpis?.pending_orders?.percentage_change ?? 0) >= 0 ? `+${displaySalesProducts.kpis?.pending_orders?.percentage_change}%` : `${displaySalesProducts.kpis?.pending_orders?.percentage_change}%`}</span>
                             <span style={{ color: 'rgba(255,255,255,0.4)', fontWeight: 400, fontSize: '0.68rem' }}>{displaySalesProducts.kpis?.pending_orders?.comparison_label}</span>
                           </div>
                         </div>
@@ -4427,9 +4738,9 @@ export const SuperadminDashboard: React.FC = () => {
                           className="dashboard-stat-card glass-panel"
                           style={{
                             padding: '18px',
-                            border: '1px solid rgba(231, 76, 60, 0.35)',
+                            border: '1px solid rgba(231, 76, 60, 0.4)',
                             borderRadius: '12px',
-                            background: 'rgba(231, 76, 60, 0.05)',
+                            background: 'var(--surface-color)',
                           }}
                         >
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '6px' }}>
@@ -4438,11 +4749,11 @@ export const SuperadminDashboard: React.FC = () => {
                               Void
                             </span>
                           </div>
-                          <span style={{ fontSize: '1.8rem', fontWeight: 800, color: '#f5efe6', display: 'block', margin: '6px 0 2px 0', fontFamily: 'var(--font-display)' }}>
+                          <span className="font-number sales-kpi-val" style={{ fontSize: '1.8rem', fontWeight: 800, color: '#f5efe6', display: 'block', margin: '6px 0 2px 0', fontFamily: 'var(--font-number)' }}>
                             {Math.round(displaySalesProducts.kpis?.cancelled_orders?.current_value ?? 0).toLocaleString()}
                           </span>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.72rem', fontWeight: 600, color: (displaySalesProducts.kpis?.cancelled_orders?.percentage_change ?? 0) <= 0 ? '#2ecc71' : '#e74c3c', flexWrap: 'wrap' }}>
-                            <span>{(displaySalesProducts.kpis?.cancelled_orders?.percentage_change ?? 0) >= 0 ? `+${displaySalesProducts.kpis?.cancelled_orders?.percentage_change}%` : `${displaySalesProducts.kpis?.cancelled_orders?.percentage_change}%`}</span>
+                            <span className="font-number" style={{ fontFamily: 'var(--font-number)' }}>{(displaySalesProducts.kpis?.cancelled_orders?.percentage_change ?? 0) >= 0 ? `+${displaySalesProducts.kpis?.cancelled_orders?.percentage_change}%` : `${displaySalesProducts.kpis?.cancelled_orders?.percentage_change}%`}</span>
                             <span style={{ color: 'rgba(255,255,255,0.4)', fontWeight: 400, fontSize: '0.68rem' }}>{displaySalesProducts.kpis?.cancelled_orders?.comparison_label}</span>
                           </div>
                         </div>
@@ -4452,9 +4763,9 @@ export const SuperadminDashboard: React.FC = () => {
                           className="dashboard-stat-card glass-panel"
                           style={{
                             padding: '18px',
-                            border: '1px solid rgba(46, 204, 113, 0.35)',
+                            border: '1px solid rgba(46, 204, 113, 0.4)',
                             borderRadius: '12px',
-                            background: 'rgba(46, 204, 113, 0.05)',
+                            background: 'var(--surface-color)',
                           }}
                         >
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '6px' }}>
@@ -4463,12 +4774,12 @@ export const SuperadminDashboard: React.FC = () => {
                               Live
                             </span>
                           </div>
-                          <span style={{ fontSize: '1.8rem', fontWeight: 800, color: '#f5efe6', display: 'block', margin: '6px 0 2px 0', fontFamily: 'var(--font-display)' }}>
+                          <span className="font-number sales-kpi-val" style={{ fontSize: '1.8rem', fontWeight: 800, color: '#f5efe6', display: 'block', margin: '6px 0 2px 0', fontFamily: 'var(--font-number)' }}>
                             {Math.round(displaySalesProducts.kpis?.current_stock?.current_value ?? 0).toLocaleString()}
                           </span>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.72rem', fontWeight: 600, color: '#2ecc71', flexWrap: 'wrap' }}>
                             <Package size={12} />
-                            <span>{displaySalesProducts.inventory_summary?.total_catalog_products || 0} active products</span>
+                            <span><span className="font-number" style={{ fontFamily: 'var(--font-number)', fontWeight: 700 }}>{displaySalesProducts.inventory_summary?.total_catalog_products || 0}</span> active products</span>
                           </div>
                         </div>
 
@@ -4477,9 +4788,9 @@ export const SuperadminDashboard: React.FC = () => {
                           className="dashboard-stat-card glass-panel"
                           style={{
                             padding: '18px',
-                            border: '1px solid rgba(231, 76, 60, 0.35)',
+                            border: '1px solid rgba(231, 76, 60, 0.4)',
                             borderRadius: '12px',
-                            background: 'rgba(231, 76, 60, 0.05)',
+                            background: 'var(--surface-color)',
                           }}
                         >
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '6px' }}>
@@ -4488,12 +4799,12 @@ export const SuperadminDashboard: React.FC = () => {
                               ≤10
                             </span>
                           </div>
-                          <span style={{ fontSize: '1.8rem', fontWeight: 800, color: '#f5efe6', display: 'block', margin: '6px 0 2px 0', fontFamily: 'var(--font-display)' }}>
+                          <span className="font-number sales-kpi-val" style={{ fontSize: '1.8rem', fontWeight: 800, color: '#f5efe6', display: 'block', margin: '6px 0 2px 0', fontFamily: 'var(--font-number)' }}>
                             {Math.round(displaySalesProducts.kpis?.low_stock_products?.current_value ?? 0).toLocaleString()}
                           </span>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.72rem', fontWeight: 600, color: '#e74c3c', flexWrap: 'wrap' }}>
                             <AlertTriangle size={12} />
-                            <span>{displaySalesProducts.inventory_summary?.out_of_stock_count || 0} out of stock</span>
+                            <span><span className="font-number" style={{ fontFamily: 'var(--font-number)', fontWeight: 700 }}>{displaySalesProducts.inventory_summary?.out_of_stock_count || 0}</span> out of stock</span>
                           </div>
                         </div>
                       </div>
@@ -4504,9 +4815,9 @@ export const SuperadminDashboard: React.FC = () => {
                       className="glass-panel"
                       style={{
                         padding: '24px',
-                        border: '1px solid rgba(201, 168, 76, 0.25)',
+                        border: '1px solid rgba(var(--gold-rgb), 0.25)',
                         borderRadius: '12px',
-                        background: 'rgba(15, 12, 10, 0.85)',
+                        background: 'var(--surface-color)',
                       }}
                     >
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '14px' }}>
@@ -4611,7 +4922,7 @@ export const SuperadminDashboard: React.FC = () => {
                                   title={`${p.date}: ${val} ${salesChartMetric === 'orders' ? 'orders' : 'units'}`}
                                 >
                                   {/* Value label on top */}
-                                  <span style={{ fontSize: '0.68rem', color: '#c9a84c', fontWeight: 700, marginBottom: '6px' }}>
+                                  <span className="font-number" style={{ fontSize: '0.68rem', color: 'var(--gold)', fontWeight: 700, marginBottom: '6px', fontFamily: 'var(--font-number)' }}>
                                     {val > 0 ? val : ''}
                                   </span>
 
@@ -4627,14 +4938,14 @@ export const SuperadminDashboard: React.FC = () => {
                                           ? 'linear-gradient(180deg, #5dade2 0%, rgba(93, 173, 226, 0.4) 100%)'
                                           : salesChartChannel === 'offline'
                                           ? 'linear-gradient(180deg, #e67e22 0%, rgba(230, 126, 34, 0.4) 100%)'
-                                          : 'linear-gradient(180deg, #c9a84c 0%, rgba(201, 168, 76, 0.4) 100%)',
+                                          : 'linear-gradient(180deg, var(--gold) 0%, rgba(var(--gold-rgb), 0.4) 100%)',
                                       borderRadius: '4px 4px 0 0',
                                       transition: 'height 0.4s ease',
                                     }}
                                   />
 
                                   {/* Date label at bottom */}
-                                  <span style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.6)', marginTop: '8px', whiteSpace: 'nowrap' }}>
+                                  <span className="font-number" style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.6)', marginTop: '8px', whiteSpace: 'nowrap', fontFamily: 'var(--font-number)' }}>
                                     {p.date}
                                   </span>
                                 </div>
@@ -4651,7 +4962,7 @@ export const SuperadminDashboard: React.FC = () => {
                       {/* Legend */}
                       <div style={{ display: 'flex', justifyContent: 'center', gap: '20px', marginTop: '16px', fontSize: '0.78rem', color: 'rgba(255,255,255,0.7)' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          <span style={{ width: '10px', height: '10px', background: '#c9a84c', borderRadius: '2px', display: 'inline-block' }} />
+                          <span style={{ width: '10px', height: '10px', background: 'var(--gold)', borderRadius: '2px', display: 'inline-block' }} />
                           <span>Combined</span>
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -4667,37 +4978,37 @@ export const SuperadminDashboard: React.FC = () => {
 
                     {/* INVENTORY SNAPSHOT OVERVIEW */}
                     <div>
-                      <h3 style={{ fontSize: '0.88rem', color: '#c9a84c', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 700, margin: '0 0 12px 0' }}>
-                        Inventory & Fulfillment Overview
+                      <h3 style={{ fontSize: '0.88rem', color: 'var(--gold)', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 700, margin: '0 0 12px 0' }}>
+                        Inventory &amp; Fulfillment Overview
                       </h3>
                       <div className="sales-kpi-grid">
-                        <div className="glass-panel" style={{ padding: '16px 20px', borderRadius: '10px', border: '1px solid rgba(201, 168, 76, 0.25)', background: 'rgba(20, 16, 13, 0.7)' }}>
+                        <div className="glass-panel" style={{ padding: '16px 20px', borderRadius: '10px', border: '1px solid rgba(var(--gold-rgb), 0.25)', background: 'var(--surface-color)' }}>
                           <span className="sales-kpi-label" style={{ display: 'block' }}>Total Current Stock</span>
-                          <span style={{ fontSize: '1.5rem', fontWeight: 800, color: '#f5efe6', margin: '4px 0', display: 'block', fontFamily: 'var(--font-display)' }}>
+                          <span className="font-number" style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--cream)', margin: '4px 0', display: 'block', fontFamily: 'var(--font-number)' }}>
                             {(displaySalesProducts.inventory_summary?.current_stock ?? 0).toLocaleString()}
                           </span>
                           <span style={{ fontSize: '0.75rem', color: '#2ecc71' }}>Available in warehouse catalog</span>
                         </div>
 
-                        <div className="glass-panel" style={{ padding: '16px 20px', borderRadius: '10px', border: '1px solid rgba(201, 168, 76, 0.25)', background: 'rgba(20, 16, 13, 0.7)' }}>
+                        <div className="glass-panel" style={{ padding: '16px 20px', borderRadius: '10px', border: '1px solid rgba(var(--gold-rgb), 0.25)', background: 'var(--surface-color)' }}>
                           <span className="sales-kpi-label" style={{ display: 'block' }}>Sold Quantity (Period)</span>
-                          <span style={{ fontSize: '1.5rem', fontWeight: 800, color: '#c9a84c', margin: '4px 0', display: 'block', fontFamily: 'var(--font-display)' }}>
+                          <span className="font-number" style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--gold)', margin: '4px 0', display: 'block', fontFamily: 'var(--font-number)' }}>
                             {(displaySalesProducts.inventory_summary?.sold_quantity ?? 0).toLocaleString()}
                           </span>
-                          <span style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.5)' }}>Units dispatched & sold</span>
+                          <span style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.5)' }}>Units dispatched &amp; sold</span>
                         </div>
 
-                        <div className="glass-panel" style={{ padding: '16px 20px', borderRadius: '10px', border: '1px solid rgba(230, 126, 34, 0.3)', background: 'rgba(230, 126, 34, 0.05)' }}>
+                        <div className="glass-panel" style={{ padding: '16px 20px', borderRadius: '10px', border: '1px solid rgba(var(--gold-rgb), 0.25)', background: 'var(--surface-color)' }}>
                           <span className="sales-kpi-label" style={{ color: '#e67e22', display: 'block' }}>Low-Stock Products</span>
-                          <span style={{ fontSize: '1.5rem', fontWeight: 800, color: '#e67e22', margin: '4px 0', display: 'block', fontFamily: 'var(--font-display)' }}>
+                          <span className="font-number" style={{ fontSize: '1.5rem', fontWeight: 800, color: '#e67e22', margin: '4px 0', display: 'block', fontFamily: 'var(--font-number)' }}>
                             {(displaySalesProducts.inventory_summary?.low_stock_count ?? 0).toLocaleString()}
                           </span>
                           <span style={{ fontSize: '0.75rem', color: '#e67e22' }}>Stock is ≤ 10 units</span>
                         </div>
 
-                        <div className="glass-panel" style={{ padding: '16px 20px', borderRadius: '10px', border: '1px solid rgba(231, 76, 60, 0.3)', background: 'rgba(231, 76, 60, 0.05)' }}>
+                        <div className="glass-panel" style={{ padding: '16px 20px', borderRadius: '10px', border: '1px solid rgba(var(--gold-rgb), 0.25)', background: 'var(--surface-color)' }}>
                           <span className="sales-kpi-label" style={{ color: '#e74c3c', display: 'block' }}>Out of Stock Products</span>
-                          <span style={{ fontSize: '1.5rem', fontWeight: 800, color: '#e74c3c', margin: '4px 0', display: 'block', fontFamily: 'var(--font-display)' }}>
+                          <span className="font-number" style={{ fontSize: '1.5rem', fontWeight: 800, color: '#e74c3c', margin: '4px 0', display: 'block', fontFamily: 'var(--font-number)' }}>
                             {(displaySalesProducts.inventory_summary?.out_of_stock_count ?? 0).toLocaleString()}
                           </span>
                           <span style={{ fontSize: '0.75rem', color: '#e74c3c' }}>Requires immediate restocking</span>
@@ -4706,11 +5017,11 @@ export const SuperadminDashboard: React.FC = () => {
                     </div>
 
                     {/* PRODUCT-WISE SALES TABLE */}
-                    <div className="glass-panel" style={{ padding: '24px', border: '1px solid rgba(201, 168, 76, 0.25)', borderRadius: '12px', background: 'rgba(15, 12, 10, 0.85)' }}>
+                    <div className="glass-panel" style={{ padding: '24px', border: '1px solid rgba(var(--gold-rgb), 0.25)', borderRadius: '12px', background: 'var(--surface-color)' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px', flexWrap: 'wrap', gap: '14px' }}>
                         <div>
-                          <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1.15rem', color: '#f5efe6', margin: 0, fontWeight: 700 }}>
-                            Product-Wise Sales & Stock Breakdown
+                          <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1.15rem', color: 'var(--cream)', margin: 0, fontWeight: 700 }}>
+                            Product-Wise Sales &amp; Stock Breakdown
                           </h3>
                           <p style={{ color: 'var(--beige)', fontSize: '0.8rem', margin: '4px 0 0 0' }}>
                             Item-level units sold by sales channel and current warehouse stock
@@ -4802,7 +5113,7 @@ export const SuperadminDashboard: React.FC = () => {
                             <col style={{ width: '160px', minWidth: '160px' }} />
                           </colgroup>
                           <thead>
-                            <tr style={{ borderBottom: '1px solid rgba(201, 168, 76, 0.3)', color: '#c9a84c' }}>
+                            <tr style={{ borderBottom: '1px solid rgba(var(--gold-rgb), 0.3)', color: 'var(--gold)' }}>
                               <th style={{ padding: '12px 14px', textAlign: 'left' }}>PRODUCT</th>
                               <th style={{ padding: '12px 14px', textAlign: 'left' }}>CATEGORY</th>
                               <th style={{ padding: '12px 14px', textAlign: 'right' }}>UNITS SOLD</th>
@@ -4829,35 +5140,36 @@ export const SuperadminDashboard: React.FC = () => {
                                           <img
                                             src={getImageUrl(prod.image_url)}
                                             alt={prod.name}
-                                            style={{ width: '38px', height: '38px', borderRadius: '6px', objectFit: 'cover', border: '1px solid rgba(201,168,76,0.3)', flexShrink: 0 }}
+                                            style={{ width: '38px', height: '38px', borderRadius: '6px', objectFit: 'cover', border: '1px solid rgba(var(--gold-rgb), 0.3)', flexShrink: 0 }}
                                           />
                                         ) : (
-                                          <div style={{ width: '38px', height: '38px', borderRadius: '6px', background: 'rgba(201,168,76,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#c9a84c', flexShrink: 0 }}>
+                                          <div style={{ width: '38px', height: '38px', borderRadius: '6px', background: 'rgba(var(--gold-rgb), 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--gold)', flexShrink: 0 }}>
                                             <ShoppingBag size={18} />
                                           </div>
                                         )}
                                         <div style={{ minWidth: 0, flex: '1 1 auto' }}>
-                                          <div style={{ color: '#f5efe6', fontWeight: 600, lineHeight: 1.35, wordBreak: 'break-word', whiteSpace: 'normal' }}>{prod.name}</div>
-                                          <div style={{ fontSize: '0.74rem', color: 'rgba(255,255,255,0.45)', marginTop: '2px' }}>₹{prod.price.toLocaleString('en-IN')}</div>
+                                          <div style={{ color: 'var(--cream)', fontWeight: 600, lineHeight: 1.35, wordBreak: 'break-word', whiteSpace: 'normal' }}>{prod.name}</div>
+                                          <div className="font-number" style={{ fontSize: '0.74rem', color: 'rgba(255,255,255,0.45)', marginTop: '2px', fontFamily: 'var(--font-number)' }}>₹{prod.price.toLocaleString('en-IN')}</div>
                                         </div>
                                       </div>
                                     </td>
                                     <td style={{ padding: '12px 14px', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
-                                      <span style={{ padding: '4px 10px', borderRadius: '6px', background: 'rgba(201,168,76,0.12)', border: '1px solid rgba(201,168,76,0.25)', color: 'var(--beige)', fontSize: '0.78rem', display: 'inline-block', whiteSpace: 'nowrap' }}>
+                                      <span style={{ padding: '4px 10px', borderRadius: '6px', background: 'rgba(var(--gold-rgb), 0.12)', border: '1px solid rgba(var(--gold-rgb), 0.25)', color: 'var(--cream)', fontSize: '0.78rem', display: 'inline-block', whiteSpace: 'nowrap' }}>
                                         {prod.category_name}
                                       </span>
                                     </td>
-                                    <td style={{ padding: '12px 14px', fontWeight: 700, color: '#c9a84c', fontSize: '0.92rem', textAlign: 'right', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
+                                    <td className="font-number" style={{ padding: '12px 14px', fontWeight: 700, color: 'var(--gold)', fontSize: '0.92rem', textAlign: 'right', verticalAlign: 'middle', whiteSpace: 'nowrap', fontFamily: 'var(--font-number)' }}>
                                       {prod.units_sold.toLocaleString()}
                                     </td>
-                                    <td style={{ padding: '12px 14px', color: '#5dade2', fontWeight: 600, textAlign: 'right', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
+                                    <td className="font-number" style={{ padding: '12px 14px', color: '#5dade2', fontWeight: 600, textAlign: 'right', verticalAlign: 'middle', whiteSpace: 'nowrap', fontFamily: 'var(--font-number)' }}>
                                       {prod.online_units.toLocaleString()}
                                     </td>
-                                    <td style={{ padding: '12px 14px', color: '#e67e22', fontWeight: 600, textAlign: 'right', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
+                                    <td className="font-number" style={{ padding: '12px 14px', color: '#e67e22', fontWeight: 600, textAlign: 'right', verticalAlign: 'middle', whiteSpace: 'nowrap', fontFamily: 'var(--font-number)' }}>
                                       {prod.offline_units.toLocaleString()}
                                     </td>
                                     <td style={{ padding: '12px 14px', textAlign: 'center', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
                                       <span
+                                        className="font-number"
                                         style={{
                                           fontWeight: 700,
                                           padding: '4px 12px',
@@ -4865,6 +5177,7 @@ export const SuperadminDashboard: React.FC = () => {
                                           fontSize: '0.75rem',
                                           display: 'inline-block',
                                           whiteSpace: 'nowrap',
+                                          fontFamily: 'var(--font-number)',
                                           background:
                                             prod.current_stock <= 0
                                               ? 'rgba(231, 76, 60, 0.15)'
@@ -4914,7 +5227,7 @@ export const SuperadminDashboard: React.FC = () => {
                 {/* SUB-TAB 2: ONLINE ORDERS                               */}
                 {/* ====================================================== */}
                 {salesSubTab === 'online' && (
-                  <div className="glass-panel" style={{ padding: '24px', border: '1px solid rgba(201, 168, 76, 0.25)', borderRadius: '12px', background: 'rgba(15, 12, 10, 0.85)' }}>
+                  <div className="glass-panel" style={{ padding: '24px', border: '1px solid rgba(var(--gold-rgb), 0.25)', borderRadius: '12px', background: 'var(--surface-color)' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px', flexWrap: 'wrap', gap: '14px' }}>
                       <div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -5211,7 +5524,7 @@ export const SuperadminDashboard: React.FC = () => {
                 {/* SUB-TAB 3: STORE SALES (IN-STORE / OFFLINE)            */}
                 {/* ====================================================== */}
                 {salesSubTab === 'offline' && (
-                  <div className="glass-panel" style={{ padding: '24px', border: '1px solid rgba(201, 168, 76, 0.25)', borderRadius: '12px', background: 'rgba(15, 12, 10, 0.85)' }}>
+                  <div className="glass-panel" style={{ padding: '24px', border: '1px solid rgba(var(--gold-rgb), 0.25)', borderRadius: '12px', background: 'var(--surface-color)' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px', flexWrap: 'wrap', gap: '14px' }}>
                       <div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -5531,7 +5844,7 @@ export const SuperadminDashboard: React.FC = () => {
                       </div>
 
                       {/* Payment & Amount Card */}
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '20px', background: 'rgba(201, 168, 76, 0.08)', border: '1px solid rgba(201, 168, 76, 0.25)', padding: '14px 16px', borderRadius: '10px' }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '20px', background: 'rgba(201, 168, 76, 0.08)', border: '1px solid rgba(var(--gold-rgb), 0.25)', padding: '14px 16px', borderRadius: '10px' }}>
                         <div>
                           <span style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Payment Method</span>
                           <div style={{ marginTop: '6px' }}>
@@ -5861,7 +6174,7 @@ export const SuperadminDashboard: React.FC = () => {
                 background: 'rgba(20, 16, 13, 0.85)',
                 padding: '12px 18px',
                 borderRadius: '10px',
-                border: '1px solid rgba(201, 168, 76, 0.25)',
+                border: '1px solid rgba(var(--gold-rgb), 0.25)',
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1, minWidth: '240px' }}>
@@ -5969,7 +6282,7 @@ export const SuperadminDashboard: React.FC = () => {
             {adminsLoading ? (
               <DashboardCardSkeleton height="350px" />
             ) : (
-              <div className="glass-panel" style={{ padding: '24px', border: '1px solid rgba(201, 168, 76, 0.25)', borderRadius: '12px', background: 'rgba(15, 12, 10, 0.85)' }}>
+              <div className="glass-panel" style={{ padding: '24px', border: '1px solid rgba(var(--gold-rgb), 0.25)', borderRadius: '12px', background: 'var(--surface-color)' }}>
                 <div style={{ overflowX: 'auto' }}>
                   <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.88rem', color: '#f5efe6' }}>
                     <thead>
@@ -6119,16 +6432,41 @@ export const SuperadminDashboard: React.FC = () => {
                 </p>
               </div>
 
-              <Button
-                variant="gold"
-                glow
-                onClick={handleExportAuditLogsCsv}
-                disabled={auditExporting}
-                style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
-              >
-                <Download size={16} />
-                {auditExporting ? 'Exporting...' : 'Export CSV'}
-              </Button>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                {selectedAuditLogIds.length > 0 && (
+                  <button
+                    onClick={handleBulkDeleteAuditLogs}
+                    disabled={isBatchDeletingAuditLogs}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      background: 'rgba(231, 76, 60, 0.18)',
+                      border: '1px solid rgba(231, 76, 60, 0.5)',
+                      color: '#e74c3c',
+                      borderRadius: '8px',
+                      padding: '8px 16px',
+                      fontSize: '0.85rem',
+                      fontWeight: 700,
+                      cursor: isBatchDeletingAuditLogs ? 'not-allowed' : 'pointer',
+                      transition: 'all 0.2s ease',
+                    }}
+                  >
+                    <Trash2 size={16} />
+                    {isBatchDeletingAuditLogs ? 'Deleting...' : `Delete Selected (${selectedAuditLogIds.length})`}
+                  </button>
+                )}
+                <Button
+                  variant="gold"
+                  glow
+                  onClick={handleExportAuditLogsCsv}
+                  disabled={auditExporting}
+                  style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+                >
+                  <Download size={16} />
+                  {auditExporting ? 'Exporting...' : 'Export CSV'}
+                </Button>
+              </div>
             </div>
 
             {/* Filters Toolbar */}
@@ -6278,6 +6616,7 @@ export const SuperadminDashboard: React.FC = () => {
               logId={selectedAuditLog?.id || null}
               initialLog={selectedAuditLog}
               onClose={() => setSelectedAuditLog(null)}
+              onDelete={handleDeleteSingleAuditLog}
               role="superadmin"
             />
 
@@ -6293,121 +6632,170 @@ export const SuperadminDashboard: React.FC = () => {
                 <div className="audit-table-wrap">
                   <table className="audit-data-table">
                     <colgroup>
-                      <col style={{ width: '170px', minWidth: '170px' }} />
+                      <col style={{ width: '48px', minWidth: '48px' }} />
                       <col style={{ width: '160px', minWidth: '160px' }} />
+                      <col style={{ width: '150px', minWidth: '150px' }} />
+                      <col style={{ width: '110px', minWidth: '110px' }} />
+                      <col style={{ width: '220px', minWidth: '220px' }} />
                       <col style={{ width: '120px', minWidth: '120px' }} />
-                      <col style={{ width: '240px', minWidth: '240px' }} />
-                      <col style={{ width: '130px', minWidth: '130px' }} />
-                      <col style={{ width: '130px', minWidth: '130px' }} />
+                      <col style={{ width: '150px', minWidth: '150px' }} />
                     </colgroup>
                     <thead>
-                      <tr style={{ borderBottom: '1px solid rgba(201, 168, 76, 0.3)', color: '#c9a84c', textAlign: 'left' }}>
+                      <tr style={{ borderBottom: '1px solid rgba(var(--gold-rgb), 0.3)', color: 'var(--gold)', textAlign: 'left' }}>
+                        <th style={{ padding: '14px 12px', textAlign: 'center' }}>
+                          <input
+                            type="checkbox"
+                            checked={displayAuditLogs.items.length > 0 && displayAuditLogs.items.every((i) => selectedAuditLogIds.includes(i.id))}
+                            onChange={handleToggleSelectAllAuditLogs}
+                            aria-label="Select all audit logs"
+                            style={{ cursor: 'pointer', accentColor: 'var(--gold)', width: '16px', height: '16px' }}
+                          />
+                        </th>
                         <th style={{ padding: '14px 16px' }}>DATE &amp; TIME</th>
                         <th style={{ padding: '14px 16px' }}>USER</th>
                         <th style={{ padding: '14px 16px' }}>ROLE</th>
                         <th style={{ padding: '14px 16px' }}>ACTION</th>
                         <th style={{ padding: '14px 16px' }}>STATUS</th>
-                        <th style={{ padding: '14px 16px', textAlign: 'right' }}>DETAILS</th>
+                        <th style={{ padding: '14px 16px', textAlign: 'right' }}>ACTIONS</th>
                       </tr>
                     </thead>
                     <tbody>
                       {displayAuditLogs.items.length > 0 ? (
-                        displayAuditLogs.items.map((log, idx) => (
-                          <tr
-                            key={log.id || idx}
-                            onClick={() => setSelectedAuditLog(log)}
-                            style={{
-                              borderBottom: '1px solid rgba(255,255,255,0.05)',
-                              background: idx % 2 === 0 ? 'rgba(255,255,255,0.015)' : 'transparent',
-                              cursor: 'pointer',
-                              transition: 'background 0.2s ease',
-                            }}
-                          >
-                            <td style={{ padding: '14px 16px', color: 'rgba(255,255,255,0.85)', fontSize: '0.82rem', whiteSpace: 'nowrap' }}>
-                              {log.created_at}
-                            </td>
-                            <td style={{ padding: '14px 16px', fontWeight: 600, color: '#f5efe6' }}>
-                              {log.user_name && log.user_name !== 'System Process' ? log.user_name : 'Enterprise Chief'}
-                            </td>
-                            <td style={{ padding: '14px 16px' }}>
-                              <span
-                                style={{
-                                  display: 'inline-block',
-                                  padding: '3px 8px',
-                                  borderRadius: '4px',
-                                  fontSize: '0.75rem',
-                                  fontWeight: 700,
-                                  background: log.user_role === 'superadmin' ? 'rgba(201, 168, 76, 0.15)' : 'rgba(255, 255, 255, 0.06)',
-                                  color: log.user_role === 'superadmin' ? '#c9a84c' : 'rgba(255, 255, 255, 0.8)',
-                                  border: log.user_role === 'superadmin' ? '1px solid rgba(201, 168, 76, 0.3)' : '1px solid rgba(255, 255, 255, 0.1)',
-                                }}
-                              >
-                                {log.user_role === 'superadmin' ? 'Super Admin' : log.user_role === 'admin' ? 'Admin' : 'Super Admin'}
-                              </span>
-                            </td>
-                            <td style={{ padding: '14px 16px', fontWeight: 600, color: '#f5efe6' }}>
-                              <div
-                                style={{
-                                  maxWidth: '220px',
-                                  overflow: 'hidden',
-                                  textOverflow: 'ellipsis',
-                                  whiteSpace: 'nowrap',
-                                }}
-                                title={formatActionLabel(log.action)}
-                              >
-                                {formatActionLabel(log.action)}
-                              </div>
-                            </td>
-                            <td style={{ padding: '14px 16px' }}>
-                              <span
-                                className={`audit-status-badge audit-status-${log.status?.toLowerCase() || 'unknown'}`}
-                                style={{
-                                  display: 'inline-flex',
-                                  alignItems: 'center',
-                                  gap: '6px',
-                                  padding: '4px 10px',
-                                  borderRadius: '20px',
-                                  fontSize: '0.74rem',
-                                  fontWeight: 700,
-                                  letterSpacing: '0.5px',
-                                  whiteSpace: 'nowrap',
-                                  background: log.status === 'SUCCESS' ? 'rgba(46, 204, 113, 0.15)' : log.status === 'DENIED' ? 'rgba(230, 126, 34, 0.15)' : 'rgba(231, 76, 60, 0.15)',
-                                  color: log.status === 'SUCCESS' ? '#2ecc71' : log.status === 'DENIED' ? '#e67e22' : '#e74c3c',
-                                  border: log.status === 'SUCCESS' ? '1px solid rgba(46, 204, 113, 0.35)' : log.status === 'DENIED' ? '1px solid rgba(230, 126, 34, 0.35)' : '1px solid rgba(231, 76, 60, 0.35)',
-                                }}
-                              >
-                                <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'currentColor', flexShrink: 0 }} />
-                                {log.status}
-                              </span>
-                            </td>
-                            <td style={{ padding: '14px 16px', textAlign: 'right' }}>
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setSelectedAuditLog(log);
-                                }}
-                                className="audit-view-btn"
-                                style={{
-                                  background: 'rgba(201, 168, 76, 0.12)',
-                                  border: '1px solid rgba(201, 168, 76, 0.35)',
-                                  color: '#c9a84c',
-                                  borderRadius: '6px',
-                                  padding: '6px 14px',
-                                  fontSize: '0.78rem',
-                                  fontWeight: 700,
-                                  cursor: 'pointer',
-                                  whiteSpace: 'nowrap',
-                                  transition: 'all 0.2s ease',
-                                }}
-                              >
-                                View Details
-                              </button>
-                            </td>
-                          </tr>
-                        ))
+                        displayAuditLogs.items.map((log, idx) => {
+                          const isSelected = selectedAuditLogIds.includes(log.id);
+                          return (
+                            <tr
+                              key={log.id || idx}
+                              onClick={() => setSelectedAuditLog(log)}
+                              style={{
+                                borderBottom: '1px solid rgba(255,255,255,0.05)',
+                                background: isSelected ? 'rgba(var(--gold-rgb), 0.08)' : idx % 2 === 0 ? 'rgba(255,255,255,0.015)' : 'transparent',
+                                cursor: 'pointer',
+                                transition: 'background 0.2s ease',
+                              }}
+                            >
+                              <td style={{ padding: '14px 12px', textAlign: 'center' }} onClick={(e) => e.stopPropagation()}>
+                                <input
+                                  type="checkbox"
+                                  checked={isSelected}
+                                  onChange={() => handleToggleAuditLogSelection(log.id)}
+                                  aria-label={`Select audit log ${log.id}`}
+                                  style={{ cursor: 'pointer', accentColor: 'var(--gold)', width: '16px', height: '16px' }}
+                                />
+                              </td>
+                              <td style={{ padding: '14px 16px', color: 'rgba(255,255,255,0.85)', fontSize: '0.82rem', whiteSpace: 'nowrap' }}>
+                                {log.created_at}
+                              </td>
+                              <td style={{ padding: '14px 16px', fontWeight: 600, color: 'var(--cream)' }}>
+                                {log.user_name && log.user_name !== 'System Process' ? log.user_name : 'Enterprise Chief'}
+                              </td>
+                              <td style={{ padding: '14px 16px' }}>
+                                <span
+                                  style={{
+                                    display: 'inline-block',
+                                    padding: '3px 8px',
+                                    borderRadius: '4px',
+                                    fontSize: '0.75rem',
+                                    fontWeight: 700,
+                                    background: log.user_role === 'superadmin' ? 'rgba(var(--gold-rgb), 0.15)' : 'rgba(255, 255, 255, 0.06)',
+                                    color: log.user_role === 'superadmin' ? 'var(--gold)' : 'rgba(255, 255, 255, 0.8)',
+                                    border: log.user_role === 'superadmin' ? '1px solid rgba(var(--gold-rgb), 0.3)' : '1px solid rgba(255, 255, 255, 0.1)',
+                                  }}
+                                >
+                                  {log.user_role === 'superadmin' ? 'Super Admin' : log.user_role === 'admin' ? 'Admin' : 'Super Admin'}
+                                </span>
+                              </td>
+                              <td style={{ padding: '14px 16px', fontWeight: 600, color: 'var(--cream)' }}>
+                                <div
+                                  style={{
+                                    maxWidth: '220px',
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                    whiteSpace: 'nowrap',
+                                  }}
+                                  title={formatActionLabel(log.action)}
+                                >
+                                  {formatActionLabel(log.action)}
+                                </div>
+                              </td>
+                              <td style={{ padding: '14px 16px' }}>
+                                <span
+                                  className={`audit-status-badge audit-status-${log.status?.toLowerCase() || 'unknown'}`}
+                                  style={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '6px',
+                                    padding: '4px 10px',
+                                    borderRadius: '20px',
+                                    fontSize: '0.74rem',
+                                    fontWeight: 700,
+                                    letterSpacing: '0.5px',
+                                    whiteSpace: 'nowrap',
+                                    background: log.status === 'SUCCESS' ? 'rgba(46, 204, 113, 0.15)' : log.status === 'DENIED' ? 'rgba(230, 126, 34, 0.15)' : 'rgba(231, 76, 60, 0.15)',
+                                    color: log.status === 'SUCCESS' ? '#2ecc71' : log.status === 'DENIED' ? '#e67e22' : '#e74c3c',
+                                    border: log.status === 'SUCCESS' ? '1px solid rgba(46, 204, 113, 0.35)' : log.status === 'DENIED' ? '1px solid rgba(230, 126, 34, 0.35)' : '1px solid rgba(231, 76, 60, 0.35)',
+                                  }}
+                                >
+                                  <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'currentColor', flexShrink: 0 }} />
+                                  {log.status}
+                                </span>
+                              </td>
+                              <td style={{ padding: '14px 16px', textAlign: 'right' }}>
+                                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', justifyContent: 'flex-end' }}>
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setSelectedAuditLog(log);
+                                    }}
+                                    className="audit-view-btn"
+                                    style={{
+                                      background: 'rgba(var(--gold-rgb), 0.12)',
+                                      border: '1px solid rgba(var(--gold-rgb), 0.35)',
+                                      color: 'var(--gold)',
+                                      borderRadius: '6px',
+                                      padding: '6px 12px',
+                                      fontSize: '0.76rem',
+                                      fontWeight: 700,
+                                      cursor: 'pointer',
+                                      whiteSpace: 'nowrap',
+                                      transition: 'all 0.2s ease',
+                                    }}
+                                  >
+                                    View Details
+                                  </button>
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleDeleteSingleAuditLog(log.id);
+                                    }}
+                                    disabled={deletingSingleAuditLogId === log.id}
+                                    title="Delete audit log record"
+                                    aria-label="Delete audit log record"
+                                    style={{
+                                      background: 'rgba(231, 76, 60, 0.12)',
+                                      border: '1px solid rgba(231, 76, 60, 0.35)',
+                                      color: '#e74c3c',
+                                      borderRadius: '6px',
+                                      padding: '6px 10px',
+                                      fontSize: '0.76rem',
+                                      fontWeight: 700,
+                                      cursor: deletingSingleAuditLogId === log.id ? 'not-allowed' : 'pointer',
+                                      display: 'inline-flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'center',
+                                      transition: 'all 0.2s ease',
+                                    }}
+                                  >
+                                    <Trash2 size={13} />
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })
                       ) : (
                         <tr>
-                          <td colSpan={6} style={{ textAlign: 'center', padding: '30px', color: 'rgba(255,255,255,0.5)' }}>
+                          <td colSpan={7} style={{ textAlign: 'center', padding: '30px', color: 'rgba(255,255,255,0.5)' }}>
                             No audit log records found matching search filters.
                           </td>
                         </tr>
@@ -6433,13 +6821,69 @@ export const SuperadminDashboard: React.FC = () => {
         {/* THEME BUILDER TAB */}
         {activeTab === 'theme-builder' && (
           <div>
-            <div style={{ marginBottom: '24px' }}>
-              <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '2rem', color: '#f5efe6', margin: '0 0 6px 0', fontWeight: 700 }}>
-                Theme Builder
-              </h1>
-              <p style={{ margin: 0, fontSize: '0.88rem', color: 'rgba(255, 255, 255, 0.65)' }}>
-                Customize the look & feel of your website
-              </p>
+            {/* Header & Status Indicator */}
+            <div style={{ marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '6px' }}>
+                  <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(1.4rem, 3.5vw, 2rem)', color: '#f5efe6', margin: 0, fontWeight: 700 }}>
+                    Theme &amp; Font Settings
+                  </h1>
+                  <span style={{
+                    padding: '4px 12px',
+                    borderRadius: '20px',
+                    fontSize: '0.72rem',
+                    fontWeight: 700,
+                    letterSpacing: '0.5px',
+                    background: 'rgba(201, 168, 76, 0.15)',
+                    color: '#c9a84c',
+                    border: '1px solid rgba(201, 168, 76, 0.35)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '5px',
+                  }}>
+                    <Check size={12} /> ACTIVE EVERYWHERE
+                  </span>
+                </div>
+                <p style={{ margin: 0, fontSize: '0.88rem', color: 'rgba(255, 255, 255, 0.65)', maxWidth: '780px' }}>
+                  Choose ready-made themes or customize button colors, shopping cart, product cards, page background, and text &amp; number fonts. Any changes here apply instantly across the Storefront, Super Admin, Admin, Customer, and Delivery Boy panels.
+                </p>
+              </div>
+
+              {/* Active Badges */}
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                <div style={{
+                  padding: '8px 14px',
+                  borderRadius: '8px',
+                  background: 'rgba(0,0,0,0.4)',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  fontSize: '0.78rem',
+                  color: 'rgba(255,255,255,0.85)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                }}>
+                  <span style={{ color: 'rgba(255,255,255,0.45)' }}>Active Theme:</span>
+                  <strong style={{ color: '#c9a84c' }}>
+                    {displayThemes.items.find((t) => t.id === activeThemeId)?.name || 'Custom Theme'}
+                  </strong>
+                </div>
+                <div style={{
+                  padding: '8px 14px',
+                  borderRadius: '8px',
+                  background: 'rgba(0,0,0,0.4)',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  fontSize: '0.78rem',
+                  color: 'rgba(255,255,255,0.85)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                }}>
+                  <span style={{ color: 'rgba(255,255,255,0.45)' }}>Numbers Font:</span>
+                  <strong style={{ color: '#38BDF8', fontFamily: customColors.number_font_family }}>
+                    {customColors.number_font_family}
+                  </strong>
+                </div>
+              </div>
             </div>
 
             {/* Error Alert */}
@@ -6465,297 +6909,1245 @@ export const SuperadminDashboard: React.FC = () => {
               </div>
             )}
 
+            {/* Section Switcher Tabs with Premium Responsive Grid */}
+            <div className="theme-builder-tabs-container">
+              {[
+                { id: 'presets' as const, icon: <Sparkles size={16} />, label: 'Ready-Made Themes', desc: '6 complete designer color styles ready to use' },
+                { id: 'components' as const, icon: <Palette size={16} />, label: 'Buttons, Cart & Card Colors', desc: 'Button colors, shopping cart, product cards, navbar & footer' },
+                { id: 'palette' as const, icon: <Layers size={16} />, label: 'Background & Screen Colors', desc: 'Main page background, box cards, regular text, and gold accents' },
+                { id: 'typography' as const, icon: <Type size={16} />, label: 'Text & Number Fonts', desc: 'Reading font, headline titles, and dedicated numbers font' },
+              ].map((tab) => {
+                const isActive = themeActiveSection === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => setThemeActiveSection(tab.id)}
+                    className={`theme-builder-tab-btn ${isActive ? 'active' : ''}`}
+                  >
+                    <div className="theme-builder-tab-header" style={{ color: isActive ? '#c9a84c' : 'rgba(255,255,255,0.7)' }}>
+                      <span style={{ flexShrink: 0, display: 'inline-flex' }}>{tab.icon}</span>
+                      <span className="theme-builder-tab-title" style={{ color: isActive ? '#f5efe6' : 'inherit' }}>{tab.label}</span>
+                    </div>
+                    <span className="theme-builder-tab-desc">{tab.desc}</span>
+                  </button>
+                );
+              })}
+            </div>
+
             {themesLoading ? (
               <DashboardCardSkeleton height="450px" />
             ) : (
               <div className="theme-builder-grid">
                 
-                {/* 1. THEME PRESETS */}
-                <div className="glass-panel" style={{ padding: '22px', border: '1px solid rgba(201, 168, 76, 0.25)', borderRadius: '12px', background: 'rgba(15, 12, 10, 0.85)' }}>
-                  <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1.15rem', color: '#c9a84c', margin: '0 0 6px 0', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                    THEME PRESETS
-                  </h3>
-                  <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.8rem', margin: '0 0 18px 0' }}>
-                    Click a theme to preview, then apply it live across all pages.
-                  </p>
+                {/* LEFT COLUMN: ACTIVE CONTROLS PANEL */}
+                <div className="theme-controls-column">
 
-                  <div className="theme-presets-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '14px', marginBottom: '18px' }}>
-                    {displayThemes.items.map((preset) => {
-                      const isSelected = selectedThemeId === preset.id;
-                      const isActive = activeThemeId === preset.id;
-                      return (
-                        <div
-                          key={preset.id}
-                          onClick={() => handleSelectPreset(preset)}
+                  {/* 1. READY-MADE THEMES */}
+                  {themeActiveSection === 'presets' && (
+                    <div className="glass-panel" style={{ padding: '22px', border: '1px solid rgba(var(--gold-rgb), 0.25)', borderRadius: '12px', background: 'var(--surface-color)' }}>
+                      <div style={{ marginBottom: '18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
+                        <div>
+                          <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1.15rem', color: '#c9a84c', margin: '0 0 4px 0', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                            Ready-Made Theme Collections
+                          </h3>
+                          <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.8rem', margin: 0 }}>
+                            Click on any theme card below to preview its colors and fonts. Click 'Apply Theme Everywhere' to make it live.
+                          </p>
+                        </div>
+                        <button
+                          onClick={() => setShowSaveModal(true)}
                           style={{
-                            borderRadius: '10px',
-                            border: isSelected ? '2px solid #c9a84c' : '1px solid rgba(255,255,255,0.12)',
-                            background: isSelected ? 'rgba(201, 168, 76, 0.12)' : 'rgba(0,0,0,0.3)',
-                            padding: '14px',
+                            padding: '8px 14px',
+                            borderRadius: '6px',
+                            border: '1px dashed rgba(201, 168, 76, 0.5)',
+                            background: 'rgba(201, 168, 76, 0.1)',
+                            color: '#c9a84c',
+                            fontSize: '0.78rem',
+                            fontWeight: 700,
                             cursor: 'pointer',
-                            transition: 'all 0.25s ease',
-                            position: 'relative',
                             display: 'flex',
-                            flexDirection: 'column',
-                            justifyContent: 'space-between',
-                            minHeight: '180px',
+                            alignItems: 'center',
+                            gap: '6px',
                           }}
                         >
-                          {/* Active / Selected Badge */}
-                          {isSelected && (
-                            <div style={{
-                              position: 'absolute',
-                              top: '8px',
-                              right: '8px',
-                              width: '22px',
-                              height: '22px',
-                              borderRadius: '50%',
-                              background: '#c9a84c',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                            }}>
-                              <Check size={14} color="#14100d" />
-                            </div>
-                          )}
+                          <Plus size={14} /> Create Custom Theme
+                        </button>
+                      </div>
 
-                          {/* Preset Miniature Visual Mockup */}
-                          <div style={{
-                            background: preset.background_color,
-                            borderRadius: '6px',
-                            padding: '12px',
-                            border: `1px solid ${preset.surface_color}`,
-                            marginBottom: '10px',
-                            textAlign: 'center',
-                          }}>
-                            <span style={{ fontSize: '0.75rem', fontWeight: 800, color: preset.luxury_gold_color, letterSpacing: '1px', display: 'block' }}>
-                              CHOVIQUE
-                            </span>
-                            <span style={{ fontSize: '0.55rem', color: preset.text_color, display: 'block', opacity: 0.7, margin: '2px 0 6px 0' }}>
-                              Premium Handmade Chocolates
-                            </span>
-                            <div style={{
-                              display: 'inline-block',
-                              padding: '2px 8px',
-                              fontSize: '0.55rem',
-                              fontWeight: 700,
-                              background: preset.luxury_gold_color,
-                              color: preset.background_color,
-                              borderRadius: '3px',
-                            }}>
-                              SHOP NOW
-                            </div>
-                          </div>
-
-                          <div>
-                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '4px' }}>
-                              <h4 style={{ fontFamily: 'var(--font-display)', fontSize: '0.95rem', color: '#f5efe6', margin: 0, fontWeight: 700 }}>
-                                {preset.name}
-                              </h4>
-                              {isActive && (
-                                <span style={{ fontSize: '0.65rem', color: '#2ecc71', fontWeight: 700 }}>[Active]</span>
-                              )}
-                            </div>
-                            <p style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.6)', margin: '4px 0 0 0', lineHeight: 1.3 }}>
-                              {preset.description}
-                            </p>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-
-                  {/* Add New Theme Button */}
-                  <button
-                    onClick={() => setShowSaveModal(true)}
-                    style={{
-                      width: '100%',
-                      padding: '12px',
-                      borderRadius: '8px',
-                      border: '1px dashed rgba(201, 168, 76, 0.5)',
-                      background: 'rgba(201, 168, 76, 0.05)',
-                      color: '#c9a84c',
-                      fontSize: '0.85rem',
-                      fontWeight: 600,
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '8px',
-                      transition: 'all 0.2s ease',
-                    }}
-                  >
-                    <Plus size={16} /> + Add New Theme
-                  </button>
-                </div>
-
-                {/* 2. MANUAL COLOR CUSTOMIZATION */}
-                <div className="glass-panel" style={{ padding: '22px', border: '1px solid rgba(201, 168, 76, 0.25)', borderRadius: '12px', background: 'rgba(15, 12, 10, 0.85)' }}>
-                  <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1.15rem', color: '#c9a84c', margin: '0 0 6px 0', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                    MANUAL COLOR CUSTOMIZATION
-                  </h3>
-                  <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.8rem', margin: '0 0 18px 0' }}>
-                    Fine-tune individual colors. Changes apply across all pages instantly.
-                  </p>
-
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                    {[
-                      { key: 'primary_brand_color' as const, label: 'Primary Brand Brown' },
-                      { key: 'background_color' as const, label: 'Chocolate Background Dark' },
-                      { key: 'luxury_gold_color' as const, label: 'Signature Luxury Gold' },
-                      { key: 'secondary_accent_color' as const, label: 'Rose Gold Accent' },
-                      { key: 'text_color' as const, label: 'Text Color' },
-                      { key: 'surface_color' as const, label: 'Card / Surface Color' },
-                    ].map((field) => {
-                      const val = customColors[field.key];
-                      const valid = isValidHex(val);
-                      return (
-                        <div key={field.key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px' }}>
-                          <span style={{ fontSize: '0.82rem', color: '#f5efe6', fontWeight: 500, flex: 1 }}>{field.label}</span>
-                          
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            <input
-                              type="text"
-                              value={val}
-                              onChange={(e) => setCustomColors({ ...customColors, [field.key]: e.target.value })}
+                      <div className="theme-presets-grid">
+                        {displayThemes.items.map((preset) => {
+                          const isSelected = selectedThemeId === preset.id;
+                          const isActive = activeThemeId === preset.id;
+                          return (
+                            <div
+                              key={preset.id}
+                              onClick={() => handleSelectPreset(preset)}
                               style={{
-                                width: '78px',
-                                background: '#14100d',
-                                border: valid ? '1px solid rgba(201, 168, 76, 0.4)' : '1px solid #e74c3c',
-                                borderRadius: '4px',
-                                color: '#f5efe6',
-                                padding: '4px 6px',
-                                fontSize: '0.78rem',
-                                fontFamily: 'monospace',
-                                textAlign: 'center',
-                                outline: 'none',
+                                borderRadius: '10px',
+                                border: isSelected ? '2px solid #c9a84c' : '1px solid rgba(255,255,255,0.12)',
+                                background: isSelected ? 'rgba(201, 168, 76, 0.12)' : 'rgba(0,0,0,0.3)',
+                                padding: '14px',
+                                cursor: 'pointer',
+                                transition: 'all 0.25s ease',
+                                position: 'relative',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                justifyContent: 'space-between',
+                                minHeight: '190px',
                               }}
-                            />
-                            <input
-                              type="color"
-                              value={valid ? val : '#000000'}
-                              onChange={(e) => setCustomColors({ ...customColors, [field.key]: e.target.value.toUpperCase() })}
-                              style={{
-                                width: '32px',
-                                height: '30px',
-                                border: '1px solid rgba(255,255,255,0.2)',
+                            >
+                              {/* Selected Checkmark */}
+                              {isSelected && (
+                                <div style={{
+                                  position: 'absolute',
+                                  top: '8px',
+                                  right: '8px',
+                                  width: '22px',
+                                  height: '22px',
+                                  borderRadius: '50%',
+                                  background: '#c9a84c',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                }}>
+                                  <Check size={14} color="#14100d" />
+                                </div>
+                              )}
+
+                              {/* Theme Visual Swatches Bar */}
+                              <div style={{
+                                background: preset.background_color,
+                                borderRadius: '6px',
+                                padding: '10px',
+                                border: `1px solid ${preset.surface_color}`,
+                                marginBottom: '10px',
+                              }}>
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                                  <span style={{ fontSize: '0.75rem', fontWeight: 800, color: preset.luxury_gold_color, letterSpacing: '0.5px' }}>
+                                    CHOVIQUE
+                                  </span>
+                                  <span style={{
+                                    fontSize: '0.55rem',
+                                    fontWeight: 700,
+                                    padding: '2px 6px',
+                                    borderRadius: '3px',
+                                    background: preset.button_color || preset.primary_brand_color,
+                                    color: preset.button_text_color || '#FFFFFF',
+                                  }}>
+                                    BUTTON
+                                  </span>
+                                </div>
+                                <div style={{ display: 'flex', gap: '4px', height: '10px', borderRadius: '3px', overflow: 'hidden' }}>
+                                  <div style={{ flex: 1, background: preset.background_color }} title="Page Background" />
+                                  <div style={{ flex: 1, background: preset.surface_color }} title="Box Background" />
+                                  <div style={{ flex: 1, background: preset.button_color || preset.primary_brand_color }} title="Button Color" />
+                                  <div style={{ flex: 1, background: preset.cart_color || preset.luxury_gold_color }} title="Cart Color" />
+                                  <div style={{ flex: 1, background: preset.product_card_color || preset.surface_color }} title="Product Card" />
+                                  <div style={{ flex: 1, background: preset.luxury_gold_color }} title="Gold Accent" />
+                                </div>
+                              </div>
+
+                              <div>
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '4px' }}>
+                                  <h4 style={{ fontFamily: 'var(--font-display)', fontSize: '0.95rem', color: '#f5efe6', margin: 0, fontWeight: 700 }}>
+                                    {preset.name}
+                                  </h4>
+                                  {isActive && (
+                                    <span style={{ fontSize: '0.65rem', color: '#2ecc71', fontWeight: 700 }}>[Active Live]</span>
+                                  )}
+                                </div>
+                                <p style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.6)', margin: '4px 0 6px 0', lineHeight: 1.3 }}>
+                                  {preset.description}
+                                </p>
+                                <div style={{ display: 'flex', gap: '8px', fontSize: '0.65rem', color: 'rgba(255,255,255,0.45)', flexWrap: 'wrap' }}>
+                                  <span>Numbers: <strong style={{ color: '#38BDF8', fontFamily: preset.number_font_family }}>{preset.number_font_family || 'Outfit'}</strong></span>
+                                  <span>• Text: {preset.font_family || 'Outfit'}</span>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 2. BUTTONS, CART & CARD COLORS */}
+                  {themeActiveSection === 'components' && (
+                    <div className="glass-panel" style={{ padding: '22px', border: '1px solid rgba(var(--gold-rgb), 0.25)', borderRadius: '12px', background: 'var(--surface-color)' }}>
+                      <div style={{ marginBottom: '18px' }}>
+                        <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1.15rem', color: '#c9a84c', margin: '0 0 4px 0', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                          Buttons, Cart &amp; Card Colors
+                        </h3>
+                        <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.8rem', margin: 0 }}>
+                          Change individual colors for action buttons, shopping cart, product display cards, and header/footer.
+                        </p>
+                      </div>
+
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '22px' }}>
+                        
+                        {/* Group: Buttons */}
+                        <div style={{ padding: '16px', background: 'rgba(0,0,0,0.3)', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.06)' }}>
+                          <div className="theme-group-header">
+                            <div>
+                              <span style={{ fontSize: '0.92rem', fontWeight: 700, color: '#f5efe6', display: 'block' }}>Action Buttons</span>
+                              <span style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.45)' }}>Main action buttons (Shop Now, Add to Cart, Submit) across all pages</span>
+                            </div>
+                            <div className="theme-preview-badges-row">
+                              <span style={{
+                                padding: '4px 10px',
+                                fontSize: '0.68rem',
+                                fontWeight: 700,
+                                borderRadius: '4px',
+                                background: customColors.button_color,
+                                color: customColors.button_text_color,
+                                border: '1px solid rgba(255,255,255,0.1)',
+                              }}>
+                                Sample Button
+                              </span>
+                              <span style={{
+                                padding: '4px 10px',
+                                fontSize: '0.68rem',
+                                fontWeight: 700,
                                 borderRadius: '4px',
                                 background: 'transparent',
-                                cursor: 'pointer',
-                              }}
-                            />
+                                color: customColors.secondary_button_color,
+                                border: `1px solid ${customColors.secondary_button_color}`,
+                              }}>
+                                Outline
+                              </span>
+                            </div>
+                          </div>
+
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                            {[
+                              { key: 'button_color' as const, label: 'Main Button Background Color', hint: 'The background color for primary action buttons' },
+                              { key: 'button_text_color' as const, label: 'Main Button Text Color', hint: 'The text and icon color inside main buttons' },
+                              { key: 'secondary_button_color' as const, label: 'Secondary / Outline Button Color', hint: 'The border and text color for secondary outline buttons' },
+                            ].map((field) => {
+                              const val = customColors[field.key];
+                              const valid = isValidHex(val);
+                              return (
+                                <div key={field.key} className="theme-color-input-row">
+                                  <div className="theme-color-info">
+                                    <span style={{ fontSize: '0.82rem', color: '#f5efe6', fontWeight: 600, display: 'block' }}>{field.label}</span>
+                                    <span style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.45)', display: 'block' }}>{field.hint}</span>
+                                  </div>
+                                  <div className="theme-color-pickers">
+                                    <input
+                                      type="text"
+                                      value={val}
+                                      onChange={(e) => handleCustomColorChange(field.key, e.target.value)}
+                                      style={{
+                                        width: '84px',
+                                        background: '#14100d',
+                                        border: valid ? '1px solid rgba(201, 168, 76, 0.4)' : '1px solid #e74c3c',
+                                        borderRadius: '4px',
+                                        color: '#f5efe6',
+                                        padding: '5px 8px',
+                                        fontSize: '0.8rem',
+                                        fontFamily: 'monospace',
+                                        textAlign: 'center',
+                                        outline: 'none',
+                                      }}
+                                    />
+                                    <input
+                                      type="color"
+                                      value={valid ? val : '#000000'}
+                                      onChange={(e) => handleCustomColorChange(field.key, e.target.value.toUpperCase())}
+                                      style={{ width: '34px', height: '32px', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '4px', background: 'transparent', cursor: 'pointer' }}
+                                    />
+                                  </div>
+                                </div>
+                              );
+                            })}
                           </div>
                         </div>
-                      );
-                    })}
-                  </div>
+
+                        {/* Group: Cart Styling */}
+                        <div style={{ padding: '16px', background: 'rgba(0,0,0,0.3)', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.06)' }}>
+                          <div className="theme-group-header">
+                            <div>
+                              <span style={{ fontSize: '0.92rem', fontWeight: 700, color: '#f5efe6', display: 'block' }}>Shopping Cart &amp; Badges</span>
+                              <span style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.45)' }}>Cart button, count badge pill, checkout highlights, and Cart Page item cards</span>
+                            </div>
+                            <div className="theme-preview-badges-row">
+                              <div style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '6px',
+                                padding: '4px 10px',
+                                borderRadius: '20px',
+                                background: customColors.cart_color,
+                                color: customColors.cart_text_color,
+                                fontWeight: 700,
+                                fontSize: '0.72rem',
+                              }}>
+                                <ShoppingBag size={12} />
+                                <span style={{ fontFamily: customColors.number_font_family, fontVariantNumeric: 'tabular-nums' }}>3 items</span>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 14px', borderRadius: '8px', background: 'rgba(201, 168, 76, 0.1)', border: '1px solid rgba(201, 168, 76, 0.3)', marginBottom: '14px' }}>
+                            <Sparkles size={16} color="var(--gold)" style={{ flexShrink: 0 }} />
+                            <div style={{ fontSize: '0.78rem', color: '#f5efe6', lineHeight: 1.45 }}>
+                              <strong style={{ color: 'var(--gold)' }}>Customer Cart Page Synchronized:</strong> Cart item cards, quantity selectors, checkout buttons, and order summaries automatically sync with these Cart &amp; Product Card colors (`cart_color`, `product_card_color`, `surface_color`), providing an interactive and cohesive luxury look.
+                            </div>
+                          </div>
+
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                            {[
+                              { key: 'cart_color' as const, label: 'Shopping Cart Button & Badge Color', hint: 'The background for cart button and item count badge' },
+                              { key: 'cart_text_color' as const, label: 'Cart Text & Count Number Color', hint: 'Text and count number inside cart button and badge' },
+                            ].map((field) => {
+                              const val = customColors[field.key];
+                              const valid = isValidHex(val);
+                              return (
+                                <div key={field.key} className="theme-color-input-row">
+                                  <div className="theme-color-info">
+                                    <span style={{ fontSize: '0.82rem', color: '#f5efe6', fontWeight: 600, display: 'block' }}>{field.label}</span>
+                                    <span style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.45)', display: 'block' }}>{field.hint}</span>
+                                  </div>
+                                  <div className="theme-color-pickers">
+                                    <input
+                                      type="text"
+                                      value={val}
+                                      onChange={(e) => handleCustomColorChange(field.key, e.target.value)}
+                                      style={{
+                                        width: '84px',
+                                        background: '#14100d',
+                                        border: valid ? '1px solid rgba(201, 168, 76, 0.4)' : '1px solid #e74c3c',
+                                        borderRadius: '4px',
+                                        color: '#f5efe6',
+                                        padding: '5px 8px',
+                                        fontSize: '0.8rem',
+                                        fontFamily: 'monospace',
+                                        textAlign: 'center',
+                                        outline: 'none',
+                                      }}
+                                    />
+                                    <input
+                                      type="color"
+                                      value={valid ? val : '#000000'}
+                                      onChange={(e) => handleCustomColorChange(field.key, e.target.value.toUpperCase())}
+                                      style={{ width: '34px', height: '32px', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '4px', background: 'transparent', cursor: 'pointer' }}
+                                    />
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+
+                        {/* Group: Product Cards */}
+                        <div style={{ padding: '16px', background: 'rgba(0,0,0,0.3)', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.06)' }}>
+                          <div className="theme-group-header">
+                            <div>
+                              <span style={{ fontSize: '0.92rem', fontWeight: 700, color: '#f5efe6', display: 'block' }}>Product Cards &amp; Cart Items</span>
+                              <span style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.45)' }}>Product display boxes in store catalog, recommendation lists, and Customer Cart item cards</span>
+                            </div>
+                            <div className="theme-preview-badges-row">
+                              <div style={{
+                                padding: '4px 10px',
+                                borderRadius: '6px',
+                                background: customColors.product_card_color,
+                                border: `1px solid ${customColors.product_card_border_color}`,
+                                color: customColors.product_card_text_color,
+                                fontSize: '0.68rem',
+                                fontWeight: 600,
+                              }}>
+                                Sample Card
+                              </div>
+                            </div>
+                          </div>
+
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                            {[
+                              { key: 'product_card_color' as const, label: 'Product Card Background Color', hint: 'The background fill color behind each product card' },
+                              { key: 'product_card_border_color' as const, label: 'Product Card Border Color', hint: 'The outline border line around each product card' },
+                              { key: 'product_card_text_color' as const, label: 'Product Card Title Text Color', hint: 'The product titles, labels, and description text' },
+                            ].map((field) => {
+                              const val = customColors[field.key];
+                              const valid = isValidHex(val);
+                              return (
+                                <div key={field.key} className="theme-color-input-row">
+                                  <div className="theme-color-info">
+                                    <span style={{ fontSize: '0.82rem', color: '#f5efe6', fontWeight: 600, display: 'block' }}>{field.label}</span>
+                                    <span style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.45)', display: 'block' }}>{field.hint}</span>
+                                  </div>
+                                  <div className="theme-color-pickers">
+                                    <input
+                                      type="text"
+                                      value={val}
+                                      onChange={(e) => handleCustomColorChange(field.key, e.target.value)}
+                                      style={{
+                                        width: '84px',
+                                        background: '#14100d',
+                                        border: valid ? '1px solid rgba(201, 168, 76, 0.4)' : '1px solid #e74c3c',
+                                        borderRadius: '4px',
+                                        color: '#f5efe6',
+                                        padding: '5px 8px',
+                                        fontSize: '0.8rem',
+                                        fontFamily: 'monospace',
+                                        textAlign: 'center',
+                                        outline: 'none',
+                                      }}
+                                    />
+                                    <input
+                                      type="color"
+                                      value={valid ? val : '#000000'}
+                                      onChange={(e) => handleCustomColorChange(field.key, e.target.value.toUpperCase())}
+                                      style={{ width: '34px', height: '32px', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '4px', background: 'transparent', cursor: 'pointer' }}
+                                    />
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+
+                        {/* Group: Navbar & Footer */}
+                        <div style={{ padding: '16px', background: 'rgba(0,0,0,0.3)', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.06)' }}>
+                          <div className="theme-group-header">
+                            <div>
+                              <span style={{ fontSize: '0.92rem', fontWeight: 700, color: '#f5efe6', display: 'block' }}>Top Header &amp; Bottom Footer</span>
+                              <span style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.45)' }}>Top menu navigation header and bottom page footer from edge to edge</span>
+                            </div>
+                          </div>
+
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                            {[
+                              { key: 'navbar_color' as const, label: 'Top Navigation Bar Color', hint: 'The background color of the top header menu' },
+                              { key: 'navbar_text_color' as const, label: 'Top Navigation Text & Links Color', hint: 'Menu links, brand title, and icon color' },
+                              { key: 'footer_color' as const, label: 'Bottom Footer Background Color', hint: 'The background color of the page footer' },
+                              { key: 'footer_text_color' as const, label: 'Bottom Footer Text Color', hint: 'Footer links, copyright notice, and info text' },
+                            ].map((field) => {
+                              const val = customColors[field.key];
+                              const valid = isValidHex(val);
+                              return (
+                                <div key={field.key} className="theme-color-input-row">
+                                  <div className="theme-color-info">
+                                    <span style={{ fontSize: '0.82rem', color: '#f5efe6', fontWeight: 600, display: 'block' }}>{field.label}</span>
+                                    <span style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.45)', display: 'block' }}>{field.hint}</span>
+                                  </div>
+                                  <div className="theme-color-pickers">
+                                    <input
+                                      type="text"
+                                      value={val}
+                                      onChange={(e) => handleCustomColorChange(field.key, e.target.value)}
+                                      style={{
+                                        width: '84px',
+                                        background: '#14100d',
+                                        border: valid ? '1px solid rgba(201, 168, 76, 0.4)' : '1px solid #e74c3c',
+                                        borderRadius: '4px',
+                                        color: '#f5efe6',
+                                        padding: '5px 8px',
+                                        fontSize: '0.8rem',
+                                        fontFamily: 'monospace',
+                                        textAlign: 'center',
+                                        outline: 'none',
+                                      }}
+                                    />
+                                    <input
+                                      type="color"
+                                      value={valid ? val : '#000000'}
+                                      onChange={(e) => handleCustomColorChange(field.key, e.target.value.toUpperCase())}
+                                      style={{ width: '34px', height: '32px', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '4px', background: 'transparent', cursor: 'pointer' }}
+                                    />
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 3. BACKGROUND & SCREEN COLORS */}
+                  {themeActiveSection === 'palette' && (
+                    <div className="glass-panel" style={{ padding: '22px', border: '1px solid rgba(var(--gold-rgb), 0.25)', borderRadius: '12px', background: 'var(--surface-color)' }}>
+                      <div style={{ marginBottom: '18px' }}>
+                        <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1.15rem', color: '#c9a84c', margin: '0 0 4px 0', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                          Background &amp; Screen Colors
+                        </h3>
+                        <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.8rem', margin: 0 }}>
+                          Global colors that set the overall backdrop, content container boxes, regular text, and luxury accents.
+                        </p>
+                      </div>
+
+                      {/* Signature Watermark Preservation Notice */}
+                      <div
+                        style={{
+                          marginBottom: '20px',
+                          padding: '14px 18px',
+                          borderRadius: '10px',
+                          background: 'linear-gradient(135deg, rgba(201, 168, 76, 0.12) 0%, rgba(20, 16, 13, 0.8) 100%)',
+                          border: '1px solid rgba(201, 168, 76, 0.35)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '14px',
+                        }}
+                      >
+                        <div
+                          style={{
+                            width: '42px',
+                            height: '42px',
+                            borderRadius: '8px',
+                            background: 'rgba(201, 168, 76, 0.2)',
+                            border: '1px solid var(--gold)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            flexShrink: 0,
+                          }}
+                        >
+                          <img
+                            src="/assets/dashboard-watermark.png"
+                            alt="Watermark Emblem"
+                            style={{ width: '32px', height: '32px', objectFit: 'contain' }}
+                          />
+                        </div>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ color: 'var(--gold)', fontWeight: 700, fontSize: '0.86rem', marginBottom: '3px' }}>
+                            Signature Chovique Watermark Background
+                          </div>
+                          <div style={{ color: 'var(--cream)', fontSize: '0.78rem', lineHeight: 1.45 }}>
+                            Is this the background you want to change? You can customize the base page background color below. In the Admin, Superadmin, and Delivery panels, your signature Chovique gold watermark emblem is permanently and seamlessly centered over your background for a consistent luxury identity.
+                          </div>
+                        </div>
+                      </div>
+
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                        {[
+                          { key: 'background_color' as const, label: 'Main Page Background Color', hint: 'The background color of the entire website and all dashboard pages' },
+                          { key: 'surface_color' as const, label: 'Box & Card Background Color', hint: 'Background color for content boxes, tables, popup modals, and cards' },
+                          { key: 'text_color' as const, label: 'Regular Text Color', hint: 'Default color used for readable paragraphs, descriptions, and regular content' },
+                          { key: 'luxury_gold_color' as const, label: 'Luxury Gold Accent Color', hint: 'The signature gold color used for star ratings, metallic highlights, and gold buttons' },
+                          { key: 'secondary_accent_color' as const, label: 'Secondary Accent Color', hint: 'Used for category tags, small chips, and subtle border highlights' },
+                          { key: 'primary_brand_color' as const, label: 'Brand Chocolate Base Color', hint: 'The signature deep chocolate brand base tone' },
+                        ].map((field) => {
+                          const val = customColors[field.key];
+                          const valid = isValidHex(val);
+                          return (
+                            <div key={field.key} className="theme-color-input-row" style={{ padding: '12px 14px', background: 'rgba(0,0,0,0.25)', borderRadius: '8px' }}>
+                              <div className="theme-color-info">
+                                <span style={{ fontSize: '0.84rem', color: '#f5efe6', fontWeight: 600, display: 'block' }}>{field.label}</span>
+                                <span style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.45)', display: 'block' }}>{field.hint}</span>
+                              </div>
+                              <div className="theme-color-pickers">
+                                <input
+                                  type="text"
+                                  value={val}
+                                  onChange={(e) => handleCustomColorChange(field.key, e.target.value)}
+                                  style={{
+                                    width: '84px',
+                                    background: '#14100d',
+                                    border: valid ? '1px solid rgba(201, 168, 76, 0.4)' : '1px solid #e74c3c',
+                                    borderRadius: '4px',
+                                    color: '#f5efe6',
+                                    padding: '5px 8px',
+                                    fontSize: '0.8rem',
+                                    fontFamily: 'monospace',
+                                    textAlign: 'center',
+                                    outline: 'none',
+                                  }}
+                                />
+                                <input
+                                  type="color"
+                                  value={valid ? val : '#000000'}
+                                  onChange={(e) => handleCustomColorChange(field.key, e.target.value.toUpperCase())}
+                                  style={{ width: '34px', height: '32px', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '4px', background: 'transparent', cursor: 'pointer' }}
+                                />
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 4. TEXT & NUMBER FONTS */}
+                  {themeActiveSection === 'typography' && (
+                    <div className="glass-panel" style={{ padding: '22px', border: '1px solid rgba(var(--gold-rgb), 0.25)', borderRadius: '12px', background: 'var(--surface-color)' }}>
+                      <div style={{ marginBottom: '18px' }}>
+                        <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1.15rem', color: '#c9a84c', margin: '0 0 4px 0', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                          Text &amp; Number Fonts
+                        </h3>
+                        <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.8rem', margin: 0 }}>
+                          Customize how text and numbers appear across the whole website and all management dashboards.
+                        </p>
+                      </div>
+
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '18px', marginBottom: '22px' }}>
+                        
+                        {/* Number Font Selector */}
+                        <div style={{ padding: '16px', background: 'rgba(56, 189, 248, 0.06)', borderRadius: '10px', border: '1px solid rgba(56, 189, 248, 0.25)' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                            <label style={{ fontSize: '0.88rem', color: '#38BDF8', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              <Type size={16} />
+                              <span>Number Font (For Prices, Totals &amp; Statistics)</span>
+                            </label>
+                            <span style={{ fontSize: '0.68rem', padding: '2px 8px', background: 'rgba(56, 189, 248, 0.2)', borderRadius: '4px', color: '#38BDF8', fontWeight: 700 }}>
+                              APPLIES EVERYWHERE
+                            </span>
+                          </div>
+                          <p style={{ fontSize: '0.74rem', color: 'rgba(255,255,255,0.65)', margin: '0 0 10px 0', lineHeight: 1.45 }}>
+                            This font is applied to <strong>all numbers</strong> across all panels: Order Management (KPI cards, order numbers, quantities, table totals), Customer Cart (item prices, quantities, taxes, subtotals, grand totals), Storefront prices (₹), and dashboard revenue.
+                          </p>
+                          <select
+                            value={customColors.number_font_family}
+                            onChange={(e) => handleCustomColorChange('number_font_family', e.target.value)}
+                            style={{
+                              width: '100%',
+                              padding: '10px 14px',
+                              borderRadius: '6px',
+                              background: '#14100d',
+                              border: '1px solid rgba(56, 189, 248, 0.4)',
+                              color: '#f5efe6',
+                              fontSize: '0.9rem',
+                              fontWeight: 600,
+                              outline: 'none',
+                              cursor: 'pointer',
+                              fontFamily: customColors.number_font_family,
+                            }}
+                          >
+                            {['Outfit', 'JetBrains Mono', 'Space Grotesk', 'Roboto Mono', 'Orbitron', 'Inter', 'Poppins', 'Montserrat', 'Oswald', 'Plus Jakarta Sans'].map((font) => (
+                              <option key={font} value={font} style={{ background: '#14100d', color: '#f5efe6', fontFamily: font }}>
+                                {font} {font === 'JetBrains Mono' ? '(High Precision Monospace)' : font === 'Orbitron' ? '(Futuristic Digital)' : font === 'Space Grotesk' ? '(Clean Tech)' : font === 'Outfit' ? '(Friendly & Modern Round)' : ''}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                        {/* Regular Text Font Selector */}
+                        <div style={{ padding: '16px', background: 'rgba(0,0,0,0.3)', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.06)' }}>
+                          <label style={{ fontSize: '0.84rem', color: '#f5efe6', fontWeight: 600, display: 'block', marginBottom: '4px' }}>
+                            Regular Text Font (Body Content)
+                          </label>
+                          <p style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.5)', margin: '0 0 10px 0' }}>
+                            Used for general paragraphs, product descriptions, menu items, and table rows.
+                          </p>
+                          <select
+                            value={customColors.font_family}
+                            onChange={(e) => handleCustomColorChange('font_family', e.target.value)}
+                            style={{
+                              width: '100%',
+                              padding: '10px 14px',
+                              borderRadius: '6px',
+                              background: '#14100d',
+                              border: '1px solid rgba(201, 168, 76, 0.4)',
+                              color: '#f5efe6',
+                              fontSize: '0.88rem',
+                              fontWeight: 500,
+                              outline: 'none',
+                              cursor: 'pointer',
+                              fontFamily: customColors.font_family,
+                            }}
+                          >
+                            {['Outfit', 'Inter', 'Plus Jakarta Sans', 'Poppins', 'Montserrat', 'Space Grotesk', 'Playfair Display'].map((font) => (
+                              <option key={font} value={font} style={{ background: '#14100d', color: '#f5efe6' }}>
+                                {font}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                        {/* Heading Font Selector */}
+                        <div style={{ padding: '16px', background: 'rgba(0,0,0,0.3)', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.06)' }}>
+                          <label style={{ fontSize: '0.84rem', color: '#f5efe6', fontWeight: 600, display: 'block', marginBottom: '4px' }}>
+                            Titles &amp; Headings Font (Headlines &amp; Banners)
+                          </label>
+                          <p style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.5)', margin: '0 0 10px 0' }}>
+                            Used for big hero headlines, section titles, and page headers.
+                          </p>
+                          <select
+                            value={customColors.heading_font_family}
+                            onChange={(e) => handleCustomColorChange('heading_font_family', e.target.value)}
+                            style={{
+                              width: '100%',
+                              padding: '10px 14px',
+                              borderRadius: '6px',
+                              background: '#14100d',
+                              border: '1px solid rgba(201, 168, 76, 0.4)',
+                              color: '#f5efe6',
+                              fontSize: '0.88rem',
+                              fontWeight: 500,
+                              outline: 'none',
+                              cursor: 'pointer',
+                              fontFamily: customColors.heading_font_family,
+                            }}
+                          >
+                            {['Playfair Display', 'Cinzel', 'Outfit', 'Montserrat', 'Cormorant Garamond', 'Oswald', 'Plus Jakarta Sans'].map((font) => (
+                              <option key={font} value={font} style={{ background: '#14100d', color: '#f5efe6' }}>
+                                {font}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                      </div>
+
+                      {/* Live Number Font Showcase Card */}
+                      <div style={{
+                        padding: '16px',
+                        borderRadius: '10px',
+                        background: 'rgba(0,0,0,0.45)',
+                        border: '1px solid rgba(56, 189, 248, 0.3)',
+                      }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                          <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#38BDF8', letterSpacing: '0.5px' }}>
+                            HOW YOUR NUMBERS WILL LOOK
+                          </span>
+                          <span style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.5)', fontFamily: customColors.number_font_family }}>
+                            Font: {customColors.number_font_family}
+                          </span>
+                        </div>
+
+                        <div className="theme-number-preview-grid">
+                          <div style={{ padding: '10px', background: 'rgba(255,255,255,0.03)', borderRadius: '6px', textAlign: 'center' }}>
+                            <span style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.5)', display: 'block' }}>Product Price</span>
+                            <span style={{ fontSize: '1.15rem', fontWeight: 700, color: customColors.luxury_gold_color, fontFamily: customColors.number_font_family, fontVariantNumeric: 'tabular-nums' }}>
+                              ₹2,450.00
+                            </span>
+                          </div>
+                          <div style={{ padding: '10px', background: 'rgba(255,255,255,0.03)', borderRadius: '6px', textAlign: 'center' }}>
+                            <span style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.5)', display: 'block' }}>Total Sales</span>
+                            <span style={{ fontSize: '1.15rem', fontWeight: 700, color: '#2ecc71', fontFamily: customColors.number_font_family, fontVariantNumeric: 'tabular-nums' }}>
+                              ₹14,82,300
+                            </span>
+                          </div>
+                          <div style={{ padding: '10px', background: 'rgba(255,255,255,0.03)', borderRadius: '6px', textAlign: 'center' }}>
+                            <span style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.5)', display: 'block' }}>Growth Rate</span>
+                            <span style={{ fontSize: '1.15rem', fontWeight: 700, color: '#38BDF8', fontFamily: customColors.number_font_family, fontVariantNumeric: 'tabular-nums' }}>
+                              +28.4%
+                            </span>
+                          </div>
+                          <div style={{ padding: '10px', background: 'rgba(255,255,255,0.03)', borderRadius: '6px', textAlign: 'center' }}>
+                            <span style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.5)', display: 'block' }}>Order ID</span>
+                            <span style={{ fontSize: '0.95rem', fontWeight: 700, color: '#f5efe6', fontFamily: customColors.number_font_family, fontVariantNumeric: 'tabular-nums' }}>
+                              #ORD-9021
+                            </span>
+                          </div>
+                          <div style={{ padding: '10px', background: 'rgba(255,255,255,0.03)', borderRadius: '6px', textAlign: 'center' }}>
+                            <span style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.5)', display: 'block' }}>Delivery Distance</span>
+                            <span style={{ fontSize: '0.95rem', fontWeight: 700, color: '#f5efe6', fontFamily: customColors.number_font_family, fontVariantNumeric: 'tabular-nums' }}>
+                              3.8 km / 18 min
+                            </span>
+                          </div>
+                          <div style={{ padding: '10px', background: 'rgba(255,255,255,0.03)', borderRadius: '6px', textAlign: 'center' }}>
+                            <span style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.5)', display: 'block' }}>Reward Points</span>
+                            <span style={{ fontSize: '0.95rem', fontWeight: 700, color: customColors.luxury_gold_color, fontFamily: customColors.number_font_family, fontVariantNumeric: 'tabular-nums' }}>
+                              1,450 pts
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                    </div>
+                  )}
 
                   {!isFormValid && (
-                    <span style={{ fontSize: '0.75rem', color: '#e74c3c', marginTop: '10px', display: 'block', fontWeight: 600 }}>
-                      * All fields require valid HEX colors (e.g. #D4AF37).
+                    <span style={{ fontSize: '0.75rem', color: '#e74c3c', marginTop: '12px', display: 'block', fontWeight: 600 }}>
+                      * All color fields require valid HEX formats (e.g. #D4AF37).
                     </span>
                   )}
                 </div>
 
-                {/* 3. LIVE PREVIEW */}
-                <div className="glass-panel" style={{ padding: '22px', border: '1px solid rgba(201, 168, 76, 0.25)', borderRadius: '12px', background: 'rgba(15, 12, 10, 0.85)' }}>
-                  <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1.15rem', color: '#c9a84c', margin: '0 0 6px 0', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                    LIVE PREVIEW
-                  </h3>
-                  <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.8rem', margin: '0 0 14px 0' }}>
-                    Preview updates instantly. Click Apply to publish.
-                  </p>
-
-                  {/* Realtime Storefront Mini Canvas */}
-                  <div style={{
-                    background: isValidHex(customColors.background_color) ? customColors.background_color : '#0D090A',
-                    color: isValidHex(customColors.text_color) ? customColors.text_color : '#F7F7F7',
-                    borderRadius: '8px',
-                    border: '1px solid rgba(255,255,255,0.15)',
-                    padding: '16px',
-                    boxShadow: '0 8px 24px rgba(0,0,0,0.5)',
-                  }}>
-                    {/* Header */}
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '8px' }}>
-                      <span style={{ fontFamily: 'var(--font-display)', fontSize: '1.05rem', fontWeight: 800, color: isValidHex(customColors.luxury_gold_color) ? customColors.luxury_gold_color : '#D4AF37', letterSpacing: '1px' }}>
-                        CHOVIQUE
+                {/* RIGHT COLUMN: INTERACTIVE MULTI-PANEL LIVE PREVIEW */}
+                <div className="glass-panel theme-preview-panel" style={{ padding: '22px', border: '1px solid rgba(var(--gold-rgb), 0.25)', borderRadius: '12px', background: 'var(--surface-color)' }}>
+                  
+                  {/* Preview Top Header & Tabs with Premium SVG Icons */}
+                  <div style={{ marginBottom: '14px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                      <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1.15rem', color: '#c9a84c', margin: 0, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                        LIVE SCREEN PREVIEW
+                      </h3>
+                      <span style={{ fontSize: '0.7rem', color: '#2ecc71', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#2ecc71', display: 'inline-block' }} /> Realtime Interactive
                       </span>
-                      <div style={{ display: 'flex', gap: '8px', fontSize: '0.62rem', fontWeight: 600, color: isValidHex(customColors.text_color) ? customColors.text_color : '#F7F7F7', opacity: 0.8 }}>
-                        <span>HOME</span>
-                        <span>SHOP</span>
-                        <span>OUR STORY</span>
-                        <span>CONTACT</span>
-                      </div>
                     </div>
+                    <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.78rem', margin: '0 0 10px 0' }}>
+                      Click any panel below to see how your colors and <strong>{customColors.number_font_family}</strong> numbers look on that screen:
+                    </p>
 
-                    {/* Hero Box */}
-                    <div style={{
-                      background: isValidHex(customColors.surface_color) ? customColors.surface_color : '#1A1716',
-                      borderRadius: '6px',
-                      padding: '14px',
-                      marginBottom: '12px',
-                      border: `1px solid ${isValidHex(customColors.secondary_accent_color) ? customColors.secondary_accent_color : '#B76E79'}`,
-                    }}>
-                      <h4 style={{ fontFamily: 'var(--font-display)', fontSize: '0.92rem', color: isValidHex(customColors.text_color) ? customColors.text_color : '#F7F7F7', margin: '0 0 4px 0', lineHeight: 1.2 }}>
-                        Premium Handmade Chocolates
-                      </h4>
-                      <p style={{ fontSize: '0.65rem', margin: '0 0 10px 0', opacity: 0.7 }}>
-                        Crafted with Passion, Delivered with Love.
-                      </p>
-                      <button style={{
-                        padding: '4px 10px',
-                        fontSize: '0.62rem',
-                        fontWeight: 800,
-                        background: isValidHex(customColors.luxury_gold_color) ? customColors.luxury_gold_color : '#D4AF37',
-                        color: isValidHex(customColors.background_color) ? customColors.background_color : '#0D090A',
-                        border: 'none',
-                        borderRadius: '3px',
-                        cursor: 'pointer',
-                      }}>
-                        SHOP NOW
-                      </button>
-                    </div>
-
-                    {/* Product Card Mini */}
-                    <div style={{
-                      background: isValidHex(customColors.surface_color) ? customColors.surface_color : '#1A1716',
-                      borderRadius: '6px',
-                      padding: '10px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                    }}>
-                      <div>
-                        <span style={{ fontSize: '0.72rem', fontWeight: 700, display: 'block' }}>Artisanal Truffle Box</span>
-                        <span style={{ fontSize: '0.65rem', color: isValidHex(customColors.luxury_gold_color) ? customColors.luxury_gold_color : '#D4AF37', fontWeight: 700 }}>₹1,490</span>
-                      </div>
-                      <button style={{
-                        padding: '3px 8px',
-                        fontSize: '0.58rem',
-                        fontWeight: 700,
-                        background: isValidHex(customColors.primary_brand_color) ? customColors.primary_brand_color : '#5A3825',
-                        color: '#FFFFFF',
-                        border: 'none',
-                        borderRadius: '3px',
-                      }}>
-                        Add to Cart
-                      </button>
+                    {/* Panel Switcher Tabs with Premium SVG Icons */}
+                    <div className="theme-preview-tabs-container">
+                      {[
+                        { id: 'storefront' as const, icon: <ShoppingBag size={13} />, label: 'Storefront' },
+                        { id: 'superadmin' as const, icon: <ShieldCheck size={13} />, label: 'Super Admin' },
+                        { id: 'admin' as const, icon: <Store size={13} />, label: 'Admin Panel' },
+                        { id: 'delivery' as const, icon: <Truck size={13} />, label: 'Delivery Partner' },
+                        { id: 'customer' as const, icon: <User size={13} />, label: 'Customer Account' },
+                      ].map((tab) => {
+                        const isTabActive = themePreviewTab === tab.id;
+                        return (
+                          <button
+                            key={tab.id}
+                            onClick={() => setThemePreviewTab(tab.id)}
+                            className={`theme-preview-tab-btn ${isTabActive ? 'active' : ''}`}
+                          >
+                            {tab.icon}
+                            <span>{tab.label}</span>
+                          </button>
+                        );
+                      })}
                     </div>
                   </div>
+
+                  {/* PREVIEW CANVAS: DYNAMIC BASED ON SELECTED PANEL */}
+                  <div className="theme-preview-canvas" style={{
+                    background: isValidHex(customColors.background_color) ? customColors.background_color : '#0D090A',
+                    color: isValidHex(customColors.text_color) ? customColors.text_color : '#F7F7F7',
+                    borderRadius: '10px',
+                    border: '1px solid rgba(255,255,255,0.15)',
+                    padding: '16px',
+                    boxShadow: '0 12px 30px rgba(0,0,0,0.6)',
+                    fontFamily: customColors.font_family,
+                    minHeight: '430px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'space-between',
+                    width: '100%',
+                    maxWidth: '100%',
+                    minWidth: 0,
+                    boxSizing: 'border-box',
+                    overflow: 'hidden',
+                  }}>
+
+                    {/* VIEW 1: STOREFRONT PREVIEW */}
+                    {themePreviewTab === 'storefront' && (
+                      <div>
+                        {/* Storefront Navbar */}
+                        <div style={{
+                          background: isValidHex(customColors.navbar_color) ? customColors.navbar_color : '#0D090A',
+                          color: isValidHex(customColors.navbar_text_color) ? customColors.navbar_text_color : '#F7F7F7',
+                          borderRadius: '6px',
+                          padding: '10px 14px',
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          marginBottom: '14px',
+                          border: '1px solid rgba(255,255,255,0.08)',
+                          width: '100%',
+                          maxWidth: '100%',
+                          minWidth: 0,
+                          boxSizing: 'border-box',
+                        }}>
+                          <span style={{ fontFamily: customColors.heading_font_family, fontSize: '0.95rem', fontWeight: 800, color: customColors.luxury_gold_color, letterSpacing: '1px', flexShrink: 0 }}>
+                            CHOVIQUE
+                          </span>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '0.62rem', fontWeight: 600 }}>
+                            <span className="theme-preview-nav-link">COLLECTIONS</span>
+                            <span className="theme-preview-nav-link">GIFTS</span>
+                            {/* Cart Button */}
+                            <div style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '5px',
+                              padding: '3px 8px',
+                              borderRadius: '20px',
+                              background: isValidHex(customColors.cart_color) ? customColors.cart_color : '#D4AF37',
+                              color: isValidHex(customColors.cart_text_color) ? customColors.cart_text_color : '#0D090A',
+                              fontWeight: 700,
+                              fontSize: '0.62rem',
+                              flexShrink: 0,
+                            }}>
+                              <ShoppingBag size={11} />
+                              <span style={{ fontFamily: customColors.number_font_family, fontVariantNumeric: 'tabular-nums' }}>3</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Storefront Hero CTA */}
+                        <div style={{
+                          background: isValidHex(customColors.surface_color) ? customColors.surface_color : '#1A1716',
+                          borderRadius: '8px',
+                          padding: '14px',
+                          marginBottom: '14px',
+                          border: `1px solid ${isValidHex(customColors.secondary_accent_color) ? customColors.secondary_accent_color : '#B76E79'}`,
+                          width: '100%',
+                          maxWidth: '100%',
+                          minWidth: 0,
+                          boxSizing: 'border-box',
+                        }}>
+                          <span style={{ fontSize: '0.62rem', color: customColors.luxury_gold_color, fontWeight: 700, letterSpacing: '1px', textTransform: 'uppercase' }}>
+                            Artisanal Haute Chocolaterie
+                          </span>
+                          <h4 style={{ fontFamily: customColors.heading_font_family, fontSize: '1rem', color: isValidHex(customColors.text_color) ? customColors.text_color : '#F7F7F7', margin: '4px 0 6px 0', lineHeight: 1.2 }}>
+                            Handcrafted with Pure Passion
+                          </h4>
+                          <p style={{ fontSize: '0.65rem', margin: '0 0 10px 0', opacity: 0.75, lineHeight: 1.3 }}>
+                            Pure single-origin cacao confections, made fresh in our luxury boutique.
+                          </p>
+                          <div style={{ display: 'flex', gap: '8px' }}>
+                            <button style={{
+                              padding: '6px 12px',
+                              fontSize: '0.65rem',
+                              fontWeight: 700,
+                              background: isValidHex(customColors.button_color) ? customColors.button_color : '#5A3825',
+                              color: isValidHex(customColors.button_text_color) ? customColors.button_text_color : '#FFFFFF',
+                              border: 'none',
+                              borderRadius: '4px',
+                              cursor: 'pointer',
+                            }}>
+                              Shop Collection
+                            </button>
+                            <button style={{
+                              padding: '6px 12px',
+                              fontSize: '0.65rem',
+                              fontWeight: 700,
+                              background: 'transparent',
+                              color: isValidHex(customColors.secondary_button_color) ? customColors.secondary_button_color : '#D4AF37',
+                              border: `1px solid ${isValidHex(customColors.secondary_button_color) ? customColors.secondary_button_color : '#D4AF37'}`,
+                              borderRadius: '4px',
+                              cursor: 'pointer',
+                            }}>
+                              Learn More
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Storefront Product Card */}
+                        <div style={{
+                          background: isValidHex(customColors.product_card_color) ? customColors.product_card_color : '#1A1716',
+                          borderRadius: '8px',
+                          padding: '12px',
+                          border: `1px solid ${isValidHex(customColors.product_card_border_color) ? customColors.product_card_border_color : '#D4AF37'}`,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          marginBottom: '14px',
+                          width: '100%',
+                          maxWidth: '100%',
+                          minWidth: 0,
+                          boxSizing: 'border-box',
+                          gap: '8px',
+                          flexWrap: 'wrap',
+                        }}>
+                          <div>
+                            <span style={{ fontSize: '0.78rem', fontWeight: 700, color: isValidHex(customColors.product_card_text_color) ? customColors.product_card_text_color : '#F7F7F7', display: 'block' }}>
+                              Belgian Dark Truffle Collection (16 pcs)
+                            </span>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '2px' }}>
+                              <span style={{ fontSize: '0.85rem', fontWeight: 800, color: customColors.luxury_gold_color, fontFamily: customColors.number_font_family, fontVariantNumeric: 'tabular-nums' }}>
+                                ₹1,490.00
+                              </span>
+                              <span style={{ fontSize: '0.62rem', color: '#2ecc71', fontFamily: customColors.number_font_family, fontVariantNumeric: 'tabular-nums' }}>
+                                4.9 ★ (128 reviews)
+                              </span>
+                            </div>
+                          </div>
+                          <button style={{
+                            padding: '6px 10px',
+                            fontSize: '0.62rem',
+                            fontWeight: 700,
+                            background: isValidHex(customColors.button_color) ? customColors.button_color : '#5A3825',
+                            color: isValidHex(customColors.button_text_color) ? customColors.button_text_color : '#FFFFFF',
+                            border: 'none',
+                            borderRadius: '4px',
+                            cursor: 'pointer',
+                          }}>
+                            Add to Cart
+                          </button>
+                        </div>
+
+                        {/* Storefront Footer */}
+                        <div style={{
+                          background: isValidHex(customColors.footer_color) ? customColors.footer_color : '#0A0A0A',
+                          color: isValidHex(customColors.footer_text_color) ? customColors.footer_text_color : '#F7F7F7',
+                          borderRadius: '6px',
+                          padding: '10px 14px',
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          fontSize: '0.62rem',
+                          opacity: 0.85,
+                          width: '100%',
+                          maxWidth: '100%',
+                          minWidth: 0,
+                          boxSizing: 'border-box',
+                          gap: '6px',
+                          flexWrap: 'wrap',
+                        }}>
+                          <span>&copy; 2026 Chovique Artisanal Confections</span>
+                          <span>Privacy • Terms • Contact</span>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* VIEW 2: SUPER ADMIN PANEL PREVIEW */}
+                    {themePreviewTab === 'superadmin' && (
+                      <div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '8px' }}>
+                          <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#c9a84c', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <ShieldCheck size={14} /> Super Admin Dashboard
+                          </span>
+                          <span style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.6)' }}>Platform Overview</span>
+                        </div>
+
+                        <div className="theme-preview-superadmin-stats">
+                          <div style={{ background: customColors.surface_color, padding: '10px', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.08)', minWidth: 0 }}>
+                            <span style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.6)', display: 'block' }}>Monthly Sales</span>
+                            <span style={{ fontSize: '1.05rem', fontWeight: 800, color: customColors.luxury_gold_color, fontFamily: customColors.number_font_family, fontVariantNumeric: 'tabular-nums', display: 'block' }}>
+                              ₹14,82,300
+                            </span>
+                            <span style={{ fontSize: '0.58rem', color: '#2ecc71', fontFamily: customColors.number_font_family, fontVariantNumeric: 'tabular-nums' }}>+18.4% growth</span>
+                          </div>
+                          <div style={{ background: customColors.surface_color, padding: '10px', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.08)', minWidth: 0 }}>
+                            <span style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.6)', display: 'block' }}>Active Admins</span>
+                            <span style={{ fontSize: '1.05rem', fontWeight: 800, color: '#38BDF8', fontFamily: customColors.number_font_family, fontVariantNumeric: 'tabular-nums', display: 'block' }}>
+                              24
+                            </span>
+                            <span style={{ fontSize: '0.58rem', color: 'rgba(255,255,255,0.5)' }}>across 6 branches</span>
+                          </div>
+                          <div style={{ background: customColors.surface_color, padding: '10px', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.08)', minWidth: 0 }}>
+                            <span style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.6)', display: 'block' }}>System Health</span>
+                            <span style={{ fontSize: '1.05rem', fontWeight: 800, color: '#2ecc71', fontFamily: customColors.number_font_family, fontVariantNumeric: 'tabular-nums', display: 'block' }}>
+                              99.94%
+                            </span>
+                            <span style={{ fontSize: '0.58rem', color: 'rgba(255,255,255,0.5)' }}>All Good</span>
+                          </div>
+                        </div>
+
+                        <div style={{ background: customColors.surface_color, padding: '12px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.08)', marginBottom: '12px' }}>
+                          <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#f5efe6', display: 'block', marginBottom: '8px' }}>Security &amp; Audit Logs</span>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.68rem', color: 'rgba(255,255,255,0.8)' }}>
+                            <span>Platform Version 2.4.0</span>
+                            <span style={{ fontFamily: customColors.number_font_family, fontVariantNumeric: 'tabular-nums' }}>4,120 audit events today</span>
+                          </div>
+                        </div>
+
+                        <button style={{
+                          width: '100%',
+                          padding: '8px',
+                          borderRadius: '6px',
+                          background: customColors.button_color,
+                          color: customColors.button_text_color,
+                          border: 'none',
+                          fontWeight: 700,
+                          fontSize: '0.72rem',
+                          cursor: 'pointer',
+                        }}>
+                          Super Admin Action Button
+                        </button>
+                      </div>
+                    )}
+
+                    {/* VIEW 3: ADMIN PANEL PREVIEW */}
+                    {themePreviewTab === 'admin' && (
+                      <div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '8px' }}>
+                          <span style={{ fontSize: '0.82rem', fontWeight: 700, color: customColors.luxury_gold_color, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <Store size={14} /> Store Admin Orders
+                          </span>
+                          <span style={{ fontSize: '0.65rem', color: '#2ecc71', fontFamily: customColors.number_font_family, fontVariantNumeric: 'tabular-nums' }}>14 Pending Orders</span>
+                        </div>
+
+                        <div style={{ background: customColors.surface_color, borderRadius: '8px', overflowX: 'auto', border: '1px solid rgba(255,255,255,0.08)', marginBottom: '12px', width: '100%', boxSizing: 'border-box' }}>
+                          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.68rem' }}>
+                            <thead>
+                              <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)', background: 'rgba(0,0,0,0.2)' }}>
+                                <th style={{ padding: '8px', textAlign: 'left', color: 'rgba(255,255,255,0.6)' }}>ORDER</th>
+                                <th style={{ padding: '8px', textAlign: 'left', color: 'rgba(255,255,255,0.6)' }}>ITEMS</th>
+                                <th style={{ padding: '8px', textAlign: 'right', color: 'rgba(255,255,255,0.6)' }}>TOTAL</th>
+                                <th style={{ padding: '8px', textAlign: 'right', color: 'rgba(255,255,255,0.6)' }}>STATUS</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                                <td style={{ padding: '8px', fontWeight: 700, fontFamily: customColors.number_font_family, fontVariantNumeric: 'tabular-nums' }}>#ORD-8821</td>
+                                <td style={{ padding: '8px' }}>Artisanal Box (x2)</td>
+                                <td style={{ padding: '8px', textAlign: 'right', fontWeight: 700, color: customColors.luxury_gold_color, fontFamily: customColors.number_font_family, fontVariantNumeric: 'tabular-nums' }}>₹2,980</td>
+                                <td style={{ padding: '8px', textAlign: 'right' }}>
+                                  <span style={{ padding: '2px 6px', borderRadius: '4px', background: 'rgba(46, 204, 113, 0.15)', color: '#2ecc71', fontWeight: 700 }}>Ready</span>
+                                </td>
+                              </tr>
+                              <tr>
+                                <td style={{ padding: '8px', fontWeight: 700, fontFamily: customColors.number_font_family, fontVariantNumeric: 'tabular-nums' }}>#ORD-8822</td>
+                                <td style={{ padding: '8px' }}>Truffle Hamper (x1)</td>
+                                <td style={{ padding: '8px', textAlign: 'right', fontWeight: 700, color: customColors.luxury_gold_color, fontFamily: customColors.number_font_family, fontVariantNumeric: 'tabular-nums' }}>₹1,450</td>
+                                <td style={{ padding: '8px', textAlign: 'right' }}>
+                                  <span style={{ padding: '2px 6px', borderRadius: '4px', background: 'rgba(241, 196, 15, 0.15)', color: '#f1c40f', fontWeight: 700 }}>Kitchen</span>
+                                </td>
+                              </tr>
+                            </tbody>
+                          </table>
+                        </div>
+
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                          <button style={{
+                            flex: 1,
+                            padding: '8px',
+                            borderRadius: '6px',
+                            background: customColors.button_color,
+                            color: customColors.button_text_color,
+                            border: 'none',
+                            fontWeight: 700,
+                            fontSize: '0.7rem',
+                            cursor: 'pointer',
+                          }}>
+                            Dispatch Orders
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* VIEW 4: DELIVERY BOY PANEL PREVIEW */}
+                    {themePreviewTab === 'delivery' && (
+                      <div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '8px' }}>
+                          <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#2ecc71', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <Truck size={14} /> Delivery Partner Console
+                          </span>
+                          <span style={{ fontSize: '0.65rem', color: '#38BDF8', fontFamily: customColors.number_font_family, fontVariantNumeric: 'tabular-nums' }}>Active Shift: 4h 12m</span>
+                        </div>
+
+                        <div style={{
+                          background: customColors.surface_color,
+                          borderRadius: '8px',
+                          padding: '12px',
+                          border: `1px solid ${customColors.luxury_gold_color}`,
+                          marginBottom: '14px',
+                          width: '100%',
+                          maxWidth: '100%',
+                          minWidth: 0,
+                          boxSizing: 'border-box',
+                        }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                            <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#f5efe6' }}>Order Assigned:</span>
+                            <span style={{ fontSize: '0.82rem', fontWeight: 800, color: '#38BDF8', fontFamily: customColors.number_font_family, fontVariantNumeric: 'tabular-nums' }}>#DEL-4019</span>
+                          </div>
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '6px', textAlign: 'center', margin: '8px 0' }}>
+                            <div style={{ background: 'rgba(0,0,0,0.3)', padding: '6px', borderRadius: '4px' }}>
+                              <span style={{ fontSize: '0.58rem', color: 'rgba(255,255,255,0.5)', display: 'block' }}>Distance</span>
+                              <span style={{ fontSize: '0.85rem', fontWeight: 800, color: '#f5efe6', fontFamily: customColors.number_font_family, fontVariantNumeric: 'tabular-nums' }}>2.4 km</span>
+                            </div>
+                            <div style={{ background: 'rgba(0,0,0,0.3)', padding: '6px', borderRadius: '4px' }}>
+                              <span style={{ fontSize: '0.58rem', color: 'rgba(255,255,255,0.5)', display: 'block' }}>ETA</span>
+                              <span style={{ fontSize: '0.85rem', fontWeight: 800, color: '#f5efe6', fontFamily: customColors.number_font_family, fontVariantNumeric: 'tabular-nums' }}>14 mins</span>
+                            </div>
+                            <div style={{ background: 'rgba(0,0,0,0.3)', padding: '6px', borderRadius: '4px' }}>
+                              <span style={{ fontSize: '0.58rem', color: 'rgba(255,255,255,0.5)', display: 'block' }}>Earnings</span>
+                              <span style={{ fontSize: '0.85rem', fontWeight: 800, color: '#2ecc71', fontFamily: customColors.number_font_family, fontVariantNumeric: 'tabular-nums' }}>₹120.00</span>
+                            </div>
+                          </div>
+                          <span style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.7)', display: 'block' }}>Drop: 42 Palm Avenue, Indiranagar</span>
+                        </div>
+
+                        <button style={{
+                          width: '100%',
+                          padding: '9px',
+                          borderRadius: '6px',
+                          background: customColors.button_color,
+                          color: customColors.button_text_color,
+                          border: 'none',
+                          fontWeight: 700,
+                          fontSize: '0.75rem',
+                          cursor: 'pointer',
+                        }}>
+                          Mark Order as Delivered
+                        </button>
+                      </div>
+                    )}
+
+                    {/* VIEW 5: CUSTOMER PORTAL PREVIEW */}
+                    {themePreviewTab === 'customer' && (
+                      <div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '8px' }}>
+                          <span style={{ fontSize: '0.82rem', fontWeight: 700, color: customColors.luxury_gold_color, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <User size={14} /> Customer My Account
+                          </span>
+                          <span style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.6)' }}>VIP Member</span>
+                        </div>
+
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px', marginBottom: '12px', width: '100%', boxSizing: 'border-box' }}>
+                          <div style={{ background: customColors.surface_color, padding: '10px', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.08)' }}>
+                            <span style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.5)', display: 'block' }}>Wallet Balance</span>
+                            <span style={{ fontSize: '1.05rem', fontWeight: 800, color: customColors.luxury_gold_color, fontFamily: customColors.number_font_family, fontVariantNumeric: 'tabular-nums' }}>
+                              ₹850.00
+                            </span>
+                          </div>
+                          <div style={{ background: customColors.surface_color, padding: '10px', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.08)' }}>
+                            <span style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.5)', display: 'block' }}>Reward Points</span>
+                            <span style={{ fontSize: '1.05rem', fontWeight: 800, color: '#38BDF8', fontFamily: customColors.number_font_family, fontVariantNumeric: 'tabular-nums' }}>
+                              1,250 pts
+                            </span>
+                          </div>
+                        </div>
+
+                        <div style={{ background: customColors.surface_color, padding: '12px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.08)', marginBottom: '12px', width: '100%', boxSizing: 'border-box' }}>
+                          <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#f5efe6', display: 'block', marginBottom: '4px' }}>Active Order Delivery</span>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.65rem' }}>
+                            <span style={{ fontFamily: customColors.number_font_family, fontVariantNumeric: 'tabular-nums' }}>#ORD-8714</span>
+                            <span style={{ color: '#2ecc71', fontWeight: 700 }}>Arriving in 12 mins</span>
+                          </div>
+                        </div>
+
+                        <button style={{
+                          width: '100%',
+                          padding: '8px',
+                          borderRadius: '6px',
+                          background: customColors.button_color,
+                          color: customColors.button_text_color,
+                          border: 'none',
+                          fontWeight: 700,
+                          fontSize: '0.72rem',
+                          cursor: 'pointer',
+                        }}>
+                          Reorder Favorites
+                        </button>
+                      </div>
+                    )}
+
+                    {/* Bottom Status Tag */}
+                    <div style={{ marginTop: '14px', paddingTop: '10px', borderTop: '1px solid rgba(255,255,255,0.08)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.62rem', color: 'rgba(255,255,255,0.45)' }}>
+                      <span>Text Font: {customColors.font_family}</span>
+                      <span>Numbers Font: <strong style={{ color: '#38BDF8', fontFamily: customColors.number_font_family }}>{customColors.number_font_family}</strong></span>
+                    </div>
+
+                  </div>
                 </div>
+
               </div>
             )}
 
             {/* Bottom Actions Bar */}
-            <div className="theme-builder-actions-bar">
-              <Button variant="secondary" onClick={handleResetDefaults} disabled={isResettingTheme}>
-                <RotateCcw size={16} style={{ marginRight: '6px' }} />
-                {isResettingTheme ? 'Resetting...' : 'Reset Defaults'}
-              </Button>
-              <Button variant="gold" glow onClick={handleApplyTheme} disabled={!isFormValid || isApplyingTheme}>
-                <Check size={16} style={{ marginRight: '6px' }} />
-                {isApplyingTheme ? 'Applying...' : 'Apply Theme'}
-              </Button>
+            <div className="theme-builder-actions-bar" style={{
+              marginTop: '24px',
+              padding: '16px 20px',
+              background: 'rgba(20, 16, 13, 0.95)',
+              borderRadius: '12px',
+              border: '1px solid rgba(201, 168, 76, 0.3)',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              flexWrap: 'wrap',
+              gap: '12px',
+            }}>
+              <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                <Button variant="secondary" onClick={handleResetDefaults} disabled={isResettingTheme}>
+                  <RotateCcw size={16} style={{ marginRight: '6px' }} />
+                  {isResettingTheme ? 'Restoring...' : 'Reset to Default Theme'}
+                </Button>
+                <Button variant="secondary" onClick={() => setShowSaveModal(true)}>
+                  <Plus size={16} style={{ marginRight: '6px' }} />
+                  Save as New Theme
+                </Button>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap' }}>
+                {!isFormValid && (
+                  <span style={{ fontSize: '0.75rem', color: '#e74c3c', fontWeight: 600 }}>
+                    Please fix invalid HEX color values to apply.
+                  </span>
+                )}
+                <Button variant="gold" glow onClick={handleApplyTheme} disabled={!isFormValid || isApplyingTheme}>
+                  <Check size={16} style={{ marginRight: '6px' }} />
+                  {isApplyingTheme ? 'Applying Everywhere...' : 'Apply Theme Everywhere'}
+                </Button>
+              </div>
             </div>
 
             {/* Save Custom Theme Modal */}
@@ -6794,7 +8186,7 @@ export const SuperadminDashboard: React.FC = () => {
                   >
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px' }}>
                       <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1.2rem', color: '#c9a84c', margin: 0, fontWeight: 700 }}>
-                        Save Custom Theme Preset
+                        Save Custom Theme
                       </h3>
                       <button onClick={() => setShowSaveModal(false)} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.6)', cursor: 'pointer' }}>
                         <X size={18} />
@@ -6811,7 +8203,7 @@ export const SuperadminDashboard: React.FC = () => {
                       />
                       <Input
                         label="Description"
-                        placeholder="Short description of this palette..."
+                        placeholder="Short description of this color theme..."
                         value={customThemeForm.description}
                         onChange={(e) => setCustomThemeForm({ ...customThemeForm, description: e.target.value })}
                       />
@@ -6936,7 +8328,7 @@ export const SuperadminDashboard: React.FC = () => {
                 {/* ── TAB 1: Payment & Shipping ── */}
                 {psActiveTab === 'payment' && (
                   <div className="platform-settings-grid">
-                    <div className="glass-panel" style={{ padding: '24px', border: '1px solid rgba(201, 168, 76, 0.2)', borderRadius: '12px', background: 'rgba(15, 12, 10, 0.85)' }}>
+                    <div className="glass-panel" style={{ padding: '24px', border: '1px solid rgba(var(--gold-rgb), 0.25)', borderRadius: '12px', background: 'var(--surface-color)' }}>
                       <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1rem', color: '#c9a84c', margin: '0 0 18px 0', fontWeight: 700 }}>
                         Payment Settings
                       </h3>
@@ -6965,7 +8357,7 @@ export const SuperadminDashboard: React.FC = () => {
                       </div>
                     </div>
 
-                    <div className="glass-panel" style={{ padding: '24px', border: '1px solid rgba(201, 168, 76, 0.2)', borderRadius: '12px', background: 'rgba(15, 12, 10, 0.85)' }}>
+                    <div className="glass-panel" style={{ padding: '24px', border: '1px solid rgba(var(--gold-rgb), 0.25)', borderRadius: '12px', background: 'var(--surface-color)' }}>
                       <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1rem', color: '#c9a84c', margin: '0 0 18px 0', fontWeight: 700 }}>
                         Shipping Settings
                       </h3>
@@ -6989,7 +8381,7 @@ export const SuperadminDashboard: React.FC = () => {
                 {/* ── TAB 3: Customer & Order Settings ── */}
                 {psActiveTab === 'customer-order' && (
                   <div className="platform-settings-grid">
-                    <div className="glass-panel" style={{ padding: '24px', border: '1px solid rgba(201, 168, 76, 0.2)', borderRadius: '12px', background: 'rgba(15, 12, 10, 0.85)' }}>
+                    <div className="glass-panel" style={{ padding: '24px', border: '1px solid rgba(var(--gold-rgb), 0.25)', borderRadius: '12px', background: 'var(--surface-color)' }}>
                       <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1rem', color: '#c9a84c', margin: '0 0 18px 0', fontWeight: 700 }}>
                         Customer Settings
                       </h3>
@@ -7013,7 +8405,7 @@ export const SuperadminDashboard: React.FC = () => {
                       </div>
                     </div>
 
-                    <div className="glass-panel" style={{ padding: '24px', border: '1px solid rgba(201, 168, 76, 0.2)', borderRadius: '12px', background: 'rgba(15, 12, 10, 0.85)' }}>
+                    <div className="glass-panel" style={{ padding: '24px', border: '1px solid rgba(var(--gold-rgb), 0.25)', borderRadius: '12px', background: 'var(--surface-color)' }}>
                       <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1rem', color: '#c9a84c', margin: '0 0 18px 0', fontWeight: 700 }}>
                         Order Settings
                       </h3>
@@ -7049,7 +8441,7 @@ export const SuperadminDashboard: React.FC = () => {
                 {/* ── TAB 4: System & Security ── */}
                 {psActiveTab === 'system' && (
                   <div className="platform-settings-grid">
-                    <div className="glass-panel" style={{ padding: '24px', border: '1px solid rgba(231, 76, 60, 0.25)', borderRadius: '12px', background: 'rgba(15, 12, 10, 0.85)' }}>
+                    <div className="glass-panel" style={{ padding: '24px', border: '1px solid rgba(231, 76, 60, 0.25)', borderRadius: '12px', background: 'var(--surface-color)' }}>
                       <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1rem', color: '#e74c3c', margin: '0 0 6px 0', fontWeight: 700 }}>
                         Maintenance Mode
                       </h3>
@@ -7074,7 +8466,7 @@ export const SuperadminDashboard: React.FC = () => {
                       </div>
                     </div>
 
-                    <div className="glass-panel" style={{ padding: '24px', border: '1px solid rgba(201, 168, 76, 0.2)', borderRadius: '12px', background: 'rgba(15, 12, 10, 0.85)' }}>
+                    <div className="glass-panel" style={{ padding: '24px', border: '1px solid rgba(var(--gold-rgb), 0.25)', borderRadius: '12px', background: 'var(--surface-color)' }}>
                       <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1rem', color: '#c9a84c', margin: '0 0 18px 0', fontWeight: 700 }}>
                         Security Settings
                       </h3>
@@ -7240,7 +8632,7 @@ export const SuperadminDashboard: React.FC = () => {
             </div>
 
             {/* Filters & Search Row */}
-            <div className="glass-panel" style={{ padding: '16px 20px', borderRadius: '12px', marginBottom: '24px', display: 'flex', flexWrap: 'wrap', gap: '16px', alignItems: 'center', justifyContent: 'space-between', border: '1px solid rgba(201,168,76,0.2)', background: 'rgba(15, 12, 10, 0.85)' }}>
+            <div className="glass-panel" style={{ padding: '16px 20px', borderRadius: '12px', marginBottom: '24px', display: 'flex', flexWrap: 'wrap', gap: '16px', alignItems: 'center', justifyContent: 'space-between', border: '1px solid rgba(var(--gold-rgb), 0.25)', background: 'var(--surface-color)' }}>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'center', flex: 1 }}>
                 {/* Search */}
                 <div style={{ minWidth: '220px', flex: '1 1 220px' }}>
@@ -7313,7 +8705,7 @@ export const SuperadminDashboard: React.FC = () => {
                 icon={<Bell size={40} color="#c9a84c" />}
               />
             ) : (
-              <div className="glass-panel" style={{ borderRadius: '12px', border: '1px solid rgba(201,168,76,0.2)', overflow: 'hidden', background: 'rgba(15, 12, 10, 0.85)' }}>
+              <div className="glass-panel" style={{ borderRadius: '12px', border: '1px solid rgba(var(--gold-rgb), 0.25)', overflow: 'hidden', background: 'var(--surface-color)' }}>
                 <table className="notifications-table" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.85rem' }}>
                   <thead>
                     <tr style={{ background: 'rgba(201, 168, 76, 0.08)', borderBottom: '1px solid rgba(201, 168, 76, 0.2)', color: '#c9a84c', textTransform: 'uppercase', fontSize: '0.72rem', letterSpacing: '0.5px' }}>
@@ -7513,7 +8905,7 @@ export const SuperadminDashboard: React.FC = () => {
                     </div>
 
                     {selectedNotif.related_user && (
-                      <div style={{ padding: '14px', background: 'rgba(201,168,76,0.06)', borderRadius: '8px', border: '1px solid rgba(201,168,76,0.2)', marginBottom: '24px' }}>
+                      <div style={{ padding: '14px', background: 'rgba(201,168,76,0.06)', borderRadius: '8px', border: '1px solid rgba(var(--gold-rgb), 0.25)', marginBottom: '24px' }}>
                         <div style={{ fontSize: '0.75rem', color: '#c9a84c', fontWeight: 700, textTransform: 'uppercase', marginBottom: '4px' }}>
                           Related Administrator
                         </div>
@@ -7576,8 +8968,18 @@ export const SuperadminDashboard: React.FC = () => {
           <ReportsAnalyticsView />
         )}
 
+        {/* REWARD COINS & LOYALTY RULES TAB */}
+        {activeTab === 'reward-settings' && (
+          <RewardCoinsView />
+        )}
+
+        {/* COUPONS & DISCOUNTS TAB */}
+        {activeTab === 'coupons' && (
+          <CouponsManagementView addToast={addToast} />
+        )}
+
         {/* AUDIT LOG TAB FALLBACK */}
-        {!['enterprise', 'revenue', 'sales-comparison', 'reports', 'admin-mgmt', 'customers', 'delivery-boys', 'logistics', 'audit-logs', 'theme-builder', 'home-mgmt', 'platform-settings', 'notifications', 'profile', 'change-password'].includes(activeTab) && (
+        {!['enterprise', 'revenue', 'sales-comparison', 'reports', 'reward-settings', 'coupons', 'admin-mgmt', 'customers', 'delivery-boys', 'logistics', 'audit-logs', 'theme-builder', 'home-mgmt', 'platform-settings', 'notifications', 'profile', 'change-password'].includes(activeTab) && (
           <div
             className="glass-panel"
             style={{
@@ -7735,7 +9137,7 @@ export const SuperadminDashboard: React.FC = () => {
                                     display: 'inline-block',
                                     background: 'rgba(201, 168, 76, 0.12)',
                                     color: '#c9a84c',
-                                    border: '1px solid rgba(201, 168, 76, 0.25)',
+                                    border: '1px solid rgba(var(--gold-rgb), 0.25)',
                                     padding: '3px 10px',
                                     borderRadius: '6px',
                                     fontSize: '0.82rem',

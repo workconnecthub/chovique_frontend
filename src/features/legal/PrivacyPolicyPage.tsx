@@ -11,8 +11,8 @@ export const PrivacyPolicyPage: React.FC = () => {
       initial="initial"
       animate="animate"
       exit="exit"
+      className="legal-page"
       style={{
-        paddingTop: '110px',
         paddingBottom: '80px',
         minHeight: '100vh',
         background: 'radial-gradient(circle at 50% 10%, rgba(90, 56, 37, 0.4) 0%, rgba(13, 9, 10, 0.98) 70%), #0d090a',

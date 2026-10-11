@@ -239,20 +239,20 @@ export const ReportsAnalyticsView: React.FC = () => {
   ];
 
   return (
-    <div style={{ width: '100%', maxWidth: '1280px', margin: '0 auto', paddingBottom: '48px', color: '#f5efe6', boxSizing: 'border-box', overflowX: 'hidden' }}>
+    <div style={{ width: '100%', maxWidth: '1280px', margin: '0 auto', paddingBottom: '48px', color: 'var(--cream)', boxSizing: 'border-box', overflowX: 'hidden' }}>
       {/* Header & Date Presets Header Row */}
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px', marginBottom: '28px' }}>
         <div>
-          <span style={{ color: 'rgba(201, 168, 76, 0.85)', fontSize: '0.78rem', letterSpacing: '2px', textTransform: 'uppercase', fontWeight: 600, display: 'block', marginBottom: '6px' }}>
+          <span style={{ color: 'var(--gold)', fontSize: '0.78rem', letterSpacing: '2px', textTransform: 'uppercase', fontWeight: 600, display: 'block', marginBottom: '6px' }}>
             — BUSINESS REPORTS
           </span>
-          <h1 style={{ fontFamily: 'var(--font-display, serif)', fontSize: '2.4rem', color: '#f5efe6', fontWeight: 700, margin: 0 }}>
+          <h1 style={{ fontFamily: 'var(--font-display, serif)', fontSize: '2.4rem', color: 'var(--cream)', fontWeight: 700, margin: 0 }}>
             Reports & Analytics
           </h1>
         </div>
 
         {/* Date Quick Presets */}
-        <div className="reports-presets-strip" style={{ display: 'flex', alignItems: 'center', background: 'rgba(20, 16, 13, 0.85)', border: '1px solid rgba(201, 168, 76, 0.2)', borderRadius: '8px', padding: '4px' }}>
+        <div className="reports-presets-strip" style={{ display: 'flex', alignItems: 'center', background: 'var(--surface-color)', border: '1px solid rgba(var(--gold-rgb), 0.25)', borderRadius: '8px', padding: '4px' }}>
           {(['7days', '30days', '3months', '1year', 'custom'] as DatePreset[]).map((p) => {
             const labels: Record<DatePreset, string> = {
               '7days': '7 Days',
@@ -270,8 +270,8 @@ export const ReportsAnalyticsView: React.FC = () => {
                   padding: '8px 14px',
                   borderRadius: '6px',
                   border: 'none',
-                  background: isActive ? 'linear-gradient(135deg, #c9a84c 0%, #e5c875 100%)' : 'transparent',
-                  color: isActive ? '#0f0c0a' : 'rgba(255,255,255,0.7)',
+                  background: isActive ? 'var(--gradient-gold)' : 'transparent',
+                  color: isActive ? 'var(--black)' : 'var(--cream)',
                   fontWeight: isActive ? 700 : 500,
                   fontSize: '0.82rem',
                   cursor: 'pointer',
@@ -286,11 +286,11 @@ export const ReportsAnalyticsView: React.FC = () => {
       </div>
 
       {/* Date Pickers & Actions Bar */}
-      <div className="reports-toolbar-card glass-panel" style={{ background: 'rgba(20, 16, 13, 0.85)', border: '1px solid rgba(201, 168, 76, 0.2)', borderRadius: '12px', padding: '20px 24px', marginBottom: '28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
+      <div className="reports-toolbar-card glass-panel" style={{ background: 'var(--surface-color)', border: '1px solid rgba(var(--gold-rgb), 0.25)', borderRadius: '12px', padding: '20px 24px', marginBottom: '28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
         <div className="reports-date-pickers">
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Calendar size={16} color="#c9a84c" />
-            <span style={{ fontSize: '0.82rem', color: '#c9a84c', fontWeight: 600 }}>Start Date:</span>
+            <Calendar size={16} color="var(--gold)" />
+            <span style={{ fontSize: '0.82rem', color: 'var(--gold)', fontWeight: 600 }}>Start Date:</span>
             <input
               type="date"
               value={startDate}
@@ -300,10 +300,10 @@ export const ReportsAnalyticsView: React.FC = () => {
               }}
               style={{
                 padding: '8px 12px',
-                background: 'rgba(10, 8, 6, 0.8)',
-                border: '1px solid rgba(255,255,255,0.15)',
+                background: 'var(--black)',
+                border: '1px solid rgba(var(--gold-rgb), 0.3)',
                 borderRadius: '6px',
-                color: '#f5efe6',
+                color: 'var(--cream)',
                 fontSize: '0.85rem',
                 outline: 'none',
               }}
@@ -312,8 +312,8 @@ export const ReportsAnalyticsView: React.FC = () => {
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Calendar size={16} color="#c9a84c" />
-            <span style={{ fontSize: '0.82rem', color: '#c9a84c', fontWeight: 600 }}>End Date:</span>
+            <Calendar size={16} color="var(--gold)" />
+            <span style={{ fontSize: '0.82rem', color: 'var(--gold)', fontWeight: 600 }}>End Date:</span>
             <input
               type="date"
               value={endDate}
@@ -323,10 +323,10 @@ export const ReportsAnalyticsView: React.FC = () => {
               }}
               style={{
                 padding: '8px 12px',
-                background: 'rgba(10, 8, 6, 0.8)',
-                border: '1px solid rgba(255,255,255,0.15)',
+                background: 'var(--black)',
+                border: '1px solid rgba(var(--gold-rgb), 0.3)',
                 borderRadius: '6px',
-                color: '#f5efe6',
+                color: 'var(--cream)',
                 fontSize: '0.85rem',
                 outline: 'none',
               }}
@@ -336,7 +336,7 @@ export const ReportsAnalyticsView: React.FC = () => {
         </div>
 
         <div className="reports-actions-group" style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
-          <span style={{ fontSize: '0.82rem', color: 'rgba(255, 255, 255, 0.55)', marginRight: '8px' }}>
+          <span style={{ fontSize: '0.82rem', color: 'var(--beige)', marginRight: '8px' }}>
             Selected Period: <strong>{startDate}</strong> to <strong>{endDate}</strong>
           </span>
 
@@ -346,10 +346,10 @@ export const ReportsAnalyticsView: React.FC = () => {
               disabled={isLoading}
               style={{
                 padding: '10px 18px',
-                background: 'rgba(201, 168, 76, 0.15)',
-                border: '1px solid rgba(201, 168, 76, 0.4)',
+                background: 'rgba(var(--gold-rgb), 0.15)',
+                border: '1px solid rgba(var(--gold-rgb), 0.4)',
                 borderRadius: '8px',
-                color: '#c9a84c',
+                color: 'var(--gold)',
                 fontSize: '0.82rem',
                 fontWeight: 700,
                 cursor: 'pointer',
@@ -368,17 +368,17 @@ export const ReportsAnalyticsView: React.FC = () => {
               disabled={isExportingExcel || isExportingPdf || isExportingCsv}
               style={{
                 padding: '10px 18px',
-                background: 'linear-gradient(135deg, #c9a84c 0%, #e5c875 50%, #c9a84c 100%)',
+                background: 'var(--gradient-gold)',
                 border: 'none',
                 borderRadius: '8px',
-                color: '#0f0c0a',
+                color: 'var(--black)',
                 fontSize: '0.82rem',
                 fontWeight: 700,
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '6px',
-                boxShadow: '0 4px 14px rgba(201, 168, 76, 0.25)',
+                boxShadow: '0 4px 14px rgba(var(--gold-rgb), 0.25)',
                 opacity: isExportingExcel ? 0.6 : 1,
               }}
             >
@@ -392,10 +392,10 @@ export const ReportsAnalyticsView: React.FC = () => {
               disabled={isExportingExcel || isExportingPdf || isExportingCsv}
               style={{
                 padding: '10px 18px',
-                background: 'rgba(20, 16, 13, 0.85)',
-                border: '1px solid rgba(201, 168, 76, 0.5)',
+                background: 'var(--surface-color)',
+                border: '1px solid rgba(var(--gold-rgb), 0.5)',
                 borderRadius: '8px',
-                color: '#c9a84c',
+                color: 'var(--gold)',
                 fontSize: '0.82rem',
                 fontWeight: 700,
                 cursor: 'pointer',
@@ -415,10 +415,10 @@ export const ReportsAnalyticsView: React.FC = () => {
               disabled={isExportingExcel || isExportingPdf || isExportingCsv}
               style={{
                 padding: '10px 18px',
-                background: 'rgba(20, 16, 13, 0.85)',
-                border: '1px solid rgba(201, 168, 76, 0.5)',
+                background: 'var(--surface-color)',
+                border: '1px solid rgba(var(--gold-rgb), 0.5)',
                 borderRadius: '8px',
-                color: '#c9a84c',
+                color: 'var(--gold)',
                 fontSize: '0.82rem',
                 fontWeight: 700,
                 cursor: 'pointer',
@@ -483,7 +483,7 @@ export const ReportsAnalyticsView: React.FC = () => {
       <div className="reports-tabs-card">
         <div className="reports-tabs-header">
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <BarChart3 size={15} color="#c9a84c" />
+            <BarChart3 size={15} color="var(--gold)" />
             <span className="reports-tabs-title">REPORT CATEGORY</span>
           </div>
           <span className="reports-tabs-active-badge">
@@ -512,9 +512,9 @@ export const ReportsAnalyticsView: React.FC = () => {
 
       {/* Loading Skeleton */}
       {isLoading ? (
-        <div style={{ padding: '60px', textAlign: 'center', background: 'rgba(20, 16, 13, 0.85)', border: '1px solid rgba(201, 168, 76, 0.2)', borderRadius: '12px' }}>
-          <Loader2 size={36} color="#c9a84c" style={{ animation: 'spin 1s linear infinite', margin: '0 auto 16px auto' }} />
-          <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.95rem' }}>Generating {reportType.replace('_', ' ')} analytics report...</p>
+        <div style={{ padding: '60px', textAlign: 'center', background: 'var(--surface-color)', border: '1px solid rgba(var(--gold-rgb), 0.25)', borderRadius: '12px' }}>
+          <Loader2 size={36} color="var(--gold)" style={{ animation: 'spin 1s linear infinite', margin: '0 auto 16px auto' }} />
+          <p style={{ color: 'var(--cream)', opacity: 0.7, fontSize: '0.95rem' }}>Generating {reportType.replace('_', ' ')} analytics report...</p>
         </div>
       ) : reportData ? (
         <>
@@ -524,18 +524,18 @@ export const ReportsAnalyticsView: React.FC = () => {
               <div
                 key={idx}
                 style={{
-                  background: 'rgba(20, 16, 13, 0.85)',
-                  border: '1px solid rgba(201, 168, 76, 0.2)',
+                  background: 'var(--surface-color)',
+                  border: '1px solid rgba(var(--gold-rgb), 0.25)',
                   borderRadius: '12px',
                   padding: '22px 24px',
                   boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
                   backdropFilter: 'blur(12px)',
                 }}
               >
-                <div style={{ fontSize: '0.82rem', color: 'rgba(255,255,255,0.6)', fontWeight: 500, marginBottom: '8px' }}>
+                <div style={{ fontSize: '0.82rem', color: 'var(--beige)', fontWeight: 500, marginBottom: '8px' }}>
                   {kpi.title}
                 </div>
-                <div style={{ fontSize: '1.9rem', fontFamily: 'var(--font-display, serif)', fontWeight: 700, color: '#f5efe6', marginBottom: '6px' }}>
+                <div style={{ fontSize: '1.9rem', fontFamily: 'var(--font-number), var(--font-display, serif)', fontWeight: 700, color: 'var(--cream)', marginBottom: '6px' }}>
                   {kpi.value}
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.78rem' }}>
@@ -555,11 +555,11 @@ export const ReportsAnalyticsView: React.FC = () => {
             {/* Sales / Performance Trend Chart */}
             <div className="reports-chart-card">
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', gap: '8px' }}>
-                <h3 style={{ color: '#c9a84c', fontSize: '1.1rem', fontFamily: 'var(--font-display, serif)', fontWeight: 600, margin: 0 }}>
+                <h3 style={{ color: 'var(--gold)', fontSize: '1.1rem', fontFamily: 'var(--font-display, serif)', fontWeight: 600, margin: 0 }}>
                   Trend Analysis
                 </h3>
                 {reportData.chart_data && reportData.chart_data.length > 5 && (
-                  <span style={{ fontSize: '0.7rem', color: 'rgba(201, 168, 76, 0.75)', whiteSpace: 'nowrap' }}>
+                  <span style={{ fontSize: '0.7rem', color: 'var(--gold)', opacity: 0.8, whiteSpace: 'nowrap' }}>
                     ⇄ Scroll chart
                   </span>
                 )}
@@ -597,7 +597,7 @@ export const ReportsAnalyticsView: React.FC = () => {
                             boxSizing: 'border-box',
                           }}
                         >
-                          <div style={{ fontSize: '0.68rem', color: '#c9a84c', fontWeight: 600, marginBottom: '6px', whiteSpace: 'nowrap' }}>
+                          <div style={{ fontSize: '0.68rem', color: 'var(--gold)', fontWeight: 600, marginBottom: '6px', whiteSpace: 'nowrap', fontFamily: 'var(--font-number)' }}>
                             {pt.value >= 1000 ? `${(pt.value / 1000).toFixed(1)}K` : pt.value}
                           </div>
                           <div
@@ -605,7 +605,7 @@ export const ReportsAnalyticsView: React.FC = () => {
                               width: '100%',
                               maxWidth: '36px',
                               height: `${pct}%`,
-                              background: 'linear-gradient(180deg, #e5c875 0%, #c9a84c 100%)',
+                              background: 'var(--gradient-gold)',
                               borderRadius: '4px 4px 0 0',
                               transition: 'height 0.4s ease',
                             }}
@@ -614,7 +614,8 @@ export const ReportsAnalyticsView: React.FC = () => {
                             title={pt.label}
                             style={{
                               fontSize: '0.68rem',
-                              color: 'rgba(255,255,255,0.6)',
+                              color: 'var(--cream)',
+                              opacity: 0.65,
                               marginTop: '8px',
                               whiteSpace: 'nowrap',
                               overflow: 'hidden',
@@ -641,11 +642,11 @@ export const ReportsAnalyticsView: React.FC = () => {
             {/* Top Items List */}
             <div className="reports-summary-card">
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', gap: '8px' }}>
-                <h3 style={{ color: '#c9a84c', fontSize: '1.1rem', fontFamily: 'var(--font-display, serif)', fontWeight: 600, margin: 0 }}>
+                <h3 style={{ color: 'var(--gold)', fontSize: '1.1rem', fontFamily: 'var(--font-display, serif)', fontWeight: 600, margin: 0 }}>
                   Top Report Summary
                 </h3>
                 {reportData.table_rows && reportData.table_rows.length > 5 && (
-                  <span style={{ fontSize: '0.7rem', color: 'rgba(201, 168, 76, 0.75)', whiteSpace: 'nowrap' }}>
+                  <span style={{ fontSize: '0.7rem', color: 'var(--gold)', opacity: 0.8, whiteSpace: 'nowrap' }}>
                     Top {Math.min(10, reportData.table_rows.length)}
                   </span>
                 )}
@@ -658,8 +659,8 @@ export const ReportsAnalyticsView: React.FC = () => {
                       key={idx}
                       style={{
                         padding: '10px 14px',
-                        background: 'rgba(10, 8, 6, 0.6)',
-                        border: '1px solid rgba(255,255,255,0.06)',
+                        background: 'var(--black)',
+                        border: '1px solid rgba(var(--gold-rgb), 0.15)',
                         borderRadius: '8px',
                         display: 'flex',
                         alignItems: 'center',
@@ -674,7 +675,7 @@ export const ReportsAnalyticsView: React.FC = () => {
                           style={{
                             fontSize: '0.88rem',
                             fontWeight: 600,
-                            color: '#f5efe6',
+                            color: 'var(--cream)',
                             whiteSpace: 'nowrap',
                             overflow: 'hidden',
                             textOverflow: 'ellipsis',
@@ -686,7 +687,8 @@ export const ReportsAnalyticsView: React.FC = () => {
                           title={String(row[1])}
                           style={{
                             fontSize: '0.78rem',
-                            color: 'rgba(255,255,255,0.45)',
+                            color: 'var(--beige)',
+                            opacity: 0.7,
                             whiteSpace: 'nowrap',
                             overflow: 'hidden',
                             textOverflow: 'ellipsis',
@@ -696,7 +698,7 @@ export const ReportsAnalyticsView: React.FC = () => {
                         </div>
                       </div>
                       <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                        <div style={{ fontSize: '0.9rem', fontWeight: 700, color: '#c9a84c', whiteSpace: 'nowrap' }}>
+                        <div style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--gold)', whiteSpace: 'nowrap', fontFamily: 'var(--font-number)' }}>
                           {row[row.length - 1]}
                         </div>
                         {row.length > 3 && (
@@ -720,10 +722,10 @@ export const ReportsAnalyticsView: React.FC = () => {
           <div className="reports-details-card">
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
               <div>
-                <h3 style={{ color: '#c9a84c', fontSize: '1.2rem', fontFamily: 'var(--font-display, serif)', fontWeight: 600, margin: 0 }}>
+                <h3 style={{ color: 'var(--gold)', fontSize: '1.2rem', fontFamily: 'var(--font-display, serif)', fontWeight: 600, margin: 0 }}>
                   Detailed Report Dataset
                 </h3>
-                <span style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.5)' }}>
+                <span style={{ fontSize: '0.8rem', color: 'var(--beige)', opacity: 0.7 }}>
                   Showing {reportData.table_rows.length} of {reportData.total_records} records
                 </span>
               </div>
@@ -734,9 +736,9 @@ export const ReportsAnalyticsView: React.FC = () => {
                   display: 'flex',
                   alignItems: 'center',
                   gap: '6px',
-                  background: 'rgba(201, 168, 76, 0.1)',
-                  border: '1px solid rgba(201, 168, 76, 0.4)',
-                  color: '#c9a84c',
+                  background: 'rgba(var(--gold-rgb), 0.1)',
+                  border: '1px solid rgba(var(--gold-rgb), 0.4)',
+                  color: 'var(--gold)',
                   padding: '6px 12px',
                   borderRadius: '6px',
                   fontSize: '0.82rem',
@@ -755,7 +757,7 @@ export const ReportsAnalyticsView: React.FC = () => {
                 <div className="reports-table-wrap" style={{ marginBottom: '20px' }}>
                   <table className="reports-data-table" style={{ borderCollapse: 'collapse', textAlign: 'left' }}>
                     <thead>
-                      <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)', color: '#c9a84c', fontSize: '0.82rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                      <tr style={{ borderBottom: '1px solid rgba(var(--gold-rgb), 0.3)', color: 'var(--gold)', fontSize: '0.82rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                         {reportData.table_headers.map((h, i) => (
                           <th key={i} style={{ padding: '12px 16px' }}>{h}</th>
                         ))}
@@ -763,7 +765,7 @@ export const ReportsAnalyticsView: React.FC = () => {
                     </thead>
                     <tbody>
                       {reportData.table_rows.map((row, rIdx) => (
-                        <tr key={rIdx} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', color: '#f5efe6', fontSize: '0.88rem' }}>
+                        <tr key={rIdx} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', color: 'var(--cream)', fontSize: '0.88rem' }}>
                           {row.map((cell, cIdx) => (
                             <td key={cIdx} style={{ padding: '14px 16px' }}>{cell}</td>
                           ))}
@@ -772,7 +774,7 @@ export const ReportsAnalyticsView: React.FC = () => {
                     </tbody>
                     {reportData.totals_footer && (
                       <tfoot>
-                        <tr style={{ borderTop: '2px solid rgba(201, 168, 76, 0.4)', background: 'rgba(201, 168, 76, 0.05)', color: '#c9a84c', fontWeight: 700, fontSize: '0.9rem' }}>
+                        <tr style={{ borderTop: '2px solid rgba(var(--gold-rgb), 0.4)', background: 'rgba(var(--gold-rgb), 0.08)', color: 'var(--gold)', fontWeight: 700, fontSize: '0.9rem', fontFamily: 'var(--font-number)' }}>
                           {reportData.totals_footer.map((fCell, fIdx) => (
                             <td key={fIdx} style={{ padding: '14px 16px' }}>{fCell}</td>
                           ))}
@@ -796,9 +798,9 @@ export const ReportsAnalyticsView: React.FC = () => {
             ) : (
               /* Empty State */
               <div style={{ padding: '48px', textAlign: 'center' }}>
-                <FileSpreadsheet size={42} color="rgba(201,168,76,0.4)" style={{ margin: '0 auto 12px auto' }} />
-                <h4 style={{ color: '#f5efe6', fontSize: '1rem', margin: '0 0 6px 0' }}>No Records Found</h4>
-                <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.85rem', margin: 0 }}>
+                <FileSpreadsheet size={42} color="var(--gold)" style={{ opacity: 0.4, margin: '0 auto 12px auto' }} />
+                <h4 style={{ color: 'var(--cream)', fontSize: '1rem', margin: '0 0 6px 0' }}>No Records Found</h4>
+                <p style={{ color: 'var(--beige)', opacity: 0.6, fontSize: '0.85rem', margin: 0 }}>
                   There are no {reportType.replace('_', ' ')} transactions logged for the selected date range ({startDate} to {endDate}).
                 </p>
               </div>

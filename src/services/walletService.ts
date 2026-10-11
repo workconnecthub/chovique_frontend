@@ -1,4 +1,4 @@
-import { apiGet, apiPost, apiPut } from '../lib/api';
+import { apiGet, apiPost, apiPut, apiDelete } from '../lib/api';
 
 export interface CoinTransaction {
   id: string;
@@ -18,6 +18,8 @@ export interface RewardSettings {
   welcome_coins?: number;
   first_order_coins?: number;
   credit_delay_hours?: number;
+  credit_delay_days?: number;
+  credit_delay_minutes?: number;
 }
 
 export interface UserWallet {
@@ -107,4 +109,7 @@ export const walletService = {
 
   adminGetCoinTransactions: (type = 'ALL'): Promise<AdminCoinTransactionItem[]> =>
     apiGet<AdminCoinTransactionItem[]>(`/admin/rewards/transactions?type_filter=${type}`),
+
+  adminDeleteCustomerRewards: (userIds: string[]): Promise<{ deleted_count: number; message: string }> =>
+    apiDelete<{ deleted_count: number; message: string }>('/admin/rewards/customers', { user_ids: userIds }),
 };

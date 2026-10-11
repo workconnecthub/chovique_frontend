@@ -312,3 +312,25 @@
   display: flex;
   gap: 12px;
 }
+
+/* Mobile responsive padding and typography for Shop page */
+@media (max-width: 768px) {
+  body.customer-mobile-active .shop-page,
+  .shop-page {
+    padding-top: 12px !important;
+    padding-bottom: 85px !important;
+  }
+
+  body.customer-mobile-active .shop-hero-header,
+  .shop-hero-header {
+    padding: 6px 0 12px 0 !important;
+    margin-bottom: 12px !important;
+  }
+
+  body.customer-mobile-active .shop-title,
+  .shop-title {
+    font-size: 1.45rem !important;
+    margin: 0 0 10px 0 !important;
+    line-height: 1.2 !important;
+  }
+}
