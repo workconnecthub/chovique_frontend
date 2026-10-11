@@ -1654,13 +1654,30 @@ export const AdminDashboard: React.FC = () => {
         account_name: meta.account_name || prev.account_name,
         video_url: meta.video_url || prev.video_url,
       }));
-      setFetchReelSuccessMsg(`✓ Successfully fetched details for ${meta.account_name || 'creator'}!`);
-      addToast('success', `Found reel video for ${meta.account_name}`, 'Instagram Details Fetched');
+      if (meta.video_url) {
+        setFetchReelSuccessMsg(`✓ Successfully fetched video and account handle for ${meta.account_name || 'creator'}!`);
+        addToast('success', `Found reel video for ${meta.account_name}`, 'Instagram Details Fetched');
+      } else {
+        setFetchReelSuccessMsg(`✓ Extracted account handle (${meta.account_name || '@choviqueofficial'}). You can now publish or upload a custom video file.`);
+        addToast('info', `Account handle extracted: ${meta.account_name || '@choviqueofficial'}`, 'Instagram Details Fetched');
+      }
     } catch (err: any) {
       console.warn('Auto fetch reel meta warning:', err);
-      const msg = err?.detail || err?.message || 'Could not auto-fetch from Instagram. You can still publish or upload video manually.';
-      setFetchReelErrorMsg(msg);
-      addToast('info', msg, 'Auto-Fetch Notice');
+      // Client-side fallback extraction so the admin is never blocked
+      const match = trimmed.match(/\/(?:reel|p|tv)\/([a-zA-Z0-9_-]+)/);
+      if (match) {
+        setNewReelData((prev) => ({
+          ...prev,
+          instagram_url: `https://www.instagram.com/reel/${match[1]}/`,
+          account_name: prev.account_name || '@choviqueofficial',
+        }));
+        setFetchReelSuccessMsg(`✓ Instagram Reel recognized (${match[1]})! You can now publish or upload a custom video file.`);
+        addToast('info', 'Reel link recognized', 'Instagram URL Verified');
+      } else {
+        const msg = err?.detail || err?.message || 'Could not auto-fetch from Instagram. You can still publish or upload video manually.';
+        setFetchReelErrorMsg(msg);
+        addToast('info', msg, 'Auto-Fetch Notice');
+      }
     } finally {
       setIsFetchingReelMeta(false);
     }

@@ -30,48 +30,15 @@ export const InstagramReels: React.FC = () => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const videoRefs = useRef<{ [key: string]: HTMLVideoElement | null }>({});
 
-  const DEFAULT_REELS: Reel[] = [
-    {
-      id: 'r1',
-      videoUrl: 'https://res.cloudinary.com/aiqm7f7b/video/upload/v1790396266/chocolate-world/reels/ig_DdQYj55v0dr.mp4',
-      instagramUrl: 'https://www.instagram.com/reel/DdQYj55v0dr/',
-      accountName: '@choviqueofficial',
-    },
-    {
-      id: 'r2',
-      videoUrl: 'https://res.cloudinary.com/aiqm7f7b/video/upload/v1790396266/chocolate-world/reels/ig_DdQYj55v0dr.mp4',
-      instagramUrl: 'https://www.instagram.com/chovique',
-      accountName: '@choviqueofficial',
-    },
-    {
-      id: 'r3',
-      videoUrl: 'https://res.cloudinary.com/aiqm7f7b/video/upload/v1790396266/chocolate-world/reels/ig_DdQYj55v0dr.mp4',
-      instagramUrl: 'https://www.instagram.com/chovique',
-      accountName: '@choviqueofficial',
-    },
-    {
-      id: 'r4',
-      videoUrl: 'https://res.cloudinary.com/aiqm7f7b/video/upload/v1790396266/chocolate-world/reels/ig_DdQYj55v0dr.mp4',
-      instagramUrl: 'https://www.instagram.com/chovique',
-      accountName: '@choviqueofficial',
-    },
-  ];
-
-  const [reelsData, setReelsData] = useState<Reel[]>(DEFAULT_REELS);
+  const [reelsData, setReelsData] = useState<Reel[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
 
   // Resolves a playable direct video URL from reel data
   const resolvePlayableVideo = (rawVideoUrl?: string, rawInstagramUrl?: string): string => {
-    if (rawVideoUrl && !rawVideoUrl.includes('mixkit') && (rawVideoUrl.endsWith('.mp4') || rawVideoUrl.includes('cloudinary') || rawVideoUrl.includes('fbcdn') || rawVideoUrl.includes('storageapi.dev'))) {
+    if (rawVideoUrl && !rawVideoUrl.includes('mixkit') && (rawVideoUrl.endsWith('.mp4') || rawVideoUrl.includes('cloudinary') || rawVideoUrl.includes('fbcdn') || rawVideoUrl.includes('storageapi.dev') || rawVideoUrl.includes('/media/'))) {
       return rawVideoUrl;
     }
-    // If rawVideoUrl was an Instagram reel URL, check if it's the known shortcode or fallback
-    if (rawVideoUrl && rawVideoUrl.includes('DdQYj55v0dr')) {
-      return 'https://res.cloudinary.com/aiqm7f7b/video/upload/v1790396266/chocolate-world/reels/ig_DdQYj55v0dr.mp4';
-    }
-    if (rawInstagramUrl && rawInstagramUrl.includes('DdQYj55v0dr')) {
-      return 'https://res.cloudinary.com/aiqm7f7b/video/upload/v1790396266/chocolate-world/reels/ig_DdQYj55v0dr.mp4';
-    }
-    return 'https://res.cloudinary.com/aiqm7f7b/video/upload/v1790396266/chocolate-world/reels/ig_DdQYj55v0dr.mp4';
+    return rawVideoUrl || '';
   };
 
   useEffect(() => {
@@ -91,10 +58,15 @@ export const InstagramReels: React.FC = () => {
             };
           });
           setReelsData(mapped);
+        } else {
+          setReelsData([]);
         }
       })
       .catch(() => {
-        // Keep default reels
+        setReelsData([]);
+      })
+      .finally(() => {
+        setIsLoading(false);
       });
   }, []);
 
@@ -221,6 +193,10 @@ export const InstagramReels: React.FC = () => {
       });
     }
   };
+
+  if (isLoading || reelsData.length === 0) {
+    return null;
+  }
 
   return (
     <section

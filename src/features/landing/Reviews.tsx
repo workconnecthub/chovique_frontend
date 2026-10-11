@@ -93,6 +93,10 @@ export const Reviews: React.FC = () => {
     }
   };
 
+  if (loading || textTestimonials.length === 0) {
+    return null;
+  }
+
   return (
     <section
       id="reviews"
