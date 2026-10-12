@@ -58,6 +58,7 @@ import { Input, Select } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
 import { ToastContainer, ToastMessage } from '../../components/ui/Toast';
 import { ConfirmationModal } from '../../components/ui/ConfirmationModal';
+import { getImageUrl } from '../../utils/imageUrl';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { Pagination } from '../../components/ui/Pagination';
 import { NotificationHeaderDropdown } from '../../components/NotificationHeaderDropdown';
@@ -78,7 +79,6 @@ import { OfflineSalesView } from './OfflineSalesView';
 import { DeliveryBoysView } from './DeliveryBoysView';
 import { CreateCouponView } from './CreateCouponView';
 import { Product, OfflineSale, SystemUser, Banner } from '../../types';
-import { getImageUrl } from '../../utils/imageUrl';
 import { BASE_URL, apiGet } from '../../lib/api';
 import {
   trimValue,
@@ -1622,13 +1622,15 @@ export const AdminDashboard: React.FC = () => {
   // --- Instagram Reels State & Handlers ---
   const [cmsReels, setCmsReels] = useState<any[]>([]);
   const [showAddReelModal, setShowAddReelModal] = useState(false);
-  const [newReelData, setNewReelData] = useState({ instagram_url: '', account_name: '@choviqueofficial', video_url: '' });
+  const [newReelData, setNewReelData] = useState({ instagram_url: '', account_name: '', video_url: '' });
   const [newReelVideoFile, setNewReelVideoFile] = useState<File | null>(null);
   const [isCreatingReel, setIsCreatingReel] = useState(false);
   const [isFetchingReelMeta, setIsFetchingReelMeta] = useState(false);
   const [fetchReelSuccessMsg, setFetchReelSuccessMsg] = useState('');
   const [fetchReelErrorMsg, setFetchReelErrorMsg] = useState('');
   const [createReelErrorMsg, setCreateReelErrorMsg] = useState('');
+  const [reelToDelete, setReelToDelete] = useState<any | null>(null);
+  const [isDeletingReel, setIsDeletingReel] = useState(false);
 
   const fetchCmsReels = () => {
     apiGet<any[]>('/home/reels')
@@ -1651,27 +1653,30 @@ export const AdminDashboard: React.FC = () => {
       setNewReelData((prev) => ({
         ...prev,
         instagram_url: meta.instagram_url || trimmed,
-        account_name: meta.account_name || prev.account_name,
-        video_url: meta.video_url || prev.video_url,
+        account_name: meta.account_name || prev.account_name || '',
+        video_url: meta.video_url || prev.video_url || '',
       }));
       if (meta.video_url) {
-        setFetchReelSuccessMsg(`✓ Successfully fetched video and account handle for ${meta.account_name || 'creator'}!`);
-        addToast('success', `Found reel video for ${meta.account_name}`, 'Instagram Details Fetched');
+        setFetchReelSuccessMsg(`Successfully fetched video and account handle for ${meta.account_name || 'creator'}!`);
+        addToast('success', `Found reel video for ${meta.account_name || 'creator'}`, 'Instagram Details Fetched');
+      } else if (meta.account_name) {
+        setFetchReelSuccessMsg(`Extracted account handle (${meta.account_name}). You can now publish or upload a custom video file.`);
+        addToast('info', `Account handle extracted: ${meta.account_name}`, 'Instagram Details Fetched');
       } else {
-        setFetchReelSuccessMsg(`✓ Extracted account handle (${meta.account_name || '@choviqueofficial'}). You can now publish or upload a custom video file.`);
-        addToast('info', `Account handle extracted: ${meta.account_name || '@choviqueofficial'}`, 'Instagram Details Fetched');
+        setFetchReelSuccessMsg('Instagram link verified. Please enter the creator handle and publish.');
+        addToast('info', 'Reel link recognized', 'Instagram URL Verified');
       }
     } catch (err: any) {
       console.warn('Auto fetch reel meta warning:', err);
-      // Client-side fallback extraction so the admin is never blocked
+      // Client-side fallback extraction without seeded dummy handles
       const match = trimmed.match(/\/(?:reel|p|tv)\/([a-zA-Z0-9_-]+)/);
       if (match) {
         setNewReelData((prev) => ({
           ...prev,
           instagram_url: `https://www.instagram.com/reel/${match[1]}/`,
-          account_name: prev.account_name || '@choviqueofficial',
+          account_name: prev.account_name || '',
         }));
-        setFetchReelSuccessMsg(`✓ Instagram Reel recognized (${match[1]})! You can now publish or upload a custom video file.`);
+        setFetchReelSuccessMsg(`Instagram Reel recognized (${match[1]})! You can now publish or upload a custom video file.`);
         addToast('info', 'Reel link recognized', 'Instagram URL Verified');
       } else {
         const msg = err?.detail || err?.message || 'Could not auto-fetch from Instagram. You can still publish or upload video manually.';
@@ -1691,13 +1696,14 @@ export const AdminDashboard: React.FC = () => {
       return;
     }
     setIsCreatingReel(true);
+    const cleanAccount = (newReelData.account_name || '').trim();
     const formData = new FormData();
-    formData.append('instagram_url', newReelData.instagram_url || '');
-    formData.append('account_name', newReelData.account_name || '@choviqueofficial');
+    formData.append('instagram_url', (newReelData.instagram_url || '').trim());
+    formData.append('account_name', cleanAccount);
     if (newReelData.video_url) {
       formData.append('video_url', newReelData.video_url);
     }
-    formData.append('title', newReelData.account_name || 'Instagram Reel');
+    formData.append('title', cleanAccount || 'Instagram Reel');
     formData.append('likes', '0');
     formData.append('comments', '0');
     formData.append('views', '0 views');
@@ -1707,7 +1713,7 @@ export const AdminDashboard: React.FC = () => {
       await adminService.createReel(formData);
       fetchCmsReels();
       setShowAddReelModal(false);
-      setNewReelData({ instagram_url: '', account_name: '@choviqueofficial', video_url: '' });
+      setNewReelData({ instagram_url: '', account_name: '', video_url: '' });
       setNewReelVideoFile(null);
       setFetchReelSuccessMsg('');
       setFetchReelErrorMsg('');
@@ -1722,13 +1728,20 @@ export const AdminDashboard: React.FC = () => {
     }
   };
 
-  const handleDeleteReelSubmit = async (reelId: string, title: string) => {
-    if (!window.confirm(`Delete reel video "${title}"?`)) return;
+  const handleConfirmDeleteReel = async () => {
+    if (!reelToDelete) return;
+    setIsDeletingReel(true);
     try {
-      await adminService.deleteReel(reelId);
-      setCmsReels((prev) => prev.filter((r) => r.id !== reelId));
+      await adminService.deleteReel(reelToDelete.id);
+      setCmsReels((prev) => prev.filter((r) => r.id !== reelToDelete.id));
+      const handleName = reelToDelete.accountName || reelToDelete.account_name || reelToDelete.title || 'Instagram reel';
+      addToast('success', `"${handleName}" was permanently removed from database and landing page showcase.`, 'Reel Deleted');
+      setReelToDelete(null);
     } catch (err: any) {
-      alert('Failed to delete reel');
+      const msg = err?.detail || err?.message || 'Failed to delete reel. Please try again.';
+      addToast('error', msg, 'Delete Failed');
+    } finally {
+      setIsDeletingReel(false);
     }
   };
 
@@ -5800,8 +5813,8 @@ export const AdminDashboard: React.FC = () => {
                           onChange={(e) => {
                             const val = e.target.value;
                             let extractedAccount = newReelData.account_name;
-                            const match = val.match(/instagram\.com\/([a-zA-Z0-9._]+)\/(?:reel|p)\//i);
-                            if (match && match[1] && !['reel', 'p', 'tv'].includes(match[1].toLowerCase())) {
+                            const match = val.match(/instagram\.com\/([a-zA-Z0-9._]+)\/(?:reel|p|tv)\//i);
+                            if (match && match[1] && !['reel', 'p', 'tv', 'explore', 'stories'].includes(match[1].toLowerCase())) {
                               extractedAccount = `@${match[1]}`;
                             }
                             setNewReelData({ ...newReelData, instagram_url: val, account_name: extractedAccount });
@@ -5952,7 +5965,7 @@ export const AdminDashboard: React.FC = () => {
                         <span style={{ fontSize: '0.74rem', color: '#2ecc71', fontWeight: 600 }}>Ready to Publish</span>
                       </div>
                       <video
-                        src={newReelData.video_url}
+                        src={getImageUrl(newReelData.video_url)}
                         controls
                         muted
                         playsInline
@@ -6040,6 +6053,8 @@ export const AdminDashboard: React.FC = () => {
                       size="sm"
                       onClick={() => {
                         setShowAddReelModal(false);
+                        setNewReelData({ instagram_url: '', account_name: '', video_url: '' });
+                        setNewReelVideoFile(null);
                         setFetchReelSuccessMsg('');
                         setFetchReelErrorMsg('');
                         setCreateReelErrorMsg('');
@@ -6060,9 +6075,35 @@ export const AdminDashboard: React.FC = () => {
 
               {/* Reels Grid — Clean cards showing Account Name and Instagram Redirect */}
               <div style={{ display: 'grid', gridTemplateColumns: isMobileGrid ? '1fr' : 'repeat(auto-fill, minmax(260px, 1fr))', gap: '12px' }}>
+                {cmsReels.length === 0 && (
+                  <div
+                    style={{
+                      gridColumn: '1 / -1',
+                      padding: '36px 20px',
+                      textAlign: 'center',
+                      background: 'rgba(255,255,255,0.02)',
+                      borderRadius: '12px',
+                      border: '1px dashed var(--glass-border)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '8px',
+                    }}
+                  >
+                    <Video size={30} style={{ color: 'var(--beige)', opacity: 0.5 }} />
+                    <p style={{ color: 'var(--cream)', fontWeight: 600, margin: 0, fontSize: '0.95rem' }}>
+                      No Instagram Reels Published
+                    </p>
+                    <p style={{ color: 'var(--beige)', fontSize: '0.82rem', margin: 0, opacity: 0.8 }}>
+                      Click &quot;Add Reel&quot; above to link a public Instagram Reel to your homepage showcase.
+                    </p>
+                  </div>
+                )}
+
                 {cmsReels.map((reel) => {
                   const reelLink = reel.instagramUrl || reel.instagram_url || reel.videoUrl || reel.video_url || 'https://instagram.com';
-                  const account = reel.accountName || reel.account_name || '@chovique_chocolatier';
+                  const account = reel.accountName || reel.account_name || 'Instagram Reel';
 
                   return (
                     <div key={reel.id} style={{ padding: '14px 16px', background: 'rgba(255,255,255,0.04)', borderRadius: '10px', border: '1px solid var(--glass-border)', display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0 }}>
@@ -6099,7 +6140,7 @@ export const AdminDashboard: React.FC = () => {
                           <Edit2 size={14} />
                         </button>
                         <button
-                          onClick={() => handleDeleteReelSubmit(reel.id, account)}
+                          onClick={() => setReelToDelete(reel)}
                           title="Delete reel"
                           style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '32px', height: '32px', borderRadius: '8px', background: 'rgba(231,76,60,0.1)', border: '1px solid rgba(231,76,60,0.3)', color: 'var(--rose-gold)', cursor: 'pointer', transition: 'all 0.2s' }}
                         >
@@ -8330,7 +8371,7 @@ export const AdminDashboard: React.FC = () => {
                         {/* Live video player that automatically plays the current or newly fetched reel */}
                         <video
                           key={currentVideoUrl}
-                          src={currentVideoUrl}
+                          src={getImageUrl(currentVideoUrl)}
                           autoPlay
                           loop
                           muted
@@ -8642,6 +8683,77 @@ export const AdminDashboard: React.FC = () => {
             </div>
           );
         })()}
+
+        {/* DELETE REEL CONFIRMATION CARD MODAL */}
+        <ConfirmationModal
+          isOpen={Boolean(reelToDelete)}
+          title="Delete Instagram Reel"
+          message={`Are you sure you want to permanently delete ${reelToDelete ? (reelToDelete.accountName || reelToDelete.account_name || 'this Instagram reel') : ''}? This reel will be deleted from the database and immediately removed from the homepage showcase.`}
+          confirmText="Delete Reel"
+          cancelText="Cancel"
+          isConfirming={isDeletingReel}
+          onConfirm={handleConfirmDeleteReel}
+          onCancel={() => { if (!isDeletingReel) setReelToDelete(null); }}
+          variant="danger"
+        >
+          {reelToDelete && (() => {
+            const account = reelToDelete.accountName || reelToDelete.account_name || 'Instagram Reel';
+            const link = reelToDelete.instagramUrl || reelToDelete.instagram_url || reelToDelete.videoUrl || reelToDelete.video_url || 'https://instagram.com';
+            const videoSrc = reelToDelete.videoUrl || reelToDelete.video_url;
+
+            return (
+              <div
+                style={{
+                  padding: '12px 14px',
+                  borderRadius: '10px',
+                  background: 'rgba(0,0,0,0.45)',
+                  border: '1px solid rgba(255,255,255,0.08)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                }}
+              >
+                <div
+                  style={{
+                    width: '38px',
+                    height: '38px',
+                    borderRadius: '8px',
+                    background: 'linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0,
+                  }}
+                >
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="2" y="2" width="20" height="20" rx="5" ry="5" />
+                    <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
+                    <line x1="17.5" y1="6.5" x2="17.51" y2="6.5" />
+                  </svg>
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p style={{ fontWeight: 700, color: 'var(--cream)', fontSize: '0.9rem', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {account}
+                  </p>
+                  <a
+                    href={link}
+                    target="_blank"
+                    rel="noreferrer"
+                    style={{ fontSize: '0.74rem', color: 'var(--gold)', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}
+                  >
+                    <span>View Reel</span>
+                    <ExternalLink size={11} />
+                  </a>
+                </div>
+                {videoSrc && (
+                  <div style={{ width: '40px', height: '40px', borderRadius: '6px', overflow: 'hidden', background: '#000', flexShrink: 0, border: '1px solid rgba(255,255,255,0.1)' }}>
+                    <video src={getImageUrl(videoSrc)} muted playsInline style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+        </ConfirmationModal>
 
         {/* CUSTOM DATE RANGE MODAL */}
         {showCustomDateModal && (

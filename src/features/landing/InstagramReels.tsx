@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { Volume2, VolumeX, Play, Pause, ChevronLeft, ChevronRight, ExternalLink } from 'lucide-react';
 import { fadeInUp } from '../../lib/framer';
 import { homeService } from '../../services/homeService';
+import { getImageUrl } from '../../utils/imageUrl';
 
 interface Reel {
   id: string;
@@ -34,11 +35,11 @@ export const InstagramReels: React.FC = () => {
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
   // Resolves a playable direct video URL from reel data
-  const resolvePlayableVideo = (rawVideoUrl?: string, rawInstagramUrl?: string): string => {
-    if (rawVideoUrl && !rawVideoUrl.includes('mixkit') && (rawVideoUrl.endsWith('.mp4') || rawVideoUrl.includes('cloudinary') || rawVideoUrl.includes('fbcdn') || rawVideoUrl.includes('storageapi.dev') || rawVideoUrl.includes('/media/'))) {
-      return rawVideoUrl;
-    }
-    return rawVideoUrl || '';
+  const resolvePlayableVideo = (rawVideoUrl?: string, _rawInstagramUrl?: string): string => {
+    if (!rawVideoUrl) return '';
+    const clean = rawVideoUrl.trim();
+    if (clean.includes('mixkit')) return '';
+    return clean;
   };
 
   useEffect(() => {
@@ -49,12 +50,13 @@ export const InstagramReels: React.FC = () => {
           const mapped = data.map((r: any) => {
             const rawVid = r.videoUrl || r.video_url || '';
             const rawIg = r.instagramUrl || r.instagram_url || rawVid || '';
-            const playable = resolvePlayableVideo(rawVid, rawIg);
+            const cleanVid = resolvePlayableVideo(rawVid, rawIg);
+            const playable = cleanVid ? getImageUrl(cleanVid) : '';
             return {
               id: String(r.id),
               videoUrl: playable,
               instagramUrl: rawIg.startsWith('http') ? rawIg : `https://www.instagram.com/reel/${r.id}/`,
-              accountName: r.accountName || r.account_name || '@choviqueofficial',
+              accountName: r.accountName || r.account_name || '',
             };
           });
           setReelsData(mapped);
@@ -102,7 +104,6 @@ export const InstagramReels: React.FC = () => {
 
   // Hover Play / Leave Pause
   const handleReelMouseEnter = (id: string) => {
-    if (!isSectionInView) return;
     setHoveredReelId(id);
 
     // Pause all other videos
@@ -117,16 +118,23 @@ export const InstagramReels: React.FC = () => {
     if (vid) {
       const isMuted = mutedMap[id] ?? true;
       vid.muted = isMuted;
-      vid.play().then(() => {
-        setPlayingMap((prev) => ({ ...prev, [id]: true }));
-      }).catch(() => {
-        // Autoplay policy fallback: mute and retry
-        vid.muted = true;
-        setMutedMap((prev) => ({ ...prev, [id]: true }));
-        vid.play().then(() => {
-          setPlayingMap((prev) => ({ ...prev, [id]: true }));
-        }).catch(() => {});
-      });
+      const playPromise = vid.play();
+      if (playPromise !== undefined) {
+        playPromise
+          .then(() => {
+            setPlayingMap((prev) => ({ ...prev, [id]: true }));
+          })
+          .catch(() => {
+            // Autoplay policy fallback: ensure muted and retry
+            vid.muted = true;
+            setMutedMap((prev) => ({ ...prev, [id]: true }));
+            vid.play()
+              .then(() => {
+                setPlayingMap((prev) => ({ ...prev, [id]: true }));
+              })
+              .catch(() => {});
+          });
+      }
     }
   };
 
@@ -353,8 +361,8 @@ export const InstagramReels: React.FC = () => {
               const isPlaying = !!playingMap[reel.id];
               const isMuted = mutedMap[reel.id] ?? true;
               const directInstagramUrl = reel.instagramUrl || reel.videoUrl || 'https://instagram.com';
-              const accountHandle = reel.accountName || '@choviqueofficial';
-              const profileUrl = `https://www.instagram.com/${accountHandle.replace(/^@/, '')}/`;
+              const accountHandle = reel.accountName || '';
+              const profileUrl = accountHandle ? `https://www.instagram.com/${accountHandle.replace(/^@/, '')}/` : directInstagramUrl;
 
               return (
                 <motion.div
@@ -393,6 +401,9 @@ export const InstagramReels: React.FC = () => {
                       muted={isMuted}
                       playsInline
                       preload="auto"
+                      onPlay={() => setPlayingMap((prev) => ({ ...prev, [reel.id]: true }))}
+                      onPause={() => setPlayingMap((prev) => ({ ...prev, [reel.id]: false }))}
+                      onEnded={() => setPlayingMap((prev) => ({ ...prev, [reel.id]: false }))}
                       style={{
                         width: '100%',
                         height: '100%',
@@ -538,7 +549,7 @@ export const InstagramReels: React.FC = () => {
                           whiteSpace: 'nowrap',
                         }}
                       >
-                        {accountHandle}
+                        {accountHandle || 'Chovique Reel'}
                       </span>
                     </a>
 
