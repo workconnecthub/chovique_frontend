@@ -4,9 +4,16 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useApp } from '../../app/providers';
 import { Card } from '../../components/ui/Card';
 import { fadeInUp } from '../../lib/framer';
+import { DEFAULT_LANDING_SECTIONS } from '../../types';
 
 export const Boutique: React.FC = () => {
-  const { products } = useApp();
+  const { products, landingSections } = useApp();
+  const config = landingSections?.boutique || DEFAULT_LANDING_SECTIONS.boutique;
+  const badge = config.badge || 'Featured Chocolates';
+  const titleMain = config.titleMain ?? 'Explore Our';
+  const titleHighlight = config.titleHighlight ?? 'Collection';
+  const titleSuffix = config.titleSuffix ?? '';
+  const subtitle = config.subtitle || 'Browse our complete range of handcrafted chocolates — from pure dark bars to chocolate gift boxes.';
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const scroll = (direction: 'left' | 'right') => {
@@ -43,15 +50,15 @@ export const Boutique: React.FC = () => {
             marginBottom: '40px',
           }}
         >
-          <span className="section-label" style={{ justifyContent: 'center' }}>
-            Featured Chocolates
-          </span>
+          {badge && (
+            <span className="section-label" style={{ justifyContent: 'center' }}>
+              {badge}
+            </span>
+          )}
           <h2 className="section-title">
-            Explore Our <span className="gold">Collection</span>
+            {titleMain}{titleHighlight ? <> <span className="gold">{titleHighlight}</span></> : null}{titleSuffix ? ` ${titleSuffix}` : ''}
           </h2>
-          <p className="section-subtitle">
-            Browse our complete range of handcrafted chocolates — from pure dark bars to chocolate gift boxes.
-          </p>
+          {subtitle && <p className="section-subtitle">{subtitle}</p>}
         </motion.div>
 
         {/* Inline CSS to hide scrollbars & responsive helpers */}

@@ -168,18 +168,30 @@ export const Navbar: React.FC = () => {
           <span className="nav-logo-text">CHOVIQUE</span>
         </Link>
 
-        {/* Desktop Menu links - Public Website Nav */}
+        {/* Desktop Menu links - Public Website Nav: Home -> Our Story -> Shop -> Contact */}
         <ul className="nav-menu">
           <li className={`nav-item ${location.pathname === '/' ? 'active' : ''}`} onClick={() => navigate('/')}>Home</li>
+          <li className={`nav-item ${location.pathname === '/our-story' ? 'active' : ''}`} onClick={() => navigate('/our-story')}>Our Story</li>
           <li className={`nav-item ${location.pathname.startsWith('/shop') || location.pathname.startsWith('/product') ? 'active' : ''}`} onClick={() => navigate('/shop')}>
             Shop
           </li>
-          <li className={`nav-item ${location.pathname === '/our-story' ? 'active' : ''}`} onClick={() => navigate('/our-story')}>Our Story</li>
           <li className={`nav-item ${location.pathname === '/contact' ? 'active' : ''}`} onClick={() => navigate('/contact')}>Contact</li>
         </ul>
 
-        {/* Action Buttons Right */}
+        {/* Action Buttons Right: Cart -> Account / Login */}
         <div className="nav-actions">
+          {/* Wishlist Icon */}
+          <Link to="/wishlist" className="nav-icon-btn" aria-label="Wishlist" title="Wishlist">
+            <Heart size={20} />
+            {wishlist.length > 0 && <span className="nav-badge">{wishlist.length}</span>}
+          </Link>
+
+          {/* Cart Icon (with live item badge for both guests and authenticated users) */}
+          <Link to="/cart" className="nav-icon-btn" aria-label="Shopping Cart" title="Shopping Cart">
+            <ShoppingBag size={20} />
+            {cartCount > 0 && <span className="nav-badge">{cartCount}</span>}
+          </Link>
+
           {role === 'guest' ? (
             <>
               <Button variant="text" size="sm" onClick={() => navigate('/login')}>
@@ -191,15 +203,6 @@ export const Navbar: React.FC = () => {
             </>
           ) : role === 'customer' ? (
             <>
-              {/* Customer icons (Wishlist, Cart, Notifications, Account) */}
-              <Link to="/wishlist" className="nav-icon-btn" aria-label="Wishlist">
-                <Heart size={20} />
-                {wishlist.length > 0 && <span className="nav-badge">{wishlist.length}</span>}
-              </Link>
-              <Link to="/cart" className="nav-icon-btn" aria-label="Cart">
-                <ShoppingBag size={20} />
-                {cartCount > 0 && <span className="nav-badge">{cartCount}</span>}
-              </Link>
 
               {/* Notifications Bell */}
               <NotificationHeaderDropdown
@@ -320,7 +323,14 @@ export const Navbar: React.FC = () => {
             <>
               {/* Admin or Superadmin — Back to Dashboard button */}
               <button
-                onClick={() => navigate(role === 'admin' ? '/admin' : '/superadmin')}
+                onClick={() => {
+                  const storedReturn = sessionStorage.getItem('chovique_dashboard_return_path');
+                  if (storedReturn) {
+                    navigate(storedReturn);
+                  } else {
+                    navigate(role === 'admin' ? '/admin' : '/superadmin');
+                  }
+                }}
                 className="nav-back-to-dashboard-btn"
                 style={{
                   display: 'flex',
@@ -399,38 +409,55 @@ export const Navbar: React.FC = () => {
             )}
 
             {/* 2. Quick Action Buttons Row (Cart, Wishlist, Dashboard) */}
-            {user && (
-              <div className="mobile-drawer-quick-bar">
-                <Link
-                  to="/cart"
-                  className="mobile-drawer-quick-btn"
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  <ShoppingBag size={18} />
-                  <span>Cart ({cartCount})</span>
-                </Link>
+            <div className="mobile-drawer-quick-bar">
+              <Link
+                to="/cart"
+                className="mobile-drawer-quick-btn"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                <ShoppingBag size={18} />
+                <span>Cart ({cartCount})</span>
+              </Link>
 
-                <Link
-                  to="/wishlist"
-                  className="mobile-drawer-quick-btn"
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  <Heart size={18} />
-                  <span>Wishlist ({wishlist.length})</span>
-                </Link>
+              <Link
+                to="/wishlist"
+                className="mobile-drawer-quick-btn"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                <Heart size={18} />
+                <span>Wishlist ({wishlist.length})</span>
+              </Link>
 
-                {role === 'customer' && (
-                  <button
-                    type="button"
-                    className="mobile-drawer-quick-btn gold"
-                    onClick={() => handleCustomerNav('overview')}
-                  >
-                    <LayoutDashboard size={18} />
-                    <span>Dashboard</span>
-                  </button>
-                )}
-              </div>
-            )}
+              {role === 'customer' && (
+                <button
+                  type="button"
+                  className="mobile-drawer-quick-btn gold"
+                  onClick={() => handleCustomerNav('overview')}
+                >
+                  <LayoutDashboard size={18} />
+                  <span>Dashboard</span>
+                </button>
+              )}
+
+              {(role === 'admin' || role === 'superadmin') && (
+                <button
+                  type="button"
+                  className="mobile-drawer-quick-btn gold"
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    const storedReturn = sessionStorage.getItem('chovique_dashboard_return_path');
+                    if (storedReturn) {
+                      navigate(storedReturn);
+                    } else {
+                      navigate(role === 'admin' ? '/admin' : '/superadmin');
+                    }
+                  }}
+                >
+                  <LayoutDashboard size={18} />
+                  <span>Dashboard</span>
+                </button>
+              )}
+            </div>
 
             {/* 3. Primary Store Navigation Links */}
             <div className="mobile-drawer-nav-section">
@@ -444,6 +471,17 @@ export const Navbar: React.FC = () => {
                   <div className="mobile-drawer-nav-link-left">
                     <Home size={18} />
                     <span>Home</span>
+                  </div>
+                </Link>
+
+                <Link
+                  to="/our-story"
+                  className={`mobile-drawer-nav-link ${location.pathname === '/our-story' ? 'active' : ''}`}
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  <div className="mobile-drawer-nav-link-left">
+                    <BookOpen size={18} />
+                    <span>Our Story</span>
                   </div>
                 </Link>
 
@@ -502,17 +540,6 @@ export const Navbar: React.FC = () => {
                 </div>
 
                 <Link
-                  to="/our-story"
-                  className={`mobile-drawer-nav-link ${location.pathname === '/our-story' ? 'active' : ''}`}
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  <div className="mobile-drawer-nav-link-left">
-                    <BookOpen size={18} />
-                    <span>Our Story</span>
-                  </div>
-                </Link>
-
-                <Link
                   to="/contact"
                   className={`mobile-drawer-nav-link ${location.pathname === '/contact' ? 'active' : ''}`}
                   onClick={() => setMobileMenuOpen(false)}
@@ -521,6 +548,18 @@ export const Navbar: React.FC = () => {
                     <Mail size={18} />
                     <span>Contact Us</span>
                   </div>
+                </Link>
+
+                <Link
+                  to="/cart"
+                  className={`mobile-drawer-nav-link ${location.pathname === '/cart' ? 'active' : ''}`}
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  <div className="mobile-drawer-nav-link-left">
+                    <ShoppingBag size={18} />
+                    <span>Shopping Cart</span>
+                  </div>
+                  {cartCount > 0 && <span className="nav-badge" style={{ position: 'static' }}>{cartCount}</span>}
                 </Link>
               </div>
             </div>

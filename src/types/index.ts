@@ -74,6 +74,7 @@ export interface Product {
   id: string;
   sku?: string;
   name: string;
+  slug?: string;
   category_id?: string;
   category: string;
   price: number;
@@ -90,10 +91,15 @@ export interface Product {
   images?: string[];
   reviews: Review[];
   stock?: number;
+  is_active?: boolean;
   is_available?: boolean;
   isAvailable?: boolean;
   isBestseller?: boolean;
   isNewArrival?: boolean;
+  isSample?: boolean;
+  is_sample?: boolean;
+  samplePrice?: number;
+  sample_price?: number;
   nutrition?: NutritionInfo;
 }
 
@@ -230,6 +236,285 @@ export interface Banner {
   buttonText: string;
   link: string;
 }
+
+export interface SectionHeaderConfig {
+  badge?: string;
+  titleMain?: string;
+  titleHighlight?: string;
+  titleSuffix?: string;
+  subtitle?: string;
+}
+
+export interface BestsellersSectionConfig {
+  header: SectionHeaderConfig;
+  bestsellersPart: {
+    tag: string;
+    title: string;
+    titleHighlight: string;
+    titleSuffix: string;
+    description: string;
+  };
+  newArrivalsPart: {
+    tag: string;
+    title: string;
+    titleHighlight: string;
+    titleSuffix: string;
+    description: string;
+  };
+}
+
+export interface TasteSampleBulletConfig {
+  title: string;
+  desc: string;
+}
+
+export interface TasteSampleSectionConfig {
+  badge: string;
+  titleMain: string;
+  titleHighlight: string;
+  titleSuffix: string;
+  subtitle: string;
+  cardBadgeText: string;
+  ctaText: string;
+  ctaLink: string;
+  secondaryCtaText: string;
+  secondaryCtaLink: string;
+  whyTitle: string;
+  whySubtitle: string;
+  whyBullets: TasteSampleBulletConfig[];
+  selectedProductIds?: string[];
+}
+
+export interface LandingSectionsConfig {
+  popularProducts: SectionHeaderConfig;
+  bestsellersNewArrivals: BestsellersSectionConfig;
+  tasteSample: TasteSampleSectionConfig;
+  giftHampers: SectionHeaderConfig;
+  boutique: SectionHeaderConfig;
+  reviews: SectionHeaderConfig & { buttonText?: string };
+  instagramReels: SectionHeaderConfig;
+}
+
+export const DEFAULT_LANDING_SECTIONS: LandingSectionsConfig = {
+  popularProducts: {
+    badge: 'Curated Selection',
+    titleMain: 'Our Most',
+    titleHighlight: 'Loved',
+    titleSuffix: 'Creations',
+    subtitle: 'Handpicked favorites that our chocolate lovers keep coming back for — each piece a testament to uncompromising quality and artisanal mastery.',
+  },
+  bestsellersNewArrivals: {
+    header: {
+      badge: 'Exclusive Showroom',
+      titleMain: 'Bestsellers',
+      titleHighlight: '&',
+      titleSuffix: 'New Arrivals',
+      subtitle: 'Indulge in our curated selections — showcasing both our legendary, time-honored classics and our latest avant-garde culinary creations.',
+    },
+    bestsellersPart: {
+      tag: 'Connoisseur Choice',
+      title: 'The Bestsellers',
+      titleHighlight: '',
+      titleSuffix: '',
+      description: 'Artisanal icons that have won the hearts of fine chocolate lovers globally. Elegant, refined, and rich in depth.',
+    },
+    newArrivalsPart: {
+      tag: 'Freshly Tempered',
+      title: 'New Arrivals',
+      titleHighlight: '',
+      titleSuffix: '',
+      description: 'Seasonal innovations and brand new releases straight from the kitchen. Discover fresh notes and modern textures.',
+    },
+  },
+  tasteSample: {
+    badge: 'Taste Our Collection',
+    titleMain: 'Try a',
+    titleHighlight: 'Sample Piece',
+    titleSuffix: '',
+    subtitle: 'Before you fall in love with an entire box, let one perfect piece do the talking — available across every chocolate variety in our store.',
+    cardBadgeText: 'Sample Piece',
+    ctaText: 'Explore All Varieties',
+    ctaLink: '/shop',
+    secondaryCtaText: 'Our Artisanal Story',
+    secondaryCtaLink: '/our-story',
+    whyTitle: 'Why We Offer A Sample Piece',
+    whySubtitle: 'Pure passion, complete transparency, and total confidence in every bite.',
+    whyBullets: [
+      {
+        title: 'Taste Before You Commit',
+        desc: 'Every chocolate we craft carries a distinct personality. A sample piece lets you experience the full flavour journey — no guesswork, no regrets.',
+      },
+      {
+        title: "Sourced from the World's Finest Cacao",
+        desc: 'Our cacao is ethically sourced from single-origin plantations across Ecuador, Madagascar & Ghana — each origin telling a different taste story.',
+      },
+      {
+        title: 'Crafted in Small, Artisanal Batches',
+        desc: 'Every piece is tempered by hand in micro-batches, so the flavour profile stays vibrant, layered and unmistakably Chovique.',
+      },
+      {
+        title: 'One Piece — Every Variety in Our Store',
+        desc: 'We offer a sample piece across every chocolate variety we stock — because we believe the right truffle should find the right person.',
+      },
+    ],
+    selectedProductIds: [],
+  },
+  giftHampers: {
+    badge: 'Art of Giving',
+    titleMain: 'Luxury Gift',
+    titleHighlight: 'Hampers',
+    titleSuffix: '',
+    subtitle: 'Celebrate life’s most exquisite moments with Chovique’s bespoke gifting packages and presentation boxes.',
+  },
+  boutique: {
+    badge: 'Featured Chocolates',
+    titleMain: 'Explore Our',
+    titleHighlight: 'Collection',
+    titleSuffix: '',
+    subtitle: 'Browse our complete range of handcrafted chocolates — from pure dark bars to chocolate gift boxes.',
+  },
+  reviews: {
+    badge: 'Customer Love',
+    titleMain: 'What Our',
+    titleHighlight: 'Chocolate Lovers',
+    titleSuffix: 'Say',
+    subtitle: 'Real stories from real people who\'ve experienced the magic of Chovique chocolates.',
+    buttonText: 'Share Your Experience',
+  },
+  instagramReels: {
+    badge: 'Social Buzz',
+    titleMain: 'Trending on',
+    titleHighlight: 'Instagram',
+    titleSuffix: '',
+    subtitle: 'Hover to play our artisanal crafting process and delicious chocolate stories.',
+  },
+};
+
+export interface StoryStep {
+  num: string;
+  title: string;
+  desc: string;
+}
+
+export interface StoryValue {
+  title: string;
+  desc: string;
+}
+
+export interface StoryPageConfig {
+  hero_badge: string;
+  hero_title: string;
+  hero_subtitle: string;
+  hero_image: string;
+  video_url: string;
+  story_badge: string;
+  story_title: string;
+  story_paragraph1: string;
+  story_paragraph2: string;
+  feature1_title: string;
+  feature1_desc: string;
+  feature2_title: string;
+  feature2_desc: string;
+  vision_title: string;
+  vision_text: string;
+  mission_title: string;
+  mission_text: string;
+  steps: StoryStep[];
+  values: StoryValue[];
+}
+
+export const DEFAULT_STORY_PAGE_CONFIG: StoryPageConfig = {
+  hero_badge: 'Heritage & Passion',
+  hero_title: 'The Chovique Story',
+  hero_subtitle: 'Crafting sensory journeys through the purity of cacao since 2020.',
+  hero_image: 'https://images.unsplash.com/photo-1511381939415-e44015466834?auto=format&fit=crop&w=1600&q=80',
+  video_url: 'https://res.cloudinary.com/aiqm7f7b/video/upload/v1790396266/chocolate-world/reels/ig_DdQYj55v0dr.mp4',
+  story_badge: 'Our Beginnings',
+  story_title: 'Born from a Love of Pure Cacao',
+  story_paragraph1: 'Chovique was founded on a simple realization: chocolate should be an experience, not just a sweet. Frustrated by highly processed, sugar-laden confectionery, our founders set out on a global quest to source authentic, single-origin cacao.',
+  story_paragraph2: 'We believe that the best chocolate is a partnership between nature and the chocolatier. By respecting the unique flavor profiles of beans from Madagascar, Ghana, and Ecuador, we celebrate the true heritage of cocoa.',
+  feature1_title: '100% Traceable',
+  feature1_desc: 'Direct relationship with farmers to ensure equity.',
+  feature2_title: 'Micro-Batch Production',
+  feature2_desc: 'Ensuring unmatched precision and quality control.',
+  vision_title: 'Our Vision',
+  vision_text: 'To establish a global standard for luxury chocolate that elevates the growers, honors the Earth, and transforms chocolate consumption into an art form. We envision a future where chocolate is valued as deeply as fine wine, celebrated for its complex terroir and therapeutic purity.',
+  mission_title: 'Our Mission',
+  mission_text: 'To curate extraordinary bean-to-bar masterpieces through sustainable direct-trade partnerships, hand-tempered craftsmanship, and transparent sourcing. We dedicate ourselves to continuous culinary innovation, ensuring that every box of Chovique delivers unmatched premium luxury.',
+  steps: [
+    {
+      num: '01',
+      title: 'Sourcing & Selection',
+      desc: 'Single-origin cocoa beans hand-selected from sustainable farms for their exceptional flavor profiles.',
+    },
+    {
+      num: '02',
+      title: 'Roasting & Grinding',
+      desc: 'Slow-roasted at precise temperatures to unlock deep, complex flavors and ground into silky smooth cocoa liquor.',
+    },
+    {
+      num: '03',
+      title: 'Tempering & Molding',
+      desc: 'Hand-tempered for that perfect snap and glossy finish, then molded into our signature creations.',
+    },
+    {
+      num: '04',
+      title: 'Finishing & Packaging',
+      desc: 'Each piece is inspected, adorned with premium toppings, and nestled into our signature luxury packaging.',
+    },
+  ],
+  values: [
+    {
+      title: 'Sustainable Sourcing',
+      desc: 'We partner directly with family-owned farms, ensuring fair wages, ethical labor, and ecological preservation.',
+    },
+    {
+      title: 'Artisanal Mastery',
+      desc: 'Our chocolates are tempered and decorated by hand in small batches by master chocolatiers.',
+    },
+    {
+      title: 'Pure Ingredients',
+      desc: 'Zero artificial preservatives, emulsifiers, or palm oil. Only pure cocoa butter, organic sugars, and natural infusions.',
+    },
+  ],
+};
+
+export interface ContactPageConfig {
+  hero_badge: string;
+  hero_title: string;
+  hero_subtitle: string;
+  hero_image: string;
+  badge_1: string;
+  badge_2: string;
+  badge_3: string;
+  phone: string;
+  whatsapp: string;
+  email: string;
+  support_hours: string;
+  address: string;
+  instagram?: string;
+  facebook?: string;
+  twitter?: string;
+}
+
+export const DEFAULT_CONTACT_PAGE_CONFIG: ContactPageConfig = {
+  hero_badge: 'CONTACT US',
+  hero_title: "We're Here to Help!",
+  hero_subtitle: 'Have questions about your order, our products, or gifting? Our team is here to make your chocolate experience smooth and delightful.',
+  hero_image: '/assets/contact-hero.png',
+  badge_1: 'Replies within 24 Hours',
+  badge_2: 'Dedicated Support',
+  badge_3: 'Reliable & Quick Assistance',
+  phone: '+91 83098 54870',
+  whatsapp: '+91 83098 54870',
+  email: 'support@chovique.com',
+  support_hours: 'Mon - Sat: 10:00 AM - 8:00 PM | Sunday: 11:00 AM - 6:00 PM',
+  address: '42, MG Road, Indiranagar, Bangalore, Karnataka 560038',
+  instagram: 'https://instagram.com',
+  facebook: 'https://facebook.com',
+  twitter: 'https://x.com',
+};
+
 
 export interface OfflineSale {
   id: string;
@@ -600,6 +885,11 @@ export interface ForgotPasswordPayload {
   email: string;
 }
 
+export interface ForgotPasswordResponse {
+  message: string;
+  expires_in?: number;
+}
+
 export interface ResetPasswordPayload {
   email: string;
   otp: string;
@@ -675,6 +965,11 @@ export interface ProductUpdatePayload {
   nutrition?: NutritionInfo;
   is_available?: boolean;
   isAvailable?: boolean;
+  is_sample?: boolean;
+  isSample?: boolean;
+  sample_price?: number;
+  samplePrice?: number;
+  rating?: number;
 }
 
 export interface ProfileUpdatePayload {

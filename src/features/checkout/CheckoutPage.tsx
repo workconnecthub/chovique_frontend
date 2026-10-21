@@ -459,8 +459,8 @@ export const CheckoutPage: React.FC = () => {
     const errors: Partial<Record<keyof AddressFormData, string>> = {};
     const name = shippingForm.name.trim();
     const phone = shippingForm.phone.trim();
-    const houseNumber = shippingForm.house_number.trim();
-    const street = shippingForm.street.trim();
+    const street = (shippingForm.street || shippingForm.house_number || '').trim();
+    const houseNumber = shippingForm.house_number?.trim() || street;
     const area = shippingForm.area.trim();
     const city = shippingForm.city.trim();
     const state = shippingForm.state.trim();
@@ -473,9 +473,8 @@ export const CheckoutPage: React.FC = () => {
       errors.phone = 'Phone number must contain exactly 10 numeric digits.';
     }
 
-    if (!houseNumber) errors.house_number = 'Flat / House / Door number is required.';
-    if (!street) errors.street = 'Street address is required.';
-    if (!area) errors.area = 'Area / Locality is required.';
+    if (!street) errors.street = 'Flat / House / Street address is required.';
+    if (!area) errors.area = 'Area / Locality / Landmark is required.';
     if (!city) errors.city = 'City is required.';
     if (!state) errors.state = 'State is required.';
 

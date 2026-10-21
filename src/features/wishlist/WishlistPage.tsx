@@ -43,39 +43,7 @@ export const WishlistPage: React.FC<WishlistPageProps> = ({ isEmbedded = false }
     }
   };
 
-  if (role === 'guest') {
-    return (
-      <motion.div
-        variants={pageTransition}
-        initial="initial"
-        animate="animate"
-        exit="exit"
-        style={{
-          paddingTop: isEmbedded ? '20px' : '85px',
-          minHeight: isEmbedded ? '400px' : '70vh',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          textAlign: 'center',
-          background: isEmbedded ? 'transparent' : 'var(--gradient-hero)',
-        }}
-      >
-        <Heart size={64} style={{ color: 'var(--rose-gold)', marginBottom: '24px' }} />
-        <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '2rem', color: 'var(--cream)', marginBottom: '10px' }}>
-          Please Log In
-        </h2>
-        <p style={{ color: 'var(--beige)', marginBottom: '30px', maxWidth: '400px' }}>
-          You must be logged in to view and manage your wishlist.
-        </p>
-        <Link to="/login">
-          <Button variant="gold" size="lg" glow>
-            Log In to Continue
-          </Button>
-        </Link>
-      </motion.div>
-    );
-  }
+
 
   if (wishlist.length === 0) {
     return (

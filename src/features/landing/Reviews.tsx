@@ -7,11 +7,17 @@ import { homeService } from '../../services/homeService';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import type { Testimonial } from '../../types';
-
-
+import { DEFAULT_LANDING_SECTIONS } from '../../types';
 
 export const Reviews: React.FC = () => {
-  const { user, role } = useApp();
+  const { user, role, landingSections } = useApp();
+  const config = landingSections?.reviews || DEFAULT_LANDING_SECTIONS.reviews;
+  const badge = config.badge || 'Customer Love';
+  const titleMain = config.titleMain ?? 'What Our';
+  const titleHighlight = config.titleHighlight ?? 'Chocolate Lovers';
+  const titleSuffix = config.titleSuffix ?? 'Say';
+  const subtitle = config.subtitle || 'Real stories from real people who\'ve experienced the magic of Chovique chocolates.';
+  const buttonText = config.buttonText || 'Share Your Experience';
   const navigate = useNavigate();
   const scrollRef = useRef<HTMLDivElement>(null);
   const [textTestimonials, setTextTestimonials] = useState<Testimonial[]>([]);
@@ -108,15 +114,19 @@ export const Reviews: React.FC = () => {
       <div className="container">
         {/* Header */}
         <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-          <span className="section-label" style={{ justifyContent: 'center' }}>
-            Customer Love
-          </span>
+          {badge && (
+            <span className="section-label" style={{ justifyContent: 'center' }}>
+              {badge}
+            </span>
+          )}
           <h2 className="section-title">
-            What Our <span className="gold">Chocolate Lovers</span> Say
+            {titleMain}{titleHighlight ? <> <span className="gold">{titleHighlight}</span></> : null}{titleSuffix ? ` ${titleSuffix}` : ''}
           </h2>
-          <p className="section-subtitle" style={{ margin: '0 auto 24px auto' }}>
-            Real stories from real people who've experienced the magic of Chovique chocolates.
-          </p>
+          {subtitle && (
+            <p className="section-subtitle" style={{ margin: '0 auto 24px auto' }}>
+              {subtitle}
+            </p>
+          )}
 
           <Button
             variant="gold"
@@ -124,7 +134,7 @@ export const Reviews: React.FC = () => {
             onClick={handleOpenModal}
             style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', fontSize: '0.85rem' }}
           >
-            <MessageSquarePlus size={16} /> Share Your Experience
+            <MessageSquarePlus size={16} /> {buttonText}
           </Button>
         </div>
 

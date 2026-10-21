@@ -11,6 +11,17 @@ import { ApiError } from '../../lib/api';
 const googleClientId = (import.meta.env.VITE_GOOGLE_CLIENT_ID || '').trim();
 const isGoogleAuthEnabled = Boolean(googleClientId && !googleClientId.includes('your_google_client_id'));
 
+const OTP_EXPIRE_SECONDS = Number(import.meta.env.VITE_OTP_EXPIRE_SECONDS) || 300;
+
+const formatOtpTimeLeft = (seconds: number): string => {
+  const mins = Math.floor(seconds / 60);
+  const secs = seconds % 60;
+  if (mins > 0) {
+    return `${mins}:${secs.toString().padStart(2, '0')} min`;
+  }
+  return `${secs}s`;
+};
+
 export const ForgotPasswordPage: React.FC = () => {
   const navigate = useNavigate();
   const { googleLogin } = useApp();
@@ -38,8 +49,8 @@ export const ForgotPasswordPage: React.FC = () => {
   const [error, setError] = useState('');
   const [successInfo, setSuccessInfo] = useState('');
 
-  // 30-Second OTP Timer
-  const [timeLeft, setTimeLeft] = useState(30);
+  // OTP Expiration Timer (configured via env: 5 minutes / 300 seconds)
+  const [timeLeft, setTimeLeft] = useState(OTP_EXPIRE_SECONDS);
 
   useEffect(() => {
     let interval: ReturnType<typeof setInterval> | null = null;
@@ -155,7 +166,7 @@ export const ForgotPasswordPage: React.FC = () => {
       const res = await authService.forgotPassword(email.trim());
       setSuccessInfo(res.message || 'If an account exists for this email, an OTP has been sent.');
       setStep('RESET');
-      setTimeLeft(30);
+      setTimeLeft(res.expires_in || OTP_EXPIRE_SECONDS);
     } catch (err: unknown) {
       let msg = 'Failed to send password reset OTP.';
       if (err instanceof ApiError) {
@@ -183,7 +194,7 @@ export const ForgotPasswordPage: React.FC = () => {
     try {
       const res = await authService.resendForgotOtp(email.trim());
       setSuccessInfo(res.message || 'OTP has been resent successfully.');
-      setTimeLeft(30);
+      setTimeLeft(res.expires_in || OTP_EXPIRE_SECONDS);
     } catch (err: unknown) {
       let msg = 'Failed to resend OTP.';
       if (err instanceof ApiError) {
@@ -458,7 +469,7 @@ export const ForgotPasswordPage: React.FC = () => {
             >
               <span style={{ color: timeLeft > 0 ? '#E5C158' : '#e74c3c', display: 'flex', alignItems: 'center', gap: '5px' }}>
                 <KeyRound size={14} />
-                {timeLeft > 0 ? `OTP expires in ${timeLeft}s` : '⚠️ OTP Expired'}
+                {timeLeft > 0 ? `OTP expires in ${formatOtpTimeLeft(timeLeft)}` : '⚠️ OTP Expired'}
               </span>
               <button
                 type="button"

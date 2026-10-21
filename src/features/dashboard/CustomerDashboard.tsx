@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
@@ -253,24 +253,6 @@ export const CustomerDashboard: React.FC = () => {
         { id: 'profile', label: 'My Profile', icon: User },
         { id: 'addresses', label: 'Addresses', icon: MapPin },
         { id: 'settings', label: 'Account Settings', icon: Settings },
-      ],
-    },
-    {
-      groupTitle: 'ORDERS',
-      items: [
-        { id: 'orders', label: 'Order History', icon: ShoppingBag },
-      ],
-    },
-    {
-      groupTitle: 'SHOPPING',
-      items: [
-        { id: 'coupons', label: 'My Coupons', icon: Tag },
-      ],
-    },
-    {
-      groupTitle: 'REWARDS',
-      items: [
-        { id: 'rewards', label: 'Rewards & Coins', icon: Coins },
       ],
     },
     {
@@ -651,6 +633,37 @@ export const CustomerDashboard: React.FC = () => {
       cancelled = true;
     };
   }, [activeTab]);
+
+  // Merge backend usedCoupons with any coupon usage recorded across customer orders
+  const effectiveUsedCoupons = useMemo(() => {
+    const list: any[] = [...(usedCoupons || [])];
+    const seenCodesAndOrders = new Set(
+      list.map((u) => `${u.order_id || ''}-${(u.code || '').trim().toUpperCase()}`)
+    );
+
+    (orders || []).forEach((ord) => {
+      const code = (ord.coupon_code || (ord as any).couponCode || '').trim().toUpperCase();
+      if (code && !seenCodesAndOrders.has(`${ord.id}-${code}`)) {
+        seenCodesAndOrders.add(`${ord.id}-${code}`);
+        const discountVal = (ord as any).coupon_discount || (ord as any).discount_amount || 0;
+        list.push({
+          id: `ord-coupon-${ord.id}`,
+          code: code,
+          name: code,
+          description: 'Coupon applied on chocolate order.',
+          order_id: ord.id,
+          discount_received: discountVal,
+          discount_str: discountVal > 0 ? `₹${discountVal} OFF` : 'DISCOUNT APPLIED',
+          used_at: ord.created_at
+            ? new Date(ord.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+            : 'Recently',
+          status: 'Used',
+        });
+      }
+    });
+
+    return list;
+  }, [usedCoupons, orders]);
 
   // --- Overview Coupons: separate state for the overview tab's coupon preview ---
   // Fetched on mount (overview tab) so the count and cards are always live from the backend.
@@ -3595,8 +3608,30 @@ export const CustomerDashboard: React.FC = () => {
                 {/* 3. ORDER HISTORY LIST VIEW (MAIN ORDERS VIEW) */}
                 {(!selectedOrder || orderSubView === 'list') && (
                   <div>
+                    {/* Dedicated Back to Overview Button */}
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab('overview')}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        color: 'var(--gold)',
+                        fontSize: '0.9rem',
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        marginBottom: isMobile ? '12px' : '18px',
+                        padding: 0,
+                        transition: 'opacity 0.2s',
+                      }}
+                    >
+                      <ArrowLeft size={16} /> Back to Overview
+                    </button>
+
                     {/* Header */}
-                    <div style={{ marginBottom: isMobile ? '12px' : '24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
+                    <div style={{ marginBottom: isMobile ? '12px' : '20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
                       <div>
                         <h2 style={{ fontFamily: 'var(--font-display)', fontSize: isMobile ? '1.35rem' : '1.8rem', color: 'var(--cream)', margin: '0 0 4px 0', fontWeight: 700 }}>
                           Order History
@@ -3630,151 +3665,94 @@ export const CustomerDashboard: React.FC = () => {
                       </button>
                     </div>
 
-                    {/* Filter Tabs & Search Row */}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? '10px' : '16px', marginBottom: isMobile ? '16px' : '28px' }}>
-                      {!isMobileGrid ? (
-                        <>
-                          {/* Desktop: Status Filters Buttons */}
-                          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                            {['All Orders', 'Pending', 'Confirmed', 'Processing', 'Shipped', 'Out for Delivery', 'Delivered', 'Cancelled', 'Returned'].map((statusOption) => {
-                              const filterVal = statusOption === 'All Orders' ? 'All' : statusOption;
-                              const isActive = orderStatusFilter === filterVal;
-                              return (
-                                <button
-                                  key={statusOption}
-                                  type="button"
-                                  onClick={() => setOrderStatusFilter(filterVal)}
-                                  style={{
-                                    padding: '8px 18px',
-                                    borderRadius: '8px',
-                                    fontSize: '0.85rem',
-                                    fontWeight: 700,
-                                    border: isActive ? '1px solid var(--gold)' : '1px solid rgba(var(--gold-rgb),  0.2)',
-                                    background: isActive ? 'var(--gold)' : 'rgba(18, 14, 11, 0.95)',
-                                    color: isActive ? 'var(--black)' : 'rgba(255, 255, 255, 0.8)',
-                                    cursor: 'pointer',
-                                    transition: 'all 0.2s ease',
-                                  }}
-                                >
-                                  {statusOption}
-                                </button>
-                              );
-                            })}
-                          </div>
+                    {/* Filter Dropdown, Search Input, and Sort Dropdown in a Single Row */}
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '12px',
+                        flexWrap: isMobile ? 'wrap' : 'nowrap',
+                        marginBottom: isMobile ? '16px' : '24px',
+                      }}
+                    >
+                      {/* Search Input */}
+                      <div style={{ position: 'relative', flex: 1, minWidth: isMobile ? '100%' : '260px' }}>
+                        <Search
+                          size={16}
+                          style={{
+                            position: 'absolute',
+                            left: '14px',
+                            top: '50%',
+                            transform: 'translateY(-50%)',
+                            color: 'rgba(255, 255, 255, 0.4)',
+                          }}
+                        />
+                        <input
+                          type="text"
+                          placeholder="Search by Order ID"
+                          value={orderSearchQuery}
+                          onChange={(e) => setOrderSearchQuery(e.target.value)}
+                          style={{
+                            width: '100%',
+                            padding: '10px 14px 10px 38px',
+                            borderRadius: '8px',
+                            background: 'rgba(18, 14, 11, 0.95)',
+                            border: '1px solid rgba(var(--gold-rgb), 0.3)',
+                            color: 'var(--cream)',
+                            fontSize: '0.88rem',
+                            outline: 'none',
+                            boxSizing: 'border-box',
+                          }}
+                        />
+                      </div>
 
-                          {/* Desktop: Search Input & Sort Dropdown */}
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '14px' }}>
-                            <div style={{ position: 'relative', width: '320px' }}>
-                              <Search size={16} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'rgba(255, 255, 255, 0.4)' }} />
-                              <input
-                                type="text"
-                                placeholder="Search by Order ID"
-                                value={orderSearchQuery}
-                                onChange={(e) => setOrderSearchQuery(e.target.value)}
-                                style={{
-                                  width: '100%',
-                                  padding: '10px 14px 10px 38px',
-                                  borderRadius: '8px',
-                                  background: 'rgba(18, 14, 11, 0.95)',
-                                  border: '1px solid rgba(var(--gold-rgb),  0.3)',
-                                  color: 'var(--cream)',
-                                  fontSize: '0.88rem',
-                                  outline: 'none',
-                                  boxSizing: 'border-box',
-                                }}
-                              />
-                            </div>
-                            <select
-                              value={orderSortOrder}
-                              onChange={(e) => setOrderSortOrder(e.target.value as 'newest' | 'oldest')}
-                              style={{
-                                padding: '10px 16px',
-                                borderRadius: '8px',
-                                background: '#120e0b',
-                                border: '1px solid rgba(var(--gold-rgb),  0.3)',
-                                color: 'var(--cream)',
-                                fontSize: '0.88rem',
-                                outline: 'none',
-                                cursor: 'pointer',
-                              }}
-                            >
-                              <option value="newest" style={{ background: '#120e0b' }}>Newest First</option>
-                              <option value="oldest" style={{ background: '#120e0b' }}>Oldest First</option>
-                            </select>
-                          </div>
-                        </>
-                      ) : (
-                        <>
-                          {/* Mobile: Search Input Top */}
-                          <div style={{ position: 'relative', width: '100%' }}>
-                            <Search size={16} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'rgba(255, 255, 255, 0.4)' }} />
-                            <input
-                              type="text"
-                              placeholder="Search by Order ID"
-                              value={orderSearchQuery}
-                              onChange={(e) => setOrderSearchQuery(e.target.value)}
-                              style={{
-                                width: '100%',
-                                padding: '10px 14px 10px 38px',
-                                borderRadius: '8px',
-                                background: 'rgba(18, 14, 11, 0.95)',
-                                border: '1px solid rgba(var(--gold-rgb),  0.3)',
-                                color: 'var(--cream)',
-                                fontSize: '0.88rem',
-                                outline: 'none',
-                                boxSizing: 'border-box',
-                              }}
-                            />
-                          </div>
+                      {/* Status Filter Dropdown */}
+                      <select
+                        value={orderStatusFilter === 'All' ? 'All Orders' : orderStatusFilter}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setOrderStatusFilter(val === 'All Orders' ? 'All' : val);
+                        }}
+                        style={{
+                          padding: '10px 14px',
+                          borderRadius: '8px',
+                          background: '#120e0b',
+                          border: '1px solid rgba(var(--gold-rgb), 0.3)',
+                          color: 'var(--cream)',
+                          fontSize: '0.88rem',
+                          outline: 'none',
+                          cursor: 'pointer',
+                          minWidth: isMobile ? 'calc(50% - 6px)' : '180px',
+                          flexShrink: 0,
+                        }}
+                      >
+                        {['All Orders', 'Pending', 'Confirmed', 'Processing', 'Shipped', 'Out for Delivery', 'Delivered', 'Cancelled', 'Returned'].map((statusOption) => (
+                          <option key={statusOption} value={statusOption} style={{ background: '#120e0b' }}>
+                            {statusOption}
+                          </option>
+                        ))}
+                      </select>
 
-                          {/* Mobile: Status Dropdown & Sort Dropdown side by side */}
-                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                            <select
-                              value={orderStatusFilter === 'All' ? 'All Orders' : orderStatusFilter}
-                              onChange={(e) => {
-                                const val = e.target.value;
-                                setOrderStatusFilter(val === 'All Orders' ? 'All' : val);
-                              }}
-                              style={{
-                                padding: '10px 12px',
-                                borderRadius: '8px',
-                                background: '#120e0b',
-                                border: '1px solid rgba(var(--gold-rgb),  0.3)',
-                                color: 'var(--cream)',
-                                fontSize: '0.85rem',
-                                outline: 'none',
-                                cursor: 'pointer',
-                                width: '100%',
-                              }}
-                            >
-                              {['All Orders', 'Pending', 'Confirmed', 'Processing', 'Shipped', 'Out for Delivery', 'Delivered', 'Cancelled', 'Returned'].map((statusOption) => (
-                                <option key={statusOption} value={statusOption} style={{ background: '#120e0b' }}>
-                                  {statusOption}
-                                </option>
-                              ))}
-                            </select>
-
-                            <select
-                              value={orderSortOrder}
-                              onChange={(e) => setOrderSortOrder(e.target.value as 'newest' | 'oldest')}
-                              style={{
-                                padding: '10px 12px',
-                                borderRadius: '8px',
-                                background: '#120e0b',
-                                border: '1px solid rgba(var(--gold-rgb),  0.3)',
-                                color: 'var(--cream)',
-                                fontSize: '0.85rem',
-                                outline: 'none',
-                                cursor: 'pointer',
-                                width: '100%',
-                              }}
-                            >
-                              <option value="newest" style={{ background: '#120e0b' }}>Newest First</option>
-                              <option value="oldest" style={{ background: '#120e0b' }}>Oldest First</option>
-                            </select>
-                          </div>
-                        </>
-                      )}
+                      {/* Sort Dropdown */}
+                      <select
+                        value={orderSortOrder}
+                        onChange={(e) => setOrderSortOrder(e.target.value as 'newest' | 'oldest')}
+                        style={{
+                          padding: '10px 14px',
+                          borderRadius: '8px',
+                          background: '#120e0b',
+                          border: '1px solid rgba(var(--gold-rgb), 0.3)',
+                          color: 'var(--cream)',
+                          fontSize: '0.88rem',
+                          outline: 'none',
+                          cursor: 'pointer',
+                          minWidth: isMobile ? 'calc(50% - 6px)' : '150px',
+                          flexShrink: 0,
+                        }}
+                      >
+                        <option value="newest" style={{ background: '#120e0b' }}>Newest First</option>
+                        <option value="oldest" style={{ background: '#120e0b' }}>Oldest First</option>
+                      </select>
                     </div>
 
                     {/* Order Cards List */}
@@ -4900,6 +4878,28 @@ export const CustomerDashboard: React.FC = () => {
             {/* REWARDS & COINS / WALLET PANEL */}
             {activeTab === 'rewards' && (
               <div>
+                {/* Dedicated Back to Overview Button */}
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('overview')}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: 'var(--gold)',
+                    fontSize: '0.9rem',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    marginBottom: isMobile ? '12px' : '18px',
+                    padding: 0,
+                    transition: 'opacity 0.2s',
+                  }}
+                >
+                  <ArrowLeft size={16} /> Back to Overview
+                </button>
+
                 {/* Page Title & Subtitle + Tab Buttons */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: isMobile ? '14px' : '28px', flexWrap: 'wrap', gap: '10px' }}>
                   <div>
@@ -4907,7 +4907,7 @@ export const CustomerDashboard: React.FC = () => {
                       Chovique Reward Coins &amp; Wallet
                     </h2>
                     <p style={{ color: 'rgba(255, 255, 255, 0.6)', fontSize: isMobile ? '0.8rem' : '0.9rem', margin: 0 }}>
-                      Track your coin balance, redemption history, and reward rules.
+                      Track your coin balance and view reward rules.
                     </p>
                   </div>
 
@@ -4985,448 +4985,6 @@ export const CustomerDashboard: React.FC = () => {
                           <span style={{ color: 'rgba(255, 255, 255, 0.65)', fontSize: '0.78rem' }}>• Will be credited automatically within {wallet?.settings?.credit_delay_hours || 24} hours of order delivery</span>
                         </div>
                       )}
-                    </div>
-
-                    {/* TRANSACTION LEDGER & AUDIT HISTORY */}
-                    <div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '16px' }}>
-                        <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1.4rem', color: 'var(--cream)', margin: 0, fontWeight: 700 }}>
-                          Transaction Ledger &amp; Audit History
-                        </h3>
-
-                        {/* Filter Tabs Row */}
-                        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                          {[
-                            { key: 'ALL', label: 'All' },
-                            { key: 'EARN', label: 'Earned' },
-                            { key: 'REDEEM', label: 'Redeemed' },
-                            { key: 'ADJUSTMENT', label: 'Adjustments' },
-                          ].map((t) => {
-                            const isActive = walletTxTypeFilter === t.key;
-                            return (
-                              <button
-                                key={t.key}
-                                type="button"
-                                onClick={() => {
-                                  setWalletTxTypeFilter(t.key as any);
-                                  setWalletTxsPage(1);
-                                }}
-                                style={{
-                                  padding: '6px 14px',
-                                  borderRadius: '6px',
-                                  border: isActive ? '1px solid var(--gold)' : '1px solid rgba(255, 255, 255, 0.12)',
-                                  background: isActive ? 'var(--gold)' : 'rgba(255, 255, 255, 0.05)',
-                                  color: isActive ? 'var(--black)' : '#f5efe6',
-                                  fontSize: '0.82rem',
-                                  fontWeight: 700,
-                                  cursor: 'pointer',
-                                  transition: 'all 0.2s ease',
-                                }}
-                              >
-                                {t.label}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
-
-                      {/* Date Filters Row */}
-                      <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '20px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '5px', flex: 1, minWidth: 0 }}>
-                          <span style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.6)', whiteSpace: 'nowrap' }}>From:</span>
-                          <input
-                            type="date"
-                            value={walletDateFrom}
-                            onChange={(e) => setWalletDateFrom(e.target.value)}
-                            style={{
-                              flex: 1,
-                              minWidth: 0,
-                              padding: '6px 6px',
-                              borderRadius: '6px',
-                              background: 'rgba(0,0,0,0.3)',
-                              border: '1px solid rgba(var(--gold-rgb), 0.3)',
-                              color: 'var(--cream)',
-                              fontSize: '0.78rem',
-                              colorScheme: 'dark',
-                            }}
-                          />
-                        </div>
-
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '5px', flex: 1, minWidth: 0 }}>
-                          <span style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.6)', whiteSpace: 'nowrap' }}>To:</span>
-                          <input
-                            type="date"
-                            value={walletDateTo}
-                            onChange={(e) => setWalletDateTo(e.target.value)}
-                            style={{
-                              flex: 1,
-                              minWidth: 0,
-                              padding: '6px 6px',
-                              borderRadius: '6px',
-                              background: 'rgba(0,0,0,0.3)',
-                              border: '1px solid rgba(var(--gold-rgb), 0.3)',
-                              color: 'var(--cream)',
-                              fontSize: '0.78rem',
-                              colorScheme: 'dark',
-                            }}
-                          />
-                        </div>
-
-                        {(walletDateFrom || walletDateTo) && (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setWalletDateFrom('');
-                              setWalletDateTo('');
-                            }}
-                            style={{
-                              background: 'none',
-                              border: 'none',
-                              color: 'var(--gold)',
-                              fontSize: '0.78rem',
-                              fontWeight: 600,
-                              cursor: 'pointer',
-                              whiteSpace: 'nowrap',
-                              flexShrink: 0,
-                            }}
-                          >
-                            Reset
-                          </button>
-                        )}
-                      </div>
-
-                      {/* Loading State */}
-                      {isWalletTxsLoading ? (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: 'rgba(255, 255, 255, 0.7)', padding: '48px 0', justifyContent: 'center' }}>
-                          <Loader2 size={20} style={{ animation: 'spin 1s linear infinite', color: 'var(--gold)' }} />
-                          <span style={{ fontSize: '0.95rem' }}>Loading reward transactions...</span>
-                        </div>
-                      ) : walletTxsError ? (
-                        <div
-                          style={{
-                            padding: '20px',
-                            background: 'rgba(231, 76, 60, 0.12)',
-                            border: '1px solid #e74c3c',
-                            borderRadius: '10px',
-                            color: '#e74c3c',
-                            textAlign: 'center',
-                          }}
-                        >
-                          <p style={{ margin: '0 0 12px 0', fontWeight: 600 }}>{walletTxsError}</p>
-                          <Button variant="gold" size="sm" onClick={() => fetchWalletTransactions()}>
-                            Retry
-                          </Button>
-                        </div>
-                      ) : (() => {
-                        const filteredTxs = walletTxs.filter((tx) => {
-                          if (!tx.created_at) return true;
-                          const txTime = new Date(tx.created_at).getTime();
-                          if (walletDateFrom) {
-                            const fromTime = new Date(walletDateFrom).getTime();
-                            if (txTime < fromTime) return false;
-                          }
-                          if (walletDateTo) {
-                            const toTime = new Date(walletDateTo).setHours(23, 59, 59, 999);
-                            if (txTime > toTime) return false;
-                          }
-                          return true;
-                        });
-
-                        if (filteredTxs.length === 0) {
-                          return (
-                            <div
-                              style={{
-                                padding: '56px 24px',
-                                background: 'rgba(18, 14, 11, 0.95)',
-                                border: '1px dashed rgba(var(--gold-rgb),  0.3)',
-                                borderRadius: '14px',
-                                textAlign: 'center',
-                                boxShadow: '0 8px 30px rgba(0, 0, 0, 0.6)',
-                              }}
-                            >
-                              <div
-                                style={{
-                                  width: '72px',
-                                  height: '72px',
-                                  borderRadius: '50%',
-                                  background: 'rgba(var(--gold-rgb),  0.1)',
-                                  border: '1px solid rgba(var(--gold-rgb),  0.3)',
-                                  display: 'inline-flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
-                                  marginBottom: '20px',
-                                }}
-                              >
-                                <Coins size={36} style={{ color: 'var(--gold)' }} />
-                              </div>
-                              <h3 style={{ color: 'var(--cream)', margin: '0 0 8px 0', fontSize: '1.4rem', fontWeight: 700, fontFamily: 'var(--font-display)' }}>
-                                No Reward Transactions Yet
-                              </h3>
-                              <p style={{ color: 'rgba(255, 255, 255, 0.65)', margin: '0 0 28px 0', fontSize: '0.92rem' }}>
-                                Earn Chovique Coins by shopping and redeem them on future orders.
-                              </p>
-                              <Button variant="gold" size="md" glow onClick={() => navigate('/shop')}>
-                                SHOP NOW
-                              </Button>
-                            </div>
-                          );
-                        }
-
-                        return (
-                          <div
-                            style={{
-                              background: 'rgba(18, 14, 11, 0.95)',
-                              border: '1px solid rgba(var(--gold-rgb),  0.25)',
-                              borderRadius: '14px',
-                              overflow: 'hidden',
-                              boxShadow: '0 8px 30px rgba(0, 0, 0, 0.7)',
-                            }}
-                          >
-                            {isMobileGrid ? (
-                              /* MOBILE: Card layout */
-                              <div style={{ display: 'flex', flexDirection: 'column', gap: '1px', background: 'rgba(255,255,255,0.04)' }}>
-                                {filteredTxs.map((tx) => {
-                                  const tType = (tx.type || '').toUpperCase();
-                                  const desc = (tx.description || '').toLowerCase();
-                                  const isWelcome = tType.includes('WELCOME') || tType.includes('ACCOUNT') || desc.includes('welcome') || desc.includes('registration');
-                                  const isOrderReward = (tType.includes('ORDER') || (tType === 'EARN' && tx.order_id)) && !isWelcome;
-                                  const isRedeem = tType.includes('REDEEM');
-                                  const isEarn = !isRedeem && !isWelcome && !isOrderReward && (tType === 'EARN' || tx.coins > 0);
-
-                                  let typeLabel = 'ADJUSTMENT';
-                                  let typeBadgeColor = '#f1c40f';
-                                  let typeBadgeBg = 'rgba(241,196,15,0.15)';
-
-                                  if (isWelcome) {
-                                    typeLabel = 'WELCOME BONUS';
-                                    typeBadgeColor = 'var(--gold)';
-                                    typeBadgeBg = 'rgba(var(--gold-rgb), 0.18)';
-                                  } else if (isOrderReward) {
-                                    typeLabel = 'ORDER REWARD';
-                                    typeBadgeColor = '#3498db';
-                                    typeBadgeBg = 'rgba(52,152,219,0.15)';
-                                  } else if (isRedeem) {
-                                    typeLabel = 'REDEEM';
-                                    typeBadgeColor = '#e74c3c';
-                                    typeBadgeBg = 'rgba(231,76,60,0.15)';
-                                  } else if (isEarn) {
-                                    typeLabel = 'EARN';
-                                    typeBadgeColor = '#2ecc71';
-                                    typeBadgeBg = 'rgba(46,204,113,0.15)';
-                                  }
-
-                                  const isPending = (tx as any).is_pending || (tx as any).status === 'PENDING';
-                                  const delayHours = (tx as any).delay_hours || wallet?.settings?.credit_delay_hours || 24;
-                                  const statusBadge = isPending ? (
-                                    <span style={{ fontSize: '0.72rem', color: '#f1c40f', background: 'rgba(241,196,15,0.12)', border: '1px solid rgba(241,196,15,0.3)', padding: '2px 6px', borderRadius: '4px', fontWeight: 600 }}>⏳ Within {delayHours}h</span>
-                                  ) : isWelcome ? (
-                                    <span style={{ fontSize: '0.72rem', color: '#2ecc71', background: 'rgba(46,204,113,0.12)', border: '1px solid rgba(46,204,113,0.3)', padding: '2px 6px', borderRadius: '4px', fontWeight: 600 }}>✓ Added to Wallet</span>
-                                  ) : isOrderReward ? (
-                                    <span style={{ fontSize: '0.72rem', color: '#2ecc71', background: 'rgba(46,204,113,0.12)', border: '1px solid rgba(46,204,113,0.3)', padding: '2px 6px', borderRadius: '4px', fontWeight: 600 }}>✓ Available</span>
-                                  ) : null;
-
-                                  const absCoins = Math.abs(tx.coins);
-                                  const isPositive = tx.coins > 0 || isEarn || isWelcome || isOrderReward;
-                                  const formattedCoins = isPositive ? `+${absCoins} Coins` : `−${absCoins} Coins`;
-                                  const coinsColor = isWelcome ? 'var(--gold)' : isEarn || isOrderReward ? '#2ecc71' : isRedeem ? '#e74c3c' : 'var(--gold)';
-                                  let dateStr = 'Recently';
-                                  if (tx.created_at) {
-                                    try { dateStr = new Date(tx.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }); } catch { dateStr = tx.created_at; }
-                                  }
-                                  return (
-                                    <div key={tx.id} style={{ background: 'rgba(18,14,11,0.98)', padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                                          <span style={{ fontSize: '0.72rem', fontWeight: 800, letterSpacing: '0.5px', padding: '3px 10px', borderRadius: '6px', background: typeBadgeBg, color: typeBadgeColor, border: `1px solid ${typeBadgeColor}`, textTransform: 'uppercase' }}>● {typeLabel}</span>
-                                          {statusBadge}
-                                        </div>
-                                        <span style={{ fontWeight: 800, color: coinsColor, fontSize: '0.95rem' }}>{formattedCoins}</span>
-                                      </div>
-                                      <div style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.7)', lineHeight: 1.4 }}>{tx.description || (isWelcome ? 'Registration welcome gift' : isOrderReward ? 'Coins earned for purchase' : isRedeem ? 'Coins redeemed on order' : 'Reward adjustment')}</div>
-                                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '6px' }}>
-                                        <span style={{ fontSize: '0.76rem', color: 'rgba(255,255,255,0.45)' }}>{dateStr}</span>
-                                        {tx.order_id ? (
-                                          <span onClick={() => setActiveTab('orders')} style={{ fontSize: '0.76rem', fontWeight: 700, color: 'var(--gold)', background: 'rgba(var(--gold-rgb), 0.1)', border: '1px solid rgba(var(--gold-rgb), 0.3)', padding: '3px 8px', borderRadius: '6px', cursor: 'pointer' }}>Order #{tx.order_id.slice(-8)}</span>
-                                        ) : <span style={{ fontSize: '0.76rem', color: 'rgba(255,255,255,0.3)' }}>—</span>}
-                                      </div>
-                                    </div>
-                                  );
-                                })}
-                              </div>
-                            ) : (
-                              /* DESKTOP: Table layout */
-                              <div style={{ overflowX: 'auto' }}>
-                                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.85rem', tableLayout: 'fixed' }}>
-                                  <colgroup>
-                                    <col style={{ width: '110px' }} />
-                                    <col style={{ width: '145px' }} />
-                                    <col style={{ width: '110px' }} />
-                                    <col />
-                                    <col style={{ width: '140px' }} />
-                                  </colgroup>
-                                  <thead>
-                                    <tr style={{ background: 'rgba(0, 0, 0, 0.4)', borderBottom: '1px solid rgba(var(--gold-rgb),  0.2)' }}>
-                                      <th style={{ padding: '12px 14px', color: 'var(--gold)', fontWeight: 700, whiteSpace: 'nowrap' }}>Date</th>
-                                      <th style={{ padding: '12px 14px', color: 'var(--gold)', fontWeight: 700, whiteSpace: 'nowrap' }}>Type</th>
-                                      <th style={{ padding: '12px 14px', color: 'var(--gold)', fontWeight: 700, whiteSpace: 'nowrap' }}>Amount</th>
-                                      <th style={{ padding: '12px 14px', color: 'var(--gold)', fontWeight: 700 }}>Description</th>
-                                      <th style={{ padding: '12px 14px', color: 'var(--gold)', fontWeight: 700, textAlign: 'right', whiteSpace: 'nowrap' }}>Order Ref</th>
-                                    </tr>
-                                  </thead>
-                                  <tbody>
-                                    {filteredTxs.map((tx) => {
-                                      const tType = (tx.type || '').toUpperCase();
-                                      const desc = (tx.description || '').toLowerCase();
-                                      const isWelcome = tType.includes('WELCOME') || tType.includes('ACCOUNT') || desc.includes('welcome') || desc.includes('registration');
-                                      const isOrderReward = (tType.includes('ORDER') || (tType === 'EARN' && tx.order_id)) && !isWelcome;
-                                      const isRedeem = tType.includes('REDEEM');
-                                      const isEarn = !isRedeem && !isWelcome && !isOrderReward && (tType === 'EARN' || tx.coins > 0);
-
-                                      let typeLabel = 'ADJUSTMENT';
-                                      let typeBadgeColor = '#f1c40f';
-                                      let typeBadgeBg = 'rgba(241, 196, 15, 0.15)';
-
-                                      if (isWelcome) {
-                                        typeLabel = 'WELCOME BONUS';
-                                        typeBadgeColor = 'var(--gold)';
-                                        typeBadgeBg = 'rgba(var(--gold-rgb),  0.18)';
-                                      } else if (isOrderReward) {
-                                        typeLabel = 'ORDER REWARD';
-                                        typeBadgeColor = '#3498db';
-                                        typeBadgeBg = 'rgba(52, 152, 219, 0.15)';
-                                      } else if (isRedeem) {
-                                        typeLabel = 'REDEEM';
-                                        typeBadgeColor = '#e74c3c';
-                                        typeBadgeBg = 'rgba(231, 76, 60, 0.15)';
-                                      } else if (isEarn) {
-                                        typeLabel = 'EARN';
-                                        typeBadgeColor = '#2ecc71';
-                                        typeBadgeBg = 'rgba(46, 204, 113, 0.15)';
-                                      }
-
-                                      const isPending = (tx as any).is_pending || (tx as any).status === 'PENDING';
-                                      const delayHours = (tx as any).delay_hours || wallet?.settings?.credit_delay_hours || 24;
-
-                                      const absCoins = Math.abs(tx.coins);
-                                      const isPositive = tx.coins > 0 || isEarn || isWelcome || isOrderReward;
-                                      const formattedCoins = isPositive ? `+${absCoins} Coins` : `−${absCoins} Coins`;
-                                      const coinsColor = isWelcome ? 'var(--gold)' : isEarn || isOrderReward ? '#2ecc71' : isRedeem ? '#e74c3c' : 'var(--gold)';
-                                      let dateStr = 'Recently';
-                                      if (tx.created_at) {
-                                        try {
-                                          dateStr = new Date(tx.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
-                                        } catch { dateStr = tx.created_at; }
-                                      }
-                                      return (
-                                        <tr key={tx.id} style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.06)', transition: 'background 0.2s ease' }}>
-                                          <td style={{ padding: '12px 14px', color: 'rgba(255, 255, 255, 0.8)', whiteSpace: 'nowrap' }}>{dateStr}</td>
-                                          <td style={{ padding: '12px 14px', whiteSpace: 'nowrap' }}>
-                                            <span style={{ fontSize: '0.7rem', fontWeight: 800, letterSpacing: '0.5px', padding: '3px 8px', borderRadius: '6px', background: typeBadgeBg, color: typeBadgeColor, border: `1px solid ${typeBadgeColor}`, textTransform: 'uppercase', whiteSpace: 'nowrap' }}>● {typeLabel}</span>
-                                          </td>
-                                          <td style={{ padding: '12px 14px', fontWeight: 800, color: coinsColor, fontSize: '0.9rem', whiteSpace: 'nowrap' }}>{formattedCoins}</td>
-                                          <td style={{ padding: '12px 14px', color: 'rgba(255, 255, 255, 0.7)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={tx.description || ''}>
-                                            <span>{tx.description || (isWelcome ? 'Registration welcome bonus' : isOrderReward ? 'Coins earned for purchase' : isRedeem ? 'Coins redeemed on order' : 'Reward adjustment')}</span>
-                                            {isPending && (
-                                              <span style={{ marginLeft: '8px', fontSize: '0.72rem', color: '#f1c40f', background: 'rgba(241,196,15,0.12)', border: '1px solid rgba(241,196,15,0.3)', padding: '2px 6px', borderRadius: '4px', fontWeight: 600 }}>
-                                                ⏳ Added within {delayHours}h
-                                              </span>
-                                            )}
-                                          </td>
-                                          <td style={{ padding: '12px 14px', textAlign: 'right', whiteSpace: 'nowrap' }}>
-                                            {tx.order_id ? (
-                                              <span onClick={() => setActiveTab('orders')} style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--gold)', background: 'rgba(var(--gold-rgb),  0.1)', border: '1px solid rgba(var(--gold-rgb),  0.3)', padding: '3px 8px', borderRadius: '6px', cursor: 'pointer', whiteSpace: 'nowrap' }}>#{tx.order_id.slice(-8)}</span>
-                                            ) : (
-                                              <span style={{ color: 'rgba(255, 255, 255, 0.35)', fontSize: '0.8rem' }}>—</span>
-                                            )}
-                                          </td>
-                                        </tr>
-                                      );
-                                    })}
-                                  </tbody>
-                                </table>
-                              </div>
-                            )}
-
-                            {/* Pagination Footer */}
-                            <div
-                              style={{
-                                padding: '16px 20px',
-                                background: 'rgba(0, 0, 0, 0.3)',
-                                borderTop: '1px solid rgba(var(--gold-rgb),  0.15)',
-                                display: 'flex',
-                                justifyContent: 'space-between',
-                                alignItems: 'center',
-                                flexWrap: 'wrap',
-                                gap: '12px',
-                                fontSize: '0.84rem',
-                                color: 'rgba(255, 255, 255, 0.65)',
-                              }}
-                            >
-                              <div>
-                                Showing <strong style={{ color: 'var(--cream)' }}>{walletTxsTotal > 0 ? (walletTxsPage - 1) * 10 + 1 : 0}</strong>–<strong style={{ color: 'var(--cream)' }}>{Math.min(walletTxsPage * 10, walletTxsTotal)}</strong> of <strong style={{ color: 'var(--cream)' }}>{walletTxsTotal}</strong> transactions
-                              </div>
-
-                              <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
-                                <button
-                                  type="button"
-                                  disabled={walletTxsPage <= 1}
-                                  onClick={() => setWalletTxsPage((p) => Math.max(1, p - 1))}
-                                  style={{
-                                    padding: '6px 12px',
-                                    borderRadius: '6px',
-                                    background: walletTxsPage > 1 ? 'rgba(var(--gold-rgb),  0.15)' : 'rgba(255, 255, 255, 0.05)',
-                                    color: walletTxsPage > 1 ? 'var(--gold)' : 'rgba(255, 255, 255, 0.3)',
-                                    border: walletTxsPage > 1 ? '1px solid rgba(var(--gold-rgb),  0.4)' : '1px solid rgba(255, 255, 255, 0.1)',
-                                    fontSize: '0.8rem',
-                                    fontWeight: 700,
-                                    cursor: walletTxsPage > 1 ? 'pointer' : 'not-allowed',
-                                  }}
-                                >
-                                  ← Previous
-                                </button>
-
-                                {Array.from({ length: walletTxsPages }, (_, i) => i + 1).map((pg) => (
-                                  <button
-                                    key={pg}
-                                    type="button"
-                                    onClick={() => setWalletTxsPage(pg)}
-                                    style={{
-                                      padding: '6px 10px',
-                                      borderRadius: '6px',
-                                      background: pg === walletTxsPage ? 'var(--gold)' : 'rgba(255, 255, 255, 0.05)',
-                                      color: pg === walletTxsPage ? 'var(--black)' : '#f5efe6',
-                                      border: pg === walletTxsPage ? '1px solid var(--gold)' : '1px solid rgba(255, 255, 255, 0.1)',
-                                      fontSize: '0.8rem',
-                                      fontWeight: 700,
-                                      cursor: 'pointer',
-                                    }}
-                                  >
-                                    {pg}
-                                  </button>
-                                ))}
-
-                                <button
-                                  type="button"
-                                  disabled={walletTxsPage >= walletTxsPages}
-                                  onClick={() => setWalletTxsPage((p) => Math.min(walletTxsPages, p + 1))}
-                                  style={{
-                                    padding: '6px 12px',
-                                    borderRadius: '6px',
-                                    background: walletTxsPage < walletTxsPages ? 'rgba(var(--gold-rgb),  0.15)' : 'rgba(255, 255, 255, 0.05)',
-                                    color: walletTxsPage < walletTxsPages ? 'var(--gold)' : 'rgba(255, 255, 255, 0.3)',
-                                    border: walletTxsPage < walletTxsPages ? '1px solid rgba(var(--gold-rgb),  0.4)' : '1px solid rgba(255, 255, 255, 0.1)',
-                                    fontSize: '0.8rem',
-                                    fontWeight: 700,
-                                    cursor: walletTxsPage < walletTxsPages ? 'pointer' : 'not-allowed',
-                                  }}
-                                >
-                                  Next →
-                                </button>
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })()}
                     </div>
                   </div>
                 )}
@@ -5515,6 +5073,28 @@ export const CustomerDashboard: React.FC = () => {
             {/* COUPONS PANEL */}
             {activeTab === 'coupons' && (
               <div>
+                {/* Dedicated Back to Overview Button */}
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('overview')}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: 'var(--gold)',
+                    fontSize: '0.9rem',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    marginBottom: isMobile ? '12px' : '18px',
+                    padding: 0,
+                    transition: 'opacity 0.2s',
+                  }}
+                >
+                  <ArrowLeft size={16} /> Back to Overview
+                </button>
+
                 {/* SECTION 1: AVAILABLE COUPONS */}
                 <div style={{ marginBottom: isMobile ? '16px' : '32px' }}>
                   <div style={{ marginBottom: isMobile ? '10px' : '20px' }}>
@@ -5536,7 +5116,7 @@ export const CustomerDashboard: React.FC = () => {
                       {couponsError}
                     </div>
                   ) : (() => {
-                      const uniqueCoupons = getAvailableCouponsList(coupons, usedCoupons);
+                      const uniqueCoupons = getAvailableCouponsList(coupons, effectiveUsedCoupons);
 
                       if (uniqueCoupons.length === 0) {
                         return (
@@ -5671,24 +5251,44 @@ export const CustomerDashboard: React.FC = () => {
 
                 {/* SECTION 2: USED COUPONS HISTORY */}
                 <div style={{ marginTop: '40px', paddingTop: '32px', borderTop: '1px solid rgba(var(--gold-rgb),  0.2)' }}>
-                  <div style={{ marginBottom: '20px' }}>
-                    <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.6rem', color: 'var(--cream)', margin: '0 0 6px 0', fontWeight: 700 }}>
-                      Used Coupons
-                    </h2>
-                    <p style={{ color: 'rgba(255, 255, 255, 0.6)', fontSize: '0.88rem', margin: 0 }}>
-                      History of redeemed coupons and savings on your past orders.
-                    </p>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
+                    <div>
+                      <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.6rem', color: 'var(--cream)', margin: '0 0 6px 0', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        Used Coupons
+                        <span
+                          style={{
+                            fontSize: '0.82rem',
+                            fontWeight: 800,
+                            padding: '3px 12px',
+                            borderRadius: '20px',
+                            background: effectiveUsedCoupons.length > 0 ? 'rgba(var(--gold-rgb), 0.15)' : 'rgba(255, 255, 255, 0.08)',
+                            color: effectiveUsedCoupons.length > 0 ? 'var(--gold)' : 'rgba(255, 255, 255, 0.6)',
+                            border: `1px solid ${effectiveUsedCoupons.length > 0 ? 'rgba(var(--gold-rgb), 0.35)' : 'rgba(255, 255, 255, 0.15)'}`,
+                          }}
+                        >
+                          {effectiveUsedCoupons.length} Used
+                        </span>
+                      </h2>
+                      <p style={{ color: 'rgba(255, 255, 255, 0.6)', fontSize: '0.88rem', margin: 0 }}>
+                        {effectiveUsedCoupons.length === 0
+                          ? 'No coupons redeemed yet. Your coupon savings history will appear here once used on orders.'
+                          : `Total of ${effectiveUsedCoupons.length} coupon${effectiveUsedCoupons.length === 1 ? '' : 's'} redeemed on your past orders.`
+                        }
+                      </p>
+                    </div>
                   </div>
 
-                  {usedCoupons.length === 0 ? (
-                    <div style={{ padding: '30px 20px', background: 'rgba(18, 14, 11, 0.4)', border: '1px dashed rgba(255, 255, 255, 0.15)', borderRadius: '10px', color: 'rgba(255, 255, 255, 0.5)', fontSize: '0.88rem' }}>
-                      No coupon history recorded yet. Apply an available coupon on your next order to receive instant savings!
+                  {effectiveUsedCoupons.length === 0 ? (
+                    <div style={{ padding: '30px 20px', background: 'rgba(18, 14, 11, 0.4)', border: '1px dashed rgba(255, 255, 255, 0.15)', borderRadius: '10px', color: 'rgba(255, 255, 255, 0.5)', fontSize: '0.88rem', textAlign: 'center' }}>
+                      <p style={{ margin: 0, fontWeight: 500 }}>
+                        0 Coupons Used — No coupons have been redeemed yet for this account. Apply an available coupon code at checkout to receive instant savings!
+                      </p>
                     </div>
                   ) : (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                      {usedCoupons.map((uc: any) => (
+                      {effectiveUsedCoupons.map((uc: any) => (
                         <div
-                          key={uc.id || uc.code + uc.order_id}
+                          key={uc.id || `${uc.code}-${uc.order_id}`}
                           style={{
                             background: 'rgba(18, 14, 11, 0.85)',
                             border: '1px solid rgba(255, 255, 255, 0.12)',
@@ -5715,7 +5315,12 @@ export const CustomerDashboard: React.FC = () => {
                                 </span>
                               </div>
                               <div style={{ color: 'rgba(255, 255, 255, 0.65)', fontSize: '0.84rem', marginTop: '3px' }}>
-                                Used on Order <strong style={{ color: 'var(--cream)' }}>#{uc.order_id}</strong> • Date: <strong style={{ color: 'var(--cream)' }}>{uc.used_at}</strong>
+                                {uc.order_id ? (
+                                  <>Used on Order <strong style={{ color: 'var(--cream)', cursor: 'pointer', textDecoration: 'underline' }} onClick={() => { setSelectedOrder(orders.find(o => o.id === uc.order_id) || null); if (orders.find(o => o.id === uc.order_id)) setOrderSubView('details'); setActiveTab('orders'); }}>#{uc.order_id}</strong></>
+                                ) : (
+                                  <>Redeemed on order</>
+                                )}
+                                {uc.used_at && <> • Date: <strong style={{ color: 'var(--cream)' }}>{uc.used_at}</strong></>}
                               </div>
                             </div>
                           </div>

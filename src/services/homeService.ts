@@ -46,7 +46,21 @@ export const homeService = {
   getReels: (): Promise<InstagramReel[]> =>
     apiGet<InstagramReel[]>('/home/reels'),
 
+  /** Customizable landing page sections copy */
+  getLandingSections: (): Promise<any> =>
+    apiGet<any>('/home/landing-sections'),
+
+  /** Customizable Our Story page config */
+  getStoryPageConfig: (): Promise<any> =>
+    apiGet<any>('/home/story-page'),
+
+  /** Customizable Contact Us page config */
+  getContactPageConfig: (): Promise<any> =>
+    apiGet<any>('/home/contact-page'),
+
   /** Submit a customer testimonial (pending admin approval) */
   submitTestimonial: (payload: { author: string; text: string; title?: string; rating?: number }): Promise<Testimonial> =>
     apiPost<Testimonial>('/home/testimonials', payload),
 };
+
+

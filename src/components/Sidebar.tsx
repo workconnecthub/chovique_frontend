@@ -104,7 +104,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, onReq
     { id: 'offline-sales', label: 'Offline Sales', icon: Receipt },
     { id: 'coupons', label: 'Coupons & Discounts', icon: Tag },
     { id: 'reward-settings', label: 'Reward Coins System', icon: Coins },
-    { id: 'home-mgmt', label: 'Banner & Carousel', icon: Image },
+    { id: 'home-mgmt', label: 'Website CMS', icon: Image },
     { id: 'testimonials', label: 'Reviews', icon: Star },
     { id: 'contact-messages', label: 'Contact Messages', icon: Mail },
     { id: 'complaints', label: 'Customer Complaints', icon: AlertTriangle },
@@ -124,6 +124,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, onReq
     { id: 'logistics', label: 'Logistics & Hubs', icon: Store },
     { id: 'audit-logs', label: 'Audit Logs', icon: FileClock },
     { id: 'theme-builder', label: 'Theme Builder', icon: Palette },
+    { id: 'home-mgmt', label: 'Website CMS', icon: Image },
     { id: 'platform-settings', label: 'Platform Settings', icon: Settings },
   ];
 
@@ -150,7 +151,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, onReq
     { id: 'delivery-boys', label: 'Delivery Management', icon: Bike },
     { id: 'coupons', label: 'Coupons & Discounts', icon: Tag },
     { id: 'reward-settings', label: 'Reward Coins System', icon: Coins },
-    { id: 'home-mgmt', label: 'Banner & Carousel', icon: Image },
+    { id: 'home-mgmt', label: 'Website CMS', icon: Image },
     { id: 'testimonials', label: 'Reviews & Testimonials', icon: Star },
     { id: 'contact-messages', label: 'Contact Messages', icon: Mail },
     { id: 'complaints', label: 'Customer Complaints', icon: AlertTriangle },
@@ -165,6 +166,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, onReq
     { id: 'logistics', label: 'Logistics & Hubs', icon: Store },
     { id: 'audit-logs', label: 'Audit Logs', icon: FileClock },
     { id: 'theme-builder', label: 'Theme Builder', icon: Palette },
+    { id: 'home-mgmt', label: 'Website CMS', icon: Image },
   ];
 
   const desktopItems = role === 'superadmin' ? superadminDesktopItems : adminDesktopItems;

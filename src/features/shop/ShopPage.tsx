@@ -1,19 +1,18 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import {
   Search,
   Grid,
   List,
-  Star,
-  SlidersHorizontal,
   ChevronLeft,
   ChevronRight,
   ShoppingBag,
   Heart,
   Loader2,
   X,
-  Info,
+  RotateCcw,
+  Minus,
   Plus,
 } from 'lucide-react';
 import { useApp } from '../../app/providers';
@@ -27,7 +26,7 @@ import { getImageUrl } from '../../utils/imageUrl';
 
 export const ShopPage: React.FC = () => {
   const navigate = useNavigate();
-  const { addToCart, toggleWishlist, wishlist, role } = useApp();
+  const { cart, addToCart, updateCartQuantity, removeFromCart, toggleWishlist, wishlist } = useApp();
   const [searchParams, setSearchParams] = useSearchParams();
 
   // --- Product Data State ---
@@ -43,13 +42,9 @@ export const ShopPage: React.FC = () => {
     { value: 'all', label: 'All Categories' },
   ]);
 
-  const [priceRange, setPriceRange] = useState({ min: 0, max: 50000 });
-  const [minRating, setMinRating] = useState<number | null>(null);
   const [sortOption, setSortOption] = useState<string>('featured');
-
   const [isGridView, setIsGridView] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
-  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
 
   // Dynamic Category Loading from Backend
   useEffect(() => {
@@ -101,9 +96,6 @@ export const ShopPage: React.FC = () => {
       const result = await productService.getProducts({
         search: searchQuery || undefined,
         category: selectedCategory === 'all' ? undefined : selectedCategory,
-        price_min: priceRange.min > 0 ? priceRange.min : undefined,
-        price_max: priceRange.max < 50000 ? priceRange.max : undefined,
-        min_rating: minRating ?? undefined,
         sort: getApiSortValue(sortOption),
         page: currentPage,
         per_page: itemsPerPage,
@@ -118,7 +110,7 @@ export const ShopPage: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [searchQuery, selectedCategory, priceRange.min, priceRange.max, minRating, sortOption, currentPage, itemsPerPage]);
+  }, [searchQuery, selectedCategory, sortOption, currentPage, itemsPerPage]);
 
   useEffect(() => {
     fetchProducts();
@@ -126,23 +118,15 @@ export const ShopPage: React.FC = () => {
 
   const totalPages = Math.max(1, Math.ceil(totalProducts / itemsPerPage));
 
-  // Active filter count calculation
-  const activeFiltersCount = useMemo(() => {
-    let count = 0;
-    if (selectedCategory !== 'all') count++;
-    if (searchQuery.trim() !== '') count++;
-    if (priceRange.min > 0 || priceRange.max < 50000) count++;
-    if (minRating !== null) count++;
-    if (sortOption !== 'featured') count++;
-    return count;
-  }, [selectedCategory, searchQuery, priceRange.min, priceRange.max, minRating, sortOption]);
+  // Check if any filters are active
+  const hasActiveFilters = useMemo(() => {
+    return selectedCategory !== 'all' || searchQuery.trim() !== '' || sortOption !== 'featured';
+  }, [selectedCategory, searchQuery, sortOption]);
 
   // Reset all filters handler
   const handleResetFilters = () => {
     setSearchQuery('');
     setSelectedCategory('all');
-    setPriceRange({ min: 0, max: 50000 });
-    setMinRating(null);
     setSortOption('featured');
     setSearchParams({});
     setCurrentPage(1);
@@ -158,19 +142,6 @@ export const ShopPage: React.FC = () => {
   const indexOfFirstItem = totalProducts > 0 ? (currentPage - 1) * itemsPerPage + 1 : 0;
   const indexOfLastItem = Math.min(currentPage * itemsPerPage, totalProducts);
 
-  // Top category horizontal chips derived dynamically from Admin category data
-  const categoryChips = useMemo(() => {
-    return [
-      { id: 'all', label: 'All' },
-      ...categoriesList
-        .filter((c) => c.value !== 'all')
-        .map((c) => ({ id: c.value, label: c.label })),
-    ];
-  }, [categoriesList]);
-
-  // Exact 4 Rating Options (No duplicates)
-  const ratingOptions = [4.5, 4.0, 3.5, 3.0];
-
   return (
     <motion.div
       variants={pageTransition}
@@ -180,19 +151,20 @@ export const ShopPage: React.FC = () => {
       className="shop-page"
     >
       <div className="container">
-        {/* HERO / TITLE HEADER */}
+        {/* HERO / TITLE & SEARCH HEADER */}
         <div className="shop-hero-header">
-          <span className="shop-breadcrumb">
-            HOME / SHOP
-          </span>
-          <h1 className="shop-title">
-            Our Chocolate Shop
-          </h1>
+          <div className="shop-hero-content">
+            <div className="shop-title-area">
+              <span className="shop-breadcrumb">
+                HOME / SHOP
+              </span>
+              <h1 className="shop-title">
+                Our Chocolate Shop
+              </h1>
+            </div>
 
-          {/* Top Search & Category Chips Row (Horizontal inline on desktop) */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '20px', flexWrap: 'wrap' }}>
-            {/* Top Search Input */}
-            <div className="search-input-wrapper" style={{ width: '280px', flexShrink: 0 }}>
+            {/* Top Search Bar */}
+            <div className="shop-search-wrapper">
               <input
                 type="text"
                 placeholder="Search chocolates..."
@@ -201,364 +173,138 @@ export const ShopPage: React.FC = () => {
                   setSearchQuery(e.target.value);
                   setCurrentPage(1);
                 }}
-                style={{ padding: '10px 38px 10px 14px', fontSize: '0.88rem', borderRadius: '4px', background: 'rgba(0,0,0,0.4)', border: '1px solid rgba(201, 168, 76, 0.3)' }}
+                className="shop-search-input"
+                aria-label="Search chocolates"
               />
-              <Search size={16} />
-            </div>
-
-            {/* Top Category Dropdown */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', flex: 1, justifyContent: 'flex-start' }}>
-              <span style={{ fontSize: '0.82rem', color: 'var(--gold)', fontWeight: 600 }}>
-                Category:
-              </span>
-              <select
-                value={selectedCategory}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  setSelectedCategory(val);
-                  setSearchParams(val === 'all' ? {} : { category: val });
-                  setCurrentPage(1);
-                }}
-                style={{
-                  padding: '8px 12px',
-                  borderRadius: '4px',
-                  background: 'rgba(0,0,0,0.4)',
-                  border: '1px solid rgba(201, 168, 76, 0.3)',
-                  color: 'var(--cream)',
-                  fontSize: '0.9rem',
-                  outline: 'none',
-                  cursor: 'pointer'
-                }}
-              >
-                {categoryChips.map((chip) => (
-                  <option key={chip.id} value={chip.id} style={{ background: '#14100d', color: 'var(--cream)' }}>
-                    {chip.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-        </div>
-
-        {/* MOBILE TOOLBAR BUTTONS (Screens <= 992px) */}
-        <div className="show-on-mobile-flex" style={{ display: 'none', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', gap: '10px', flexWrap: 'wrap' }}>
-          <button
-            onClick={() => setMobileFiltersOpen(true)}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              padding: '8px 16px',
-              borderRadius: '4px',
-              background: 'rgba(20, 16, 13, 0.9)',
-              border: '1px solid rgba(201, 168, 76, 0.4)',
-              color: 'var(--cream)',
-              fontSize: '0.85rem',
-              fontWeight: 600,
-              cursor: 'pointer',
-            }}
-          >
-            <SlidersHorizontal size={16} color="var(--gold)" />
-            <span>Filters {activeFiltersCount > 0 && `(${activeFiltersCount})`}</span>
-          </button>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <select
-              value={sortOption}
-              onChange={(e) => { setSortOption(e.target.value); setCurrentPage(1); }}
-              style={{
-                padding: '8px 12px',
-                borderRadius: '4px',
-                background: 'rgba(20, 16, 13, 0.9)',
-                border: '1px solid rgba(201, 168, 76, 0.4)',
-                color: 'var(--cream)',
-                fontSize: '0.82rem',
-                outline: 'none',
-              }}
-            >
-              <option value="featured">Default</option>
-              <option value="popularity">Popularity</option>
-              <option value="price_asc">Price: Low to High</option>
-              <option value="price_desc">Price: High to Low</option>
-              <option value="newest">Newest</option>
-              <option value="rating">Rating</option>
-            </select>
-
-            <div style={{ display: 'flex', gap: '4px' }}>
-              <button
-                onClick={() => setIsGridView(true)}
-                style={{ padding: '6px', color: isGridView ? '#c9a84c' : 'rgba(255,255,255,0.5)', background: 'none', border: 'none', cursor: 'pointer' }}
-              >
-                <Grid size={18} />
-              </button>
-              <button
-                onClick={() => setIsGridView(false)}
-                style={{ padding: '6px', color: !isGridView ? '#c9a84c' : 'rgba(255,255,255,0.5)', background: 'none', border: 'none', cursor: 'pointer' }}
-              >
-                <List size={18} />
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* MAIN SHOP CONTAINER */}
-        <div className="shop-container">
-          {/* DESKTOP FILTERS SIDEBAR */}
-          <aside className="filter-sidebar-desktop">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '22px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--gold)' }}>
-                <SlidersHorizontal size={16} />
-                <span style={{ fontSize: '0.85rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1.5px' }}>FILTERS</span>
-              </div>
-              <button
-                onClick={handleResetFilters}
-                style={{ fontSize: '0.78rem', color: '#e74c3c', textTransform: 'uppercase', fontWeight: 700, background: 'none', border: 'none', cursor: 'pointer' }}
-              >
-                RESET ALL
-              </button>
-            </div>
-
-            {/* Filter: Search */}
-            <div className="filter-group">
-              <h4 className="filter-group-title">SEARCH</h4>
-              <div className="search-input-wrapper">
-                <input
-                  type="text"
-                  placeholder="Search chocolates..."
-                  value={searchQuery}
-                  onChange={(e) => {
-                    setSearchQuery(e.target.value);
+              {searchQuery ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSearchQuery('');
                     setCurrentPage(1);
                   }}
-                />
-                <Search size={16} />
+                  className="shop-search-clear-btn"
+                  title="Clear search"
+                  aria-label="Clear search"
+                >
+                  <X size={16} />
+                </button>
+              ) : (
+                <Search size={16} className="shop-search-icon" />
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* TOP CONTROLS TOOLBAR (Category Filter, Sorting, Count, View Mode) */}
+        <div className="shop-toolbar">
+          {/* Controls: Category Dropdown & Sort Dropdown */}
+          <div className="shop-toolbar-filters">
+            {/* Category Dropdown */}
+            <div className="shop-control-group">
+              <label htmlFor="shop-category-select" className="shop-control-label">Category:</label>
+              <div className="shop-select-container">
+                <select
+                  id="shop-category-select"
+                  value={selectedCategory}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setSelectedCategory(val);
+                    setSearchParams(val === 'all' ? {} : { category: val });
+                    setCurrentPage(1);
+                  }}
+                  className="shop-select-field"
+                  aria-label="Filter by category"
+                >
+                  {categoriesList.map((cat) => (
+                    <option key={cat.value} value={cat.value}>
+                      {cat.label}
+                    </option>
+                  ))}
+                </select>
               </div>
             </div>
 
-            {/* Filter: Category */}
-            <div className="filter-group">
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '14px' }}>
-                <h4 className="filter-group-title" style={{ margin: 0 }}>CATEGORY</h4>
-                <Info size={14} color="var(--gold)" style={{ cursor: 'pointer', opacity: 0.8 }} />
-              </div>
-              <select
-                value={selectedCategory}
-                onChange={(e) => {
-                  setSelectedCategory(e.target.value);
-                  setSearchParams(e.target.value === 'all' ? {} : { category: e.target.value });
-                  setCurrentPage(1);
-                }}
-                style={{
-                  width: '100%',
-                  padding: '10px 14px',
-                  background: 'rgba(0, 0, 0, 0.4)',
-                  border: '1px solid rgba(201, 168, 76, 0.3)',
-                  borderRadius: '4px',
-                  color: 'var(--cream)',
-                  fontSize: '0.88rem',
-                  outline: 'none',
-                }}
-              >
-                {categoriesList.map((cat) => (
-                  <option key={cat.value} value={cat.value} style={{ background: 'var(--black)', color: 'var(--cream)' }}>
-                    {cat.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Filter: Price Range */}
-            <div className="filter-group">
-              <h4 className="filter-group-title">PRICE RANGE</h4>
-              <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '10px' }}>
-                <div style={{ flex: 1 }}>
-                  <span style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.5)', display: 'block', marginBottom: '4px' }}>Min (₹)</span>
-                  <input
-                    type="number"
-                    min={0}
-                    max={priceRange.max}
-                    value={priceRange.min === 0 ? '' : priceRange.min}
-                    placeholder="0"
-                    onChange={(e) => {
-                      const val = Math.max(0, parseInt(e.target.value) || 0);
-                      setPriceRange((prev) => ({ ...prev, min: val }));
-                      setCurrentPage(1);
-                    }}
-                    style={{
-                      width: '100%',
-                      padding: '6px 8px',
-                      background: 'rgba(0,0,0,0.4)',
-                      border: '1px solid rgba(201, 168, 76, 0.3)',
-                      borderRadius: '4px',
-                      color: 'var(--cream)',
-                      fontSize: '0.82rem',
-                      outline: 'none',
-                    }}
-                  />
-                </div>
-                <span style={{ color: 'rgba(255,255,255,0.4)', paddingTop: '16px' }}>—</span>
-                <div style={{ flex: 1 }}>
-                  <span style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.5)', display: 'block', marginBottom: '4px' }}>Max (₹)</span>
-                  <input
-                    type="number"
-                    min={priceRange.min}
-                    max={50000}
-                    value={priceRange.max === 50000 ? '' : priceRange.max}
-                    placeholder="50,000"
-                    onChange={(e) => {
-                      const val = Math.min(50000, parseInt(e.target.value) || 50000);
-                      setPriceRange((prev) => ({ ...prev, max: val }));
-                      setCurrentPage(1);
-                    }}
-                    style={{
-                      width: '100%',
-                      padding: '6px 8px',
-                      background: 'rgba(0,0,0,0.4)',
-                      border: '1px solid rgba(201, 168, 76, 0.3)',
-                      borderRadius: '4px',
-                      color: 'var(--cream)',
-                      fontSize: '0.82rem',
-                      outline: 'none',
-                    }}
-                  />
-                </div>
-              </div>
-              <input
-                type="range"
-                min="0"
-                max="50000"
-                step="500"
-                value={priceRange.max}
-                onChange={(e) => {
-                  setPriceRange((prev) => ({ ...prev, max: parseInt(e.target.value) }));
-                  setCurrentPage(1);
-                }}
-                style={{ width: '100%', accentColor: 'var(--gold)', cursor: 'pointer', marginBottom: '8px' }}
-              />
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem', color: 'rgba(255,255,255,0.7)', fontWeight: 600 }}>
-                <span>Min: ₹{priceRange.min.toLocaleString()}</span>
-                <span>Max: ₹{priceRange.max.toLocaleString()}</span>
+            {/* Sort Dropdown */}
+            <div className="shop-control-group">
+              <label htmlFor="shop-sort-select" className="shop-control-label">Sort by:</label>
+              <div className="shop-select-container">
+                <select
+                  id="shop-sort-select"
+                  value={sortOption}
+                  onChange={(e) => {
+                    setSortOption(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                  className="shop-select-field"
+                  aria-label="Sort chocolates"
+                >
+                  <option value="featured">Default</option>
+                  <option value="popularity">Popularity</option>
+                  <option value="price_asc">Price: Low to High</option>
+                  <option value="price_desc">Price: High to Low</option>
+                  <option value="newest">Newest</option>
+                  <option value="rating">Rating</option>
+                </select>
               </div>
             </div>
+          </div>
 
-            {/* Filter: Rating */}
-            <div className="filter-group" style={{ borderBottom: 'none', marginBottom: 0, paddingBottom: 0 }}>
-              <div style={{ marginBottom: '8px' }}>
-                <h4 className="filter-group-title" style={{ margin: '0 0 4px 0' }}>RATING</h4>
-                <span style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.4)', fontStyle: 'italic', display: 'block', marginBottom: '10px' }}>Ratings</span>
-              </div>
-              <div className="rating-filter-list">
-                {ratingOptions.map((rating) => {
-                  const isSelected = minRating === rating;
-                  return (
-                    <button
-                      key={rating}
-                      onClick={() => {
-                        setMinRating(isSelected ? null : rating);
-                        setCurrentPage(1);
-                      }}
-                      className={`rating-filter-btn ${isSelected ? 'active' : ''}`}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '8px',
-                        color: isSelected ? '#c9a84c' : 'rgba(255,255,255,0.8)',
-                        fontSize: '0.88rem',
-                        background: isSelected ? 'rgba(201, 168, 76, 0.15)' : 'transparent',
-                        border: isSelected ? '1px solid rgba(201, 168, 76, 0.4)' : '1px solid transparent',
-                        borderRadius: '4px',
-                        padding: '6px 10px',
-                        cursor: 'pointer',
-                        width: '100%',
-                        textAlign: 'left',
-                        transition: 'all 0.2s ease',
-                      }}
-                    >
-                      <Star size={15} fill="var(--gold)" color="var(--gold)" />
-                      <span>{rating === 4.0 ? '4' : rating === 3.0 ? '3' : rating}★ &amp; above</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          </aside>
-
-          {/* PRODUCT LISTING AREA */}
-          <main>
-            {/* DESKTOP TOOLBAR */}
-            <div className="shop-toolbar hide-on-mobile">
-              <span style={{ fontSize: '0.88rem', color: 'rgba(255,255,255,0.7)' }}>
+          {/* Meta & View Mode Row */}
+          <div className="shop-toolbar-meta">
+            {/* Products Count Indicator & Reset Button */}
+            <div className="shop-meta-left">
+              <span className="shop-product-count">
                 {isLoading ? (
-                  <Loader2 size={16} style={{ display: 'inline', animation: 'spin 1s linear infinite', color: 'var(--gold)' }} />
+                  <Loader2 size={15} className="shop-spinner" />
                 ) : (
                   <>
-                    Showing <strong style={{ color: 'var(--cream)' }}>{indexOfFirstItem} - {indexOfLastItem}</strong> of{' '}
-                    <strong style={{ color: 'var(--cream)' }}>{totalProducts}</strong> products
+                    Showing <strong>{indexOfFirstItem} - {indexOfLastItem}</strong> of{' '}
+                    <strong>{totalProducts}</strong> products
                   </>
                 )}
               </span>
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                {/* Grid / List view toggle */}
-                <div style={{ display: 'flex', gap: '4px' }}>
-                  <button
-                    onClick={() => setIsGridView(true)}
-                    style={{
-                      color: isGridView ? '#c9a84c' : 'rgba(255,255,255,0.4)',
-                      padding: '6px',
-                      background: 'none',
-                      border: isGridView ? '1px solid #c9a84c' : '1px solid transparent',
-                      borderRadius: '4px',
-                      cursor: 'pointer',
-                    }}
-                    title="Grid View"
-                  >
-                    <Grid size={18} />
-                  </button>
-                  <button
-                    onClick={() => setIsGridView(false)}
-                    style={{
-                      color: !isGridView ? '#c9a84c' : 'rgba(255,255,255,0.4)',
-                      padding: '6px',
-                      background: 'none',
-                      border: !isGridView ? '1px solid #c9a84c' : '1px solid transparent',
-                      borderRadius: '4px',
-                      cursor: 'pointer',
-                    }}
-                    title="List View"
-                  >
-                    <List size={18} />
-                  </button>
-                </div>
-
-                {/* Sort Dropdown */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span style={{ fontSize: '0.85rem', color: 'var(--cream)', fontWeight: 600 }}>Sort by:</span>
-                  <select
-                    value={sortOption}
-                    onChange={(e) => { setSortOption(e.target.value); setCurrentPage(1); }}
-                    style={{
-                      padding: '8px 14px',
-                      borderRadius: '4px',
-                      background: 'rgba(0, 0, 0, 0.4)',
-                      border: '1px solid rgba(201, 168, 76, 0.3)',
-                      color: 'var(--cream)',
-                      fontSize: '0.85rem',
-                      outline: 'none',
-                      cursor: 'pointer',
-                    }}
-                  >
-                    <option value="featured" style={{ background: 'var(--black)' }}>Default</option>
-                    <option value="popularity" style={{ background: 'var(--black)' }}>Popularity</option>
-                    <option value="price_asc" style={{ background: 'var(--black)' }}>Price: Low to High</option>
-                    <option value="price_desc" style={{ background: 'var(--black)' }}>Price: High to Low</option>
-                    <option value="newest" style={{ background: 'var(--black)' }}>Newest</option>
-                    <option value="rating" style={{ background: 'var(--black)' }}>Rating</option>
-                  </select>
-                </div>
-              </div>
+              {hasActiveFilters && (
+                <button
+                  type="button"
+                  onClick={handleResetFilters}
+                  className="shop-reset-btn"
+                  title="Reset all filters"
+                >
+                  <RotateCcw size={12} />
+                  <span>Reset</span>
+                </button>
+              )}
             </div>
 
+            {/* Grid / List view toggle */}
+            <div className="shop-view-toggles" role="group" aria-label="View mode">
+              <button
+                type="button"
+                onClick={() => setIsGridView(true)}
+                className={`shop-view-btn ${isGridView ? 'active' : ''}`}
+                title="Grid View"
+                aria-label="Grid View"
+              >
+                <Grid size={16} />
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsGridView(false)}
+                className={`shop-view-btn ${!isGridView ? 'active' : ''}`}
+                title="List View"
+                aria-label="List View"
+              >
+                <List size={16} />
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* MAIN PRODUCT LISTING AREA */}
+        <div className="shop-container">
+          <main style={{ width: '100%' }}>
             {/* PRODUCT DISPLAY GRID / LIST */}
             {isLoading ? (
               <div style={{ textAlign: 'center', padding: '80px 0', color: 'var(--gold)' }}>
@@ -588,7 +334,7 @@ export const ShopPage: React.FC = () => {
                 </Button>
               </div>
             ) : isGridView ? (
-              /* GRID VIEW (3-col Desktop, 2-col Mobile) */
+              /* GRID VIEW */
               <div className="shop-product-grid">
                 {products.map((prod) => (
                   <Card key={prod.id} product={prod} />
@@ -596,18 +342,22 @@ export const ShopPage: React.FC = () => {
               </div>
             ) : (
               /* LIST VIEW */
-              <div className="shop-list-layout" style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
+              <div className="shop-list-layout" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                 {products.map((prod) => {
                   const inWish = wishlist.some((p) => p.id === prod.id);
-                  const isOut = (prod.is_available === false) || (prod.stock ?? 0) <= 0;
+                  const stockQty = prod.stock ?? 0;
+                  const isOut = (prod.is_available === false) || stockQty <= 0;
+                  const cartItem = cart.find((item) => item.product.id === prod.id);
                   return (
                     <motion.div
                       key={prod.id}
                       variants={hoverLift}
                       whileHover="whileHover"
                       className="list-card"
+                      onClick={() => navigate(`/product/${prod.id}`)}
                     >
-                      <div style={{ overflow: 'hidden', borderRadius: '6px', position: 'relative' }}>
+                      {/* Left: Product Image */}
+                      <div className="list-card-media">
                         <img
                           src={getImageUrl(prod.image)}
                           alt={prod.name}
@@ -645,79 +395,123 @@ export const ShopPage: React.FC = () => {
                           </div>
                         )}
                       </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+
+                      {/* Right: Product Info & Actions */}
+                      <div className="list-card-body">
                         <div>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                            <div>
-                              <span style={{ fontSize: '0.72rem', color: 'var(--gold)', letterSpacing: '1px', textTransform: 'uppercase', fontWeight: 700 }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px' }}>
+                            <div style={{ minWidth: 0, flex: '1 1 auto' }}>
+                              <span className="list-card-collection">
                                 {prod.category} Collection
                               </span>
-                              <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1.3rem', color: 'var(--cream)', margin: '4px 0 8px 0', fontWeight: 700 }}>
+                              <h3 className="list-card-title">
                                 {prod.name}
                               </h3>
                             </div>
                             {prod.badge && (
-                              <span style={{ background: 'var(--gold)', color: 'var(--black)', fontSize: '0.68rem', padding: '3px 8px', fontWeight: 800, textTransform: 'uppercase', borderRadius: '2px' }}>
+                              <span className="list-card-badge">
                                 {prod.badge}
                               </span>
                             )}
                           </div>
-                          <p style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.65)', lineHeight: 1.5, marginBottom: '14px' }}>
+                          <p className="list-card-desc">
                             {prod.description}
                           </p>
                         </div>
 
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-                            <span style={{ fontSize: '1.3rem', fontWeight: 700, color: 'var(--cream)' }}>
+                        <div className="list-card-footer">
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <span className="list-price">
                               ₹{prod.price.toLocaleString()}
                             </span>
-                            <span style={{ color: 'var(--gold)', fontSize: '0.85rem', fontWeight: 600 }}>
+                            <span className="list-rating">
                               ★ {prod.rating ? Number(prod.rating).toFixed(1) : '4.8'}
                             </span>
                           </div>
 
-                            <div style={{ display: 'flex', gap: '10px' }}>
+                          <div className="list-card-actions">
                             <button
+                              type="button"
+                              className="list-card-wish-btn"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                if (role === 'guest') {
-                                  navigate('/login', { state: { from: '/shop' } });
-                                } else {
-                                  toggleWishlist(prod);
-                                }
+                                toggleWishlist(prod);
                               }}
                               style={{
-                                width: '38px',
-                                height: '38px',
-                                borderRadius: '50%',
-                                border: '1px solid rgba(201, 168, 76, 0.3)',
                                 background: inWish ? '#e74c3c' : 'rgba(20, 16, 13, 0.8)',
                                 color: inWish ? '#fff' : '#f5efe6',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                cursor: 'pointer',
                               }}
+                              title="Wishlist"
+                              aria-label="Wishlist"
                             >
                               <Heart size={16} fill={inWish ? 'currentColor' : 'none'} />
                             </button>
-                            <Button
-                              variant="gold"
-                              size="sm"
-                              disabled={isOut}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                if (role === 'guest') {
-                                  navigate('/login', { state: { from: '/shop' } });
-                                } else if (!isOut) {
+
+                            {isOut ? (
+                              <button
+                                disabled
+                                onClick={(e) => e.stopPropagation()}
+                                className="list-card-cart-btn"
+                                style={{
+                                  background: 'rgba(255, 255, 255, 0.05)',
+                                  color: 'rgba(255, 255, 255, 0.4)',
+                                  border: '1px solid rgba(255, 255, 255, 0.15)',
+                                  cursor: 'not-allowed',
+                                  boxShadow: 'none',
+                                }}
+                              >
+                                <ShoppingBag size={14} />
+                                <span>OUT OF STOCK</span>
+                              </button>
+                            ) : cartItem ? (
+                              <div
+                                className="list-card-qty-stepper"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (cartItem.quantity <= 1) {
+                                      removeFromCart(prod.id);
+                                    } else {
+                                      updateCartQuantity(prod.id, cartItem.quantity - 1);
+                                    }
+                                  }}
+                                  title="Decrease quantity"
+                                  aria-label="Decrease quantity"
+                                >
+                                  <Minus size={14} />
+                                </button>
+                                <span>{cartItem.quantity}</span>
+                                <button
+                                  type="button"
+                                  disabled={cartItem.quantity >= stockQty}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (cartItem.quantity < stockQty) {
+                                      updateCartQuantity(prod.id, cartItem.quantity + 1);
+                                    }
+                                  }}
+                                  title="Increase quantity"
+                                  aria-label="Increase quantity"
+                                >
+                                  <Plus size={14} />
+                                </button>
+                              </div>
+                            ) : (
+                              <button
+                                type="button"
+                                className="list-card-cart-btn"
+                                onClick={(e) => {
+                                  e.stopPropagation();
                                   addToCart(prod, 1);
-                                }
-                              }}
-                            >
-                              <ShoppingBag size={14} style={{ marginRight: '6px' }} />
-                              {isOut ? 'OUT OF STOCK' : 'Add to Cart'}
-                            </Button>
+                                }}
+                              >
+                                <ShoppingBag size={14} />
+                                <span>Add to Cart</span>
+                              </button>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -752,6 +546,7 @@ export const ShopPage: React.FC = () => {
                 {totalPages > 1 && (
                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                     <button
+                      type="button"
                       onClick={() => handlePageChange(currentPage - 1)}
                       disabled={currentPage === 1}
                       style={{
@@ -778,6 +573,7 @@ export const ShopPage: React.FC = () => {
                       const isActive = currentPage === pageNum;
                       return (
                         <button
+                          type="button"
                           key={pageNum}
                           onClick={() => handlePageChange(pageNum)}
                           style={{
@@ -802,6 +598,7 @@ export const ShopPage: React.FC = () => {
                     })}
 
                     <button
+                      type="button"
                       onClick={() => handlePageChange(currentPage + 1)}
                       disabled={currentPage === totalPages}
                       style={{
@@ -855,177 +652,6 @@ export const ShopPage: React.FC = () => {
             )}
           </main>
         </div>
-
-        {/* MOBILE FILTER BOTTOM SHEET DRAWER */}
-        <AnimatePresence>
-          {mobileFiltersOpen && (
-            <>
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="mobile-filter-drawer-overlay"
-                onClick={() => setMobileFiltersOpen(false)}
-              />
-              <motion.div
-                initial={{ y: '100%' }}
-                animate={{ y: 0 }}
-                exit={{ y: '100%' }}
-                transition={{ type: 'spring', damping: 25, stiffness: 250 }}
-                className="mobile-filter-drawer-content"
-              >
-                <div className="mobile-filter-drawer-header">
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--gold)' }}>
-                    <SlidersHorizontal size={18} />
-                    <span style={{ fontWeight: 700, fontSize: '1rem', textTransform: 'uppercase' }}>FILTERS</span>
-                  </div>
-                  <button onClick={handleResetFilters} style={{ color: '#e74c3c', background: 'none', border: 'none', fontSize: '0.8rem', fontWeight: 700 }}>
-                    RESET ALL
-                  </button>
-                </div>
-
-                <div className="mobile-filter-drawer-body">
-                  {/* Category */}
-                  <div className="filter-group">
-                    <h4 className="filter-group-title">CATEGORY</h4>
-                    <select
-                      value={selectedCategory}
-                      onChange={(e) => setSelectedCategory(e.target.value)}
-                      style={{ width: '100%', padding: '12px', background: 'rgba(0,0,0,0.4)', border: '1px solid rgba(201,168,76,0.3)', borderRadius: '6px', color: 'var(--cream)', fontSize: '0.9rem' }}
-                    >
-                      {categoriesList.map((cat) => (
-                        <option key={cat.value} value={cat.value} style={{ background: 'var(--black)', color: 'var(--cream)' }}>
-                          {cat.label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {/* Price Range */}
-                  <div className="filter-group">
-                    <h4 className="filter-group-title">PRICE RANGE</h4>
-                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '10px' }}>
-                      <div style={{ flex: 1 }}>
-                        <span style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.5)', display: 'block', marginBottom: '4px' }}>Min (₹)</span>
-                        <input
-                          type="number"
-                          min={0}
-                          max={priceRange.max}
-                          value={priceRange.min === 0 ? '' : priceRange.min}
-                          placeholder="0"
-                          onChange={(e) => {
-                            const val = Math.max(0, parseInt(e.target.value) || 0);
-                            setPriceRange((prev) => ({ ...prev, min: val }));
-                            setCurrentPage(1);
-                          }}
-                          style={{
-                            width: '100%',
-                            padding: '6px 8px',
-                            background: 'rgba(0,0,0,0.4)',
-                            border: '1px solid rgba(201, 168, 76, 0.3)',
-                            borderRadius: '4px',
-                            color: 'var(--cream)',
-                            fontSize: '0.82rem',
-                            outline: 'none',
-                          }}
-                        />
-                      </div>
-                      <span style={{ color: 'rgba(255,255,255,0.4)', paddingTop: '16px' }}>—</span>
-                      <div style={{ flex: 1 }}>
-                        <span style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.5)', display: 'block', marginBottom: '4px' }}>Max (₹)</span>
-                        <input
-                          type="number"
-                          min={priceRange.min}
-                          max={50000}
-                          value={priceRange.max === 50000 ? '' : priceRange.max}
-                          placeholder="50,000"
-                          onChange={(e) => {
-                            const val = Math.min(50000, parseInt(e.target.value) || 50000);
-                            setPriceRange((prev) => ({ ...prev, max: val }));
-                            setCurrentPage(1);
-                          }}
-                          style={{
-                            width: '100%',
-                            padding: '6px 8px',
-                            background: 'rgba(0,0,0,0.4)',
-                            border: '1px solid rgba(201, 168, 76, 0.3)',
-                            borderRadius: '4px',
-                            color: 'var(--cream)',
-                            fontSize: '0.82rem',
-                            outline: 'none',
-                          }}
-                        />
-                      </div>
-                    </div>
-                    <input
-                      type="range"
-                      min="0"
-                      max="50000"
-                      step="500"
-                      value={priceRange.max}
-                      onChange={(e) => {
-                        setPriceRange((prev) => ({ ...prev, max: parseInt(e.target.value) }));
-                        setCurrentPage(1);
-                      }}
-                      style={{ width: '100%', accentColor: 'var(--gold)', cursor: 'pointer', marginBottom: '8px' }}
-                    />
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', color: 'rgba(255,255,255,0.7)' }}>
-                      <span>Min: ₹{priceRange.min.toLocaleString()}</span>
-                      <span>Max: ₹{priceRange.max.toLocaleString()}</span>
-                    </div>
-                  </div>
-
-                  {/* Rating */}
-                  <div className="filter-group">
-                    <h4 className="filter-group-title">RATING</h4>
-                    <div className="rating-filter-list">
-                      {ratingOptions.map((rating) => {
-                        const isSelected = minRating === rating;
-                        return (
-                          <button
-                            key={rating}
-                            onClick={() => {
-                              setMinRating(isSelected ? null : rating);
-                              setCurrentPage(1);
-                            }}
-                            className={`rating-filter-btn ${isSelected ? 'active' : ''}`}
-                            style={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '8px',
-                              color: isSelected ? '#c9a84c' : 'rgba(255,255,255,0.8)',
-                              fontSize: '0.88rem',
-                              background: isSelected ? 'rgba(201, 168, 76, 0.15)' : 'transparent',
-                              border: isSelected ? '1px solid rgba(201, 168, 76, 0.4)' : '1px solid transparent',
-                              borderRadius: '4px',
-                              padding: '6px 10px',
-                              cursor: 'pointer',
-                              width: '100%',
-                              textAlign: 'left',
-                              transition: 'all 0.2s ease',
-                            }}
-                          >
-                            <Star size={14} fill="var(--gold)" color="var(--gold)" />
-                            <span>{rating === 4.0 ? '4' : rating === 3.0 ? '3' : rating}★ &amp; above</span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="mobile-filter-drawer-footer">
-                  <Button variant="secondary" fullWidth onClick={() => { handleResetFilters(); setMobileFiltersOpen(false); }}>
-                    RESET ALL
-                  </Button>
-                  <Button variant="gold" fullWidth onClick={() => setMobileFiltersOpen(false)} glow>
-                    APPLY FILTERS {activeFiltersCount > 0 && `(${activeFiltersCount})`}
-                  </Button>
-                </div>
-              </motion.div>
-            </>
-          )}
-        </AnimatePresence>
       </div>
     </motion.div>
   );

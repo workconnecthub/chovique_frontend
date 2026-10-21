@@ -1,5 +1,14 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { ApiError, BASE_URL, getAuthToken, setAuthToken } from '../../lib/api';
+import {
+  ApiError,
+  BASE_URL,
+  getAuthToken,
+  setAuthToken,
+  getRefreshToken,
+  setRefreshToken,
+  clearTokens,
+  isTokenExpired,
+} from '../../lib/api';
 
 describe('API Client and Security Utilities', () => {
   beforeEach(() => {
@@ -14,6 +23,34 @@ describe('API Client and Security Utilities', () => {
 
     setAuthToken(null);
     expect(getAuthToken()).toBeNull();
+  });
+
+  it('correctly sets, retrieves, and clears refresh token in storage', () => {
+    expect(getRefreshToken()).toBeNull();
+
+    setRefreshToken('mock-refresh-token-123');
+    expect(getRefreshToken()).toBe('mock-refresh-token-123');
+
+    setAuthToken('mock-access-token-456');
+    clearTokens();
+
+    expect(getAuthToken()).toBeNull();
+    expect(getRefreshToken()).toBeNull();
+  });
+
+  it('correctly evaluates token expiration', () => {
+    expect(isTokenExpired(null)).toBe(true);
+    expect(isTokenExpired('invalid-token')).toBe(false);
+
+    // Expired token (exp in past)
+    const expiredPayload = btoa(JSON.stringify({ exp: Math.floor(Date.now() / 1000) - 100 }));
+    const expiredToken = `header.${expiredPayload}.signature`;
+    expect(isTokenExpired(expiredToken)).toBe(true);
+
+    // Fresh token (exp in future)
+    const freshPayload = btoa(JSON.stringify({ exp: Math.floor(Date.now() / 1000) + 3600 }));
+    const freshToken = `header.${freshPayload}.signature`;
+    expect(isTokenExpired(freshToken)).toBe(false);
   });
 
   it('properly configures BASE_URL with /api/v1 prefix', () => {

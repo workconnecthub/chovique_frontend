@@ -8,6 +8,17 @@ import { LegalModal } from '../../components/LegalModal';
 import { authService } from '../../services/authService';
 import { ApiError } from '../../lib/api';
 
+const OTP_EXPIRE_SECONDS = Number(import.meta.env.VITE_OTP_EXPIRE_SECONDS) || 300;
+
+const formatOtpTimeLeft = (seconds: number): string => {
+  const mins = Math.floor(seconds / 60);
+  const secs = seconds % 60;
+  if (mins > 0) {
+    return `${mins}:${secs.toString().padStart(2, '0')} min`;
+  }
+  return `${secs}s`;
+};
+
 export const RegisterPage: React.FC = () => {
   const { verifyOtp } = useApp();
   const navigate = useNavigate();
@@ -30,7 +41,7 @@ export const RegisterPage: React.FC = () => {
 
   // OTP Verification State
   const [otp, setOtp] = useState('');
-  const [timeLeft, setTimeLeft] = useState(30);
+  const [timeLeft, setTimeLeft] = useState(OTP_EXPIRE_SECONDS);
   const [isResending, setIsResending] = useState(false);
   const [successInfo, setSuccessInfo] = useState('');
 
@@ -164,7 +175,7 @@ export const RegisterPage: React.FC = () => {
         confirmPassword,
       });
       setStep('OTP');
-      setTimeLeft(response.expires_in || 30);
+      setTimeLeft(response.expires_in || OTP_EXPIRE_SECONDS);
       setSuccessInfo(`6-digit OTP sent successfully to ${email.trim()}`);
     } catch (err: unknown) {
       let msg = 'Failed to send OTP. Please try again.';
@@ -228,7 +239,7 @@ export const RegisterPage: React.FC = () => {
     setIsResending(true);
     try {
       const response = await authService.resendOtp(email.trim());
-      setTimeLeft(response.expires_in || 30);
+      setTimeLeft(response.expires_in || OTP_EXPIRE_SECONDS);
       setOtp('');
       setSuccessInfo('OTP has been resent successfully.');
     } catch (err: unknown) {
@@ -624,7 +635,7 @@ export const RegisterPage: React.FC = () => {
               {timeLeft > 0 ? (
                 <div style={{ color: '#E5C158', display: 'flex', alignItems: 'center', gap: '6px' }}>
                   <KeyRound size={16} />
-                  <span>OTP expires in <strong>{timeLeft}s</strong></span>
+                  <span>OTP expires in <strong>{formatOtpTimeLeft(timeLeft)}</strong></span>
                 </div>
               ) : (
                 <div style={{ color: '#e74c3c', display: 'flex', alignItems: 'center', gap: '6px' }}>

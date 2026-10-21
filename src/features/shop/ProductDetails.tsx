@@ -37,7 +37,9 @@ export const ProductDetails: React.FC = () => {
   const navigate = useNavigate();
   const { products, cart, addToCart, updateCartQuantity, removeFromCart, wishlist, toggleWishlist, role, user } = useApp();
 
-  const [product, setProduct] = useState(products.find((p) => p.id === id));
+  const [product, setProduct] = useState(
+    products.find((p) => p.id === id || (p.slug && p.slug === id))
+  );
   const [activeTab, setActiveTab] = useState<TabType>('description');
   const [activeImage, setActiveImage] = useState('');
   const [addedToCartAlert, setAddedToCartAlert] = useState(false);
@@ -48,7 +50,7 @@ export const ProductDetails: React.FC = () => {
   const [isZoomed, setIsZoomed] = useState(false);
 
   useEffect(() => {
-    const prod = products.find((p) => p.id === id);
+    const prod = products.find((p) => p.id === id || (p.slug && p.slug === id));
     if (prod) {
       setProduct(prod);
       const primary = prod.image || (prod.images && prod.images[0]) || '';
@@ -83,13 +85,9 @@ export const ProductDetails: React.FC = () => {
     if (inCart) {
       updateCartQuantity(product.id, cartItem.quantity + 1);
     } else {
-      if (role === 'guest') {
-        navigate('/login', { state: { from: location.pathname } });
-      } else {
-        addToCart(product, 1);
-        setAddedToCartAlert(true);
-        setTimeout(() => setAddedToCartAlert(false), 2500);
-      }
+      addToCart(product, 1);
+      setAddedToCartAlert(true);
+      setTimeout(() => setAddedToCartAlert(false), 2500);
     }
   };
   const handleDecrement = () => {
@@ -104,33 +102,25 @@ export const ProductDetails: React.FC = () => {
 
   // Add to cart trigger
   const handleAddToCart = () => {
-    if (role === 'guest') {
-      navigate('/login', { state: { from: location.pathname } });
-    } else {
-      addToCart(product, 1);
-      setAddedToCartAlert(true);
-      setTimeout(() => setAddedToCartAlert(false), 2500);
-    }
+    addToCart(product, 1);
+    setAddedToCartAlert(true);
+    setTimeout(() => setAddedToCartAlert(false), 2500);
   };
 
-  // Buy now trigger — adds product with selected quantity to cart and navigates to existing checkout flow
+  // Buy now trigger — adds product with selected quantity to cart and proceeds to checkout (login if guest)
   const handleBuyNow = async () => {
+    if (!inCart) {
+      await addToCart(product, 1);
+    }
     if (role === 'guest') {
-      navigate('/login', { state: { from: location.pathname } });
+      navigate('/login', { state: { from: '/checkout' } });
     } else {
-      if (!inCart) {
-        await addToCart(product, 1);
-      }
       navigate('/checkout');
     }
   };
 
   const handleWishlistClick = () => {
-    if (role === 'guest') {
-      navigate('/login', { state: { from: location.pathname } });
-    } else {
-      toggleWishlist(product);
-    }
+    toggleWishlist(product);
   };
 
   // Magnifier coordinates calculator
@@ -210,12 +200,44 @@ export const ProductDetails: React.FC = () => {
                       }}
                     />
 
+                    {/* Floating Wishlist Heart Button (Amazon & Flipkart style on product image card) */}
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleWishlistClick();
+                      }}
+                      title={isLiked ? "Remove from Wishlist" : "Add to Wishlist"}
+                      aria-label={isLiked ? "Remove from Wishlist" : "Add to Wishlist"}
+                      className="product-image-wishlist-btn"
+                      style={{
+                        position: 'absolute',
+                        top: '14px',
+                        left: '14px',
+                        background: isLiked ? '#e74c3c' : 'rgba(20, 16, 13, 0.8)',
+                        border: isLiked ? '1px solid #e74c3c' : '1px solid rgba(201, 168, 76, 0.45)',
+                        boxShadow: isLiked ? '0 4px 14px rgba(231, 76, 60, 0.5)' : '0 4px 14px rgba(0, 0, 0, 0.6)',
+                        borderRadius: '50%',
+                        width: '38px',
+                        height: '38px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: isLiked ? '#ffffff' : '#f5efe6',
+                        cursor: 'pointer',
+                        zIndex: 6,
+                        transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+                      }}
+                    >
+                      <Heart size={18} fill={isLiked ? 'currentColor' : 'none'} strokeWidth={2.2} />
+                    </button>
+
                     {/* Image Counter Badge */}
                     {allImages.length > 1 && (
                       <div
                         style={{
                           position: 'absolute',
-                          top: '14px',
+                          bottom: '14px',
                           left: '14px',
                           background: 'rgba(0,0,0,0.65)',
                           backdropFilter: 'blur(6px)',
@@ -575,7 +597,7 @@ export const ProductDetails: React.FC = () => {
               </p>
             </div>
 
-            {/* Quantity Selector & Wishlist */}
+            {/* Quantity Selector */}
             <div className="details-actions-row">
               <div
                 style={{
@@ -590,6 +612,7 @@ export const ProductDetails: React.FC = () => {
                 <button
                   onClick={handleDecrement}
                   style={{ padding: '0 16px', color: 'var(--beige)', transition: 'color 0.3s' }}
+                  aria-label="Decrease quantity"
                 >
                   <Minus size={16} />
                 </button>
@@ -599,28 +622,11 @@ export const ProductDetails: React.FC = () => {
                 <button
                   onClick={handleIncrement}
                   style={{ padding: '0 16px', color: 'var(--beige)', transition: 'color 0.3s' }}
+                  aria-label="Increase quantity"
                 >
                   <Plus size={16} />
                 </button>
               </div>
-
-              <button
-                onClick={handleWishlistClick}
-                style={{
-                  width: '48px',
-                  height: '48px',
-                  borderRadius: '4px',
-                  border: '1px solid var(--glass-border)',
-                  background: isLiked ? 'var(--rose-gold)' : 'rgba(255, 255, 255, 0.03)',
-                  color: isLiked ? 'white' : 'var(--cream)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  transition: 'background 0.3s',
-                }}
-              >
-                <Heart size={20} fill={isLiked ? 'currentColor' : 'none'} />
-              </button>
             </div>
 
             {/* Action buttons */}

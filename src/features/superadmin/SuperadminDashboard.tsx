@@ -152,6 +152,7 @@ import type { SystemUser, Order, InstagramReel, Testimonial } from '../../types'
 import { ReportsAnalyticsView } from '../admin/ReportsAnalyticsView';
 import { RewardCoinsView } from '../admin/RewardCoinsView';
 import { CouponsManagementView } from '../admin/CouponsManagementView';
+import { HomepageCmsView } from '../admin/HomepageCmsView';
 import {
   trimValue,
   isValidEmail,
@@ -269,6 +270,10 @@ export const SuperadminDashboard: React.FC = () => {
         'coins': 'reward-settings',
         'coupons': 'coupons',
         'coupon': 'coupons',
+        'home-mgmt': 'home-mgmt',
+        'banners': 'home-mgmt',
+        'carousel': 'home-mgmt',
+        'cms': 'home-mgmt',
       };
       if (mapping[tabParam]) {
         setActiveTab(mapping[tabParam]);
@@ -380,6 +385,7 @@ export const SuperadminDashboard: React.FC = () => {
       setShowLogoutConfirmModal(true);
     } else {
       setActiveTab(tab);
+      navigate(`/superadmin?tab=${tab}`, { replace: true });
       if (tab === 'notifications' && entityId) {
         (adminService as any).getSuperadminNotificationById(entityId)
           .then((notif: any) => {
@@ -2894,7 +2900,12 @@ export const SuperadminDashboard: React.FC = () => {
           {/* Live Home Button */}
           <button
             className="view-home-btn"
-            onClick={() => navigate('/')}
+            onClick={() => {
+              const returnPath = `/superadmin?tab=${encodeURIComponent(activeTab)}`;
+              sessionStorage.setItem('chovique_dashboard_return_path', returnPath);
+              sessionStorage.setItem('chovique_dashboard_return_label', 'Superadmin Dashboard');
+              navigate('/', { state: { returnTo: returnPath } });
+            }}
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -8976,6 +8987,13 @@ export const SuperadminDashboard: React.FC = () => {
         {/* COUPONS & DISCOUNTS TAB */}
         {activeTab === 'coupons' && (
           <CouponsManagementView addToast={addToast} />
+        )}
+
+        {/* HOMEPAGE CMS & BANNER MANAGEMENT TAB */}
+        {activeTab === 'home-mgmt' && (
+          <div>
+            <HomepageCmsView addToast={addToast} addLogEntry={addLogEntry} />
+          </div>
         )}
 
         {/* AUDIT LOG TAB FALLBACK */}

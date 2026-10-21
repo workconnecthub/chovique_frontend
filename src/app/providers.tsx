@@ -11,6 +11,8 @@ import {
   CustomerAddress,
   SupportNotification,
   StoreConfig,
+  LandingSectionsConfig,
+  DEFAULT_LANDING_SECTIONS,
 } from '../types';
 import { authService } from '../services/authService';
 import { cartService, BackendCartItem } from '../services/cartService';
@@ -23,6 +25,15 @@ import { userService } from '../services/userService';
 import { notificationService } from '../services/notificationService';
 import { walletService, UserWallet } from '../services/walletService';
 import { ApiError, getAuthToken } from '../lib/api';
+import {
+  getGuestSession,
+  persistGuestCart,
+  persistGuestWishlist,
+  clearGuestShoppingData,
+  getGuestCartForSync,
+  getGuestWishlistForSync,
+} from '../utils/guestStorage';
+
 
 // =============================================================================
 // THEME INTERFACE & TOKENS
@@ -116,7 +127,12 @@ interface AppContextType {
   importOfflineSales: (salesList: Omit<OfflineSale, 'id' | 'date'>[]) => void;
 
   // Banners
-  updateBanner: (id: string, bannerData: Partial<Banner>) => void;
+  updateBanner: (id: string, bannerData: Partial<Banner>) => Promise<any>;
+
+  // Landing Page Customizable Sections
+  landingSections: LandingSectionsConfig;
+  updateLandingSections: (newSections: Partial<LandingSectionsConfig>) => Promise<any>;
+  refreshLandingSections: () => Promise<void>;
 
   // Theme
   theme: AppTheme;
@@ -364,22 +380,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [offlineSales, setOfflineSales] = useState<OfflineSale[]>([]);
 
   // ---------------------------------------------------------------------------
-  // Cart State — backend-persistent
+  // Cart State — backend-persistent for authenticated users, persistent 30-day session for guests
   // ---------------------------------------------------------------------------
 
-  const [cart, setCart] = useState<CartItem[]>(() => {
-    try {
-      const saved = localStorage.getItem('chovique_guest_cart');
-      return saved ? JSON.parse(saved) : [];
-    } catch {
-      return [];
-    }
-  });
+  const [cart, setCart] = useState<CartItem[]>([]);
 
-  // Keep localStorage in sync for guests
+  // Keep guestStorage in sync for guests on cart change
   useEffect(() => {
-    if (role === 'guest' && cart.length > 0) {
-      localStorage.setItem('chovique_guest_cart', JSON.stringify(cart));
+    if (role === 'guest') {
+      persistGuestCart(cart);
     }
   }, [cart, role]);
 
@@ -395,21 +404,60 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setCart(cartItems);
   }, []);
 
-  const [wishlist, setWishlist] = useState<Product[]>(() => {
-    try {
-      const saved = localStorage.getItem('chovique_guest_wishlist');
-      return saved ? JSON.parse(saved) : [];
-    } catch {
-      return [];
-    }
-  });
+  const [wishlist, setWishlist] = useState<Product[]>([]);
 
-  // Keep localStorage in sync for guest wishlist
+  // Keep guestStorage in sync for guest wishlist
   useEffect(() => {
-    if (role === 'guest' && wishlist.length > 0) {
-      localStorage.setItem('chovique_guest_wishlist', JSON.stringify(wishlist));
+    if (role === 'guest') {
+      persistGuestWishlist(wishlist);
     }
   }, [wishlist, role]);
+
+  // Rehydrate guest cart & wishlist with authoritative product data from backend
+  useEffect(() => {
+    if (role !== 'guest' || products.length === 0) return;
+
+    try {
+      const guestSession = getGuestSession();
+
+      // 1. Rehydrate cart against authoritative active products
+      if (guestSession.cart && guestSession.cart.length > 0) {
+        const rehydratedCart: CartItem[] = [];
+        for (const item of guestSession.cart) {
+          const prod = products.find((p) => p.id === item.productId);
+          if (
+            prod &&
+            prod.is_active !== false &&
+            prod.is_available !== false &&
+            (prod.stock ?? 0) > 0
+          ) {
+            const qty = Math.min(item.quantity, prod.stock ?? item.quantity);
+            if (qty > 0) {
+              rehydratedCart.push({
+                product: prod,
+                quantity: qty,
+              });
+            }
+          }
+        }
+        setCart(rehydratedCart);
+      }
+
+      // 2. Rehydrate wishlist against active products
+      if (guestSession.wishlist && guestSession.wishlist.length > 0) {
+        const rehydratedWishlist: Product[] = [];
+        for (const item of guestSession.wishlist) {
+          const prod = products.find((p) => p.id === item.productId);
+          if (prod && prod.is_active !== false && prod.is_available !== false) {
+            rehydratedWishlist.push(prod);
+          }
+        }
+        setWishlist(rehydratedWishlist);
+      }
+    } catch (err) {
+      console.warn('[Chovique] Failed to rehydrate guest shopping session:', err);
+    }
+  }, [products, role]);
 
   // ---------------------------------------------------------------------------
   // Support Tickets — fetched after login
@@ -450,44 +498,44 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // ---------------------------------------------------------------------------
 
   const mergeGuestSession = async () => {
-    // Merge guest cart
-    try {
-      const savedCart = localStorage.getItem('chovique_guest_cart');
-      if (savedCart) {
-        const guestCart = JSON.parse(savedCart);
-        if (guestCart.length > 0) {
-          const itemsToSync = guestCart.map((item: any) => ({
-            product_id: item.product.id,
-            quantity: item.quantity,
-          }));
-          await cartService.syncCart(itemsToSync);
-        }
+    const guestCartItems = getGuestCartForSync();
+    const guestWishlistIds = getGuestWishlistForSync();
+
+    let cartSyncSuccess = false;
+    let wishlistSyncSuccess = false;
+
+    // 1. Sync guest cart items to backend cart
+    if (guestCartItems.length > 0) {
+      try {
+        const cartRes = await cartService.syncCart(guestCartItems);
+        syncCartFromBackend(cartRes.items);
+        cartSyncSuccess = true;
+      } catch (e) {
+        console.error('[Chovique] Failed to synchronize guest cart:', e);
       }
-    } catch (e) {
-      console.error('Failed to merge guest cart', e);
-    } finally {
-      localStorage.removeItem('chovique_guest_cart');
+    } else {
+      cartSyncSuccess = true;
     }
 
-    // Merge guest wishlist
-    try {
-      const savedWish = localStorage.getItem('chovique_guest_wishlist');
-      if (savedWish) {
-        const guestWishlist: Product[] = JSON.parse(savedWish);
-        if (guestWishlist.length > 0) {
-          for (const item of guestWishlist) {
-            try {
-              await wishlistService.addToWishlist(item.id);
-            } catch {}
-          }
-        }
+    // 2. Sync guest wishlist items to backend wishlist
+    if (guestWishlistIds.length > 0) {
+      try {
+        const wishRes = await wishlistService.syncWishlist(guestWishlistIds);
+        setWishlist(wishRes.map((i) => i.product));
+        wishlistSyncSuccess = true;
+      } catch (e) {
+        console.error('[Chovique] Failed to synchronize guest wishlist:', e);
       }
-    } catch (e) {
-      console.error('Failed to merge guest wishlist', e);
-    } finally {
-      localStorage.removeItem('chovique_guest_wishlist');
+    } else {
+      wishlistSyncSuccess = true;
+    }
+
+    // Clear guest storage only after successful synchronization is confirmed
+    if (cartSyncSuccess && wishlistSyncSuccess) {
+      clearGuestShoppingData();
     }
   };
+
 
   const refreshUserCartAndWishlist = async () => {
     const cOpId = ++cartOpIdRef.current;
@@ -613,8 +661,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     } catch {
       // Best-effort server-side logout — always clear local state
     } finally {
-      localStorage.removeItem('chovique_guest_cart');
-      localStorage.removeItem('chovique_guest_wishlist');
+      clearGuestShoppingData();
       sessionStorage.clear();
       setUser(null);
       setRole('guest');
@@ -1349,11 +1396,103 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setBanners((prev) => prev.filter((b) => b.id !== id));
   };
 
-  const updateBanner = (id: string, bannerData: Partial<Banner>) => {
+  const updateBanner = async (id: string, bannerData: Partial<Banner>) => {
     setBanners((prev) =>
       prev.map((b) => (b.id === id ? { ...b, ...bannerData } : b))
     );
+    try {
+      const { adminService } = await import('../services/adminService');
+      const payload: any = { ...bannerData };
+      if (bannerData.buttonText !== undefined) {
+        payload.button_text = bannerData.buttonText;
+      }
+      const updated = await adminService.updateBanner(id, payload);
+      if (updated) {
+        setBanners((prev) =>
+          prev.map((b) =>
+            b.id === id
+              ? {
+                  ...b,
+                  ...updated,
+                  buttonText: updated.buttonText || updated.button_text || b.buttonText,
+                }
+              : b
+          )
+        );
+      }
+      return updated;
+    } catch (err) {
+      console.error('Failed to sync banner update to backend:', err);
+      throw err;
+    }
   };
+
+  // ---------------------------------------------------------------------------
+  // Landing Page Sections CMS State
+  // ---------------------------------------------------------------------------
+  const [landingSections, setLandingSections] = useState<LandingSectionsConfig>(DEFAULT_LANDING_SECTIONS);
+
+  const refreshLandingSections = useCallback(async () => {
+    try {
+      const data = await homeService.getLandingSections();
+      if (data && typeof data === 'object' && Object.keys(data).length > 0) {
+        setLandingSections((prev) => {
+          const merged: any = { ...prev };
+          for (const key of Object.keys(data)) {
+            if (data[key] && typeof data[key] === 'object' && !Array.isArray(data[key])) {
+              merged[key] = { ...(prev as any)[key], ...data[key] };
+            } else if (data[key] !== undefined) {
+              merged[key] = data[key];
+            }
+          }
+          return merged;
+        });
+      }
+    } catch (err) {
+      console.warn('Could not fetch landing sections config, using defaults:', err);
+    }
+  }, []);
+
+  useEffect(() => {
+    refreshLandingSections();
+  }, [refreshLandingSections]);
+
+  const updateLandingSections = useCallback(async (newSections: Partial<LandingSectionsConfig>) => {
+    setLandingSections((prev) => {
+      const merged: any = { ...prev };
+      for (const key of Object.keys(newSections)) {
+        const val = (newSections as any)[key];
+        if (val && typeof val === 'object' && !Array.isArray(val)) {
+          merged[key] = { ...(prev as any)[key], ...val };
+        } else if (val !== undefined) {
+          merged[key] = val;
+        }
+      }
+      return merged;
+    });
+
+    try {
+      const { adminService } = await import('../services/adminService');
+      const updated = await adminService.updateLandingSections(newSections);
+      if (updated && typeof updated === 'object') {
+        setLandingSections((prev) => {
+          const merged: any = { ...prev };
+          for (const key of Object.keys(updated)) {
+            if (updated[key] && typeof updated[key] === 'object' && !Array.isArray(updated[key])) {
+              merged[key] = { ...(prev as any)[key], ...updated[key] };
+            } else if (updated[key] !== undefined) {
+              merged[key] = updated[key];
+            }
+          }
+          return merged;
+        });
+      }
+      return updated;
+    } catch (err) {
+      console.error('Failed to save landing sections to backend:', err);
+      throw err;
+    }
+  }, []);
 
   // ---------------------------------------------------------------------------
   // Theme Operations
@@ -1647,6 +1786,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         refreshBanners,
         addBanner,
         deleteBannerState,
+        landingSections,
+        updateLandingSections,
+        refreshLandingSections,
         updateThemeColors,
         tickets,
         addSupportTicket,

@@ -7,18 +7,25 @@ import { Button } from '../../components/ui/Button';
 import { getImageUrl } from '../../utils/imageUrl';
 
 export const Hero: React.FC = () => {
-  const { banners } = useApp();
+  const { banners, refreshBanners } = useApp();
   const [currentSlide, setCurrentSlide] = useState(0);
   const duration = 6000;
   const navigate = useNavigate();
   const location = useLocation();
 
   useEffect(() => {
+    if (refreshBanners) {
+      refreshBanners();
+    }
+  }, [refreshBanners]);
+
+  useEffect(() => {
+    if (!banners || banners.length <= 1) return;
     const timer = setInterval(() => {
       setCurrentSlide((prev) => (prev + 1) % banners.length);
     }, duration);
     return () => clearInterval(timer);
-  }, [banners.length]);
+  }, [banners?.length]);
 
   if (!banners || banners.length === 0) return null;
 
@@ -37,64 +44,53 @@ export const Hero: React.FC = () => {
    *   3. Shop the Deals → redirect to /shop
    *   4. Discover Our Process → redirect to /our-story
    */
-  const handleBannerClick = (buttonText: string, link: string) => {
-    const textLower = (buttonText || '').toLowerCase();
-    const linkLower = (link || '').toLowerCase();
-
-    // 1. Explore Collection → scroll to "store" on homepage
-    if (textLower.includes('explore') || linkLower.includes('store') || linkLower.includes('collection')) {
-      if (location.pathname === '/') {
-        const el = document.getElementById('store');
-        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      } else {
-        navigate('/', { state: { scrollTo: 'store' } });
-      }
-      return;
-    }
-
-    // 2. View Gift Sets / Gift Collections → scroll to "luxury-gift-hampers" on homepage
-    if (textLower.includes('gift') || linkLower.includes('gift-collections') || linkLower.includes('gift-hampers') || linkLower.includes('luxury-gift-hampers')) {
-      if (location.pathname === '/') {
-        const el = document.getElementById('luxury-gift-hampers') || document.getElementById('gift-hampers') || document.getElementById('gift-collections');
-        if (el) {
-          el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }
-      } else {
-        navigate('/', { state: { scrollTo: 'luxury-gift-hampers' } });
-      }
-      return;
-    }
-
-    // 3. Discover Our Process / Our Story → redirect to /our-story
-    if (textLower.includes('process') || textLower.includes('story') || linkLower.includes('story') || linkLower === '/our-story') {
-      navigate('/our-story');
-      return;
-    }
-
-    // 4. Shop the Deals / Shop → redirect to /shop
-    if (textLower.includes('shop') || textLower.includes('deals') || linkLower.includes('shop') || linkLower === '/shop') {
+  /**
+   * Smart navigation handler for hero banner buttons and links.
+   * Directly respects the banner's configured link URL / anchor / page route.
+   */
+  const handleBannerClick = (_buttonText: string, link: string) => {
+    const rawLink = (link || '').trim();
+    if (!rawLink) {
       navigate('/shop');
       return;
     }
 
-    // Fallback: anchor links starting with #
-    if (link && link.startsWith('#')) {
-      const targetId = link.substring(1);
+    // External URL
+    if (rawLink.startsWith('http://') || rawLink.startsWith('https://')) {
+      window.open(rawLink, '_blank', 'noopener,noreferrer');
+      return;
+    }
+
+    // Anchor hash link on landing page (e.g. #popular, #store, #best-sellers, #new-arrivals, #luxury-gift-hampers, #reviews)
+    if (rawLink.startsWith('#')) {
+      const targetId = rawLink.substring(1);
       if (location.pathname === '/') {
         const el = document.getElementById(targetId);
-        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
       } else {
         navigate('/', { state: { scrollTo: targetId } });
       }
       return;
     }
 
-    // Direct link fallback
-    if (link) {
-      navigate(link);
-    } else {
-      navigate('/shop');
+    // Link that includes leading slash and hash (e.g. /#popular)
+    if (rawLink.startsWith('/#')) {
+      const targetId = rawLink.substring(2);
+      if (location.pathname === '/') {
+        const el = document.getElementById(targetId);
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      } else {
+        navigate('/', { state: { scrollTo: targetId } });
+      }
+      return;
     }
+
+    // Internal app route (e.g. /shop, /contact, /our-story, /categories, etc.)
+    navigate(rawLink);
   };
 
   // Create array of particles for background animation
@@ -233,13 +229,7 @@ export const Hero: React.FC = () => {
                 letterSpacing: '1px',
               }}
             >
-              {currentSlide === 0 ? (
-                <>
-                  The Art of <em style={{ fontFamily: 'var(--font-elegant)', fontStyle: 'italic', fontWeight: 400, background: 'var(--gradient-gold-text)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Fine Chocolate</em>
-                </>
-              ) : (
-                activeBanner.title
-              )}
+              {activeBanner.title}
             </h1>
             <p
               style={{

@@ -4,6 +4,8 @@ import { motion } from 'framer-motion';
 import { Eye, Heart, Target, Star, Leaf, Award, Play, Pause, Volume2, VolumeX } from 'lucide-react';
 import { slideInLeft, slideInRight, fadeIn } from '../../lib/framer';
 import { adminService } from '../../services/adminService';
+import { homeService } from '../../services/homeService';
+import { StoryPageConfig, DEFAULT_STORY_PAGE_CONFIG } from '../../types';
 import { Footer } from '../../components/Footer';
 import { Reviews } from './Reviews';
 
@@ -11,7 +13,8 @@ export const OurStoryPage: React.FC = () => {
   const location = useLocation();
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(true);
-  const [videoUrl, setVideoUrl] = useState('https://res.cloudinary.com/aiqm7f7b/video/upload/v1790396266/chocolate-world/reels/ig_DdQYj55v0dr.mp4');
+  const [storyConfig, setStoryConfig] = useState<StoryPageConfig>(DEFAULT_STORY_PAGE_CONFIG);
+  const [videoUrl, setVideoUrl] = useState(DEFAULT_STORY_PAGE_CONFIG.video_url);
   const videoRef = useRef<HTMLVideoElement>(null);
   const videoContainerRef = useRef<HTMLDivElement>(null);
 
@@ -30,10 +33,18 @@ export const OurStoryPage: React.FC = () => {
   }, [location.hash]);
 
   useEffect(() => {
-    adminService.getStoryVideo()
-      .then((res) => {
-        if (res && res.video_url) {
-          setVideoUrl(res.video_url);
+    homeService.getStoryPageConfig()
+      .then((cfg) => {
+        if (cfg && typeof cfg === 'object' && Object.keys(cfg).length > 0) {
+          setStoryConfig((prev) => ({
+            ...prev,
+            ...cfg,
+            steps: Array.isArray(cfg.steps) && cfg.steps.length > 0 ? cfg.steps : prev.steps,
+            values: Array.isArray(cfg.values) && cfg.values.length > 0 ? cfg.values : prev.values,
+          }));
+          if (cfg.video_url) {
+            setVideoUrl(cfg.video_url);
+          }
         }
       })
       .catch(() => {});
@@ -133,7 +144,7 @@ export const OurStoryPage: React.FC = () => {
         style={{
           position: 'relative',
           padding: '105px 0 45px 0',
-          background: 'linear-gradient(rgba(var(--dark-chocolate-rgb), 0.75), rgba(10, 10, 10, 1)), url("https://images.unsplash.com/photo-1511381939415-e44015466834?auto=format&fit=crop&w=1600&q=80")',
+          background: `linear-gradient(rgba(var(--dark-chocolate-rgb), 0.75), rgba(10, 10, 10, 1)), url("${storyConfig.hero_image || 'https://images.unsplash.com/photo-1511381939415-e44015466834?auto=format&fit=crop&w=1600&q=80'}")`,
           backgroundSize: 'cover',
           backgroundPosition: 'center',
           textAlign: 'center',
@@ -145,12 +156,14 @@ export const OurStoryPage: React.FC = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8 }}
           >
-            <span className="section-label" style={{ justifyContent: 'center' }}>Heritage & Passion</span>
+            <span className="section-label" style={{ justifyContent: 'center' }}>
+              {storyConfig.hero_badge || 'Heritage & Passion'}
+            </span>
             <h1 className="section-title" style={{ fontSize: 'clamp(2.5rem, 5vw, 4.5rem)', marginBottom: '16px' }}>
-              The Chovique <span className="gold">Story</span>
+              {storyConfig.hero_title || 'The Chovique Story'}
             </h1>
             <p style={{ fontFamily: 'var(--font-elegant)', fontSize: '1.4rem', color: 'var(--beige)', maxWidth: '700px', margin: '0 auto', lineHeight: 1.6 }}>
-              Crafting sensory journeys through the purity of cacao since 2020.
+              {storyConfig.hero_subtitle || 'Crafting sensory journeys through the purity of cacao since 2020.'}
             </p>
           </motion.div>
         </div>
@@ -279,25 +292,25 @@ export const OurStoryPage: React.FC = () => {
               viewport={{ once: true }}
               variants={slideInRight}
             >
-              <span className="section-label">Our Beginnings</span>
+              <span className="section-label">{storyConfig.story_badge || 'Our Beginnings'}</span>
               <h2 className="section-title">
-                Born from a Love of <span className="gold">Pure Cacao</span>
+                {storyConfig.story_title || 'Born from a Love of Pure Cacao'}
               </h2>
               <div className="gold-divider" style={{ margin: '15px 0 25px 0', width: '60px', height: '2px', background: 'var(--gradient-gold)' }} />
               <p style={{ color: 'var(--beige)', marginBottom: '20px', lineHeight: 1.8, fontSize: '1.05rem' }}>
-                Chovique was founded on a simple realization: chocolate should be an experience, not just a sweet. Frustrated by highly processed, sugar-laden confectionery, our founders set out on a global quest to source authentic, single-origin cacao.
+                {storyConfig.story_paragraph1}
               </p>
               <p style={{ color: 'var(--grey-light)', marginBottom: '25px', lineHeight: 1.8 }}>
-                We believe that the best chocolate is a partnership between nature and the chocolatier. By respecting the unique flavor profiles of beans from Madagascar, Ghana, and Ecuador, we celebrate the true heritage of cocoa.
+                {storyConfig.story_paragraph2}
               </p>
               <div style={{ display: 'flex', gap: '20px', marginTop: '30px' }}>
                 <div style={{ flex: 1, borderLeft: '3px solid var(--gold)', paddingLeft: '15px' }}>
-                  <h4 style={{ color: 'var(--cream)', fontSize: '1.1rem', marginBottom: '6px' }}>100% Traceable</h4>
-                  <p style={{ fontSize: '0.85rem', color: 'var(--grey-light)' }}>Direct relationship with farmers to ensure equity.</p>
+                  <h4 style={{ color: 'var(--cream)', fontSize: '1.1rem', marginBottom: '6px' }}>{storyConfig.feature1_title}</h4>
+                  <p style={{ fontSize: '0.85rem', color: 'var(--grey-light)' }}>{storyConfig.feature1_desc}</p>
                 </div>
                 <div style={{ flex: 1, borderLeft: '3px solid var(--gold)', paddingLeft: '15px' }}>
-                  <h4 style={{ color: 'var(--cream)', fontSize: '1.1rem', marginBottom: '6px' }}>Micro-Batch Production</h4>
-                  <p style={{ fontSize: '0.85rem', color: 'var(--grey-light)' }}>Ensuring unmatched precision and quality control.</p>
+                  <h4 style={{ color: 'var(--cream)', fontSize: '1.1rem', marginBottom: '6px' }}>{storyConfig.feature2_title}</h4>
+                  <p style={{ fontSize: '0.85rem', color: 'var(--grey-light)' }}>{storyConfig.feature2_desc}</p>
                 </div>
               </div>
             </motion.div>
@@ -336,10 +349,10 @@ export const OurStoryPage: React.FC = () => {
                 <Eye size={30} />
               </div>
               <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1.8rem', color: 'var(--cream)' }}>
-                Our <span className="gold">Vision</span>
+                {storyConfig.vision_title || 'Our Vision'}
               </h3>
               <p style={{ color: 'var(--beige)', lineHeight: 1.8, fontSize: '1.05rem' }}>
-                To establish a global standard for luxury chocolate that elevates the growers, honors the Earth, and transforms chocolate consumption into an art form. We envision a future where chocolate is valued as deeply as fine wine, celebrated for its complex terroir and therapeutic purity.
+                {storyConfig.vision_text}
               </p>
             </motion.div>
 
@@ -364,10 +377,10 @@ export const OurStoryPage: React.FC = () => {
                 <Target size={30} />
               </div>
               <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1.8rem', color: 'var(--cream)' }}>
-                Our <span className="gold">Mission</span>
+                {storyConfig.mission_title || 'Our Mission'}
               </h3>
               <p style={{ color: 'var(--beige)', lineHeight: 1.8, fontSize: '1.05rem' }}>
-                To curate extraordinary bean-to-bar masterpieces through sustainable direct-trade partnerships, hand-tempered craftsmanship, and transparent sourcing. We dedicate ourselves to continuous culinary innovation, ensuring that every box of Chovique delivers unmatched premium luxury.
+                {storyConfig.mission_text}
               </p>
             </motion.div>
           </div>
@@ -390,9 +403,9 @@ export const OurStoryPage: React.FC = () => {
               gap: '30px',
             }}
           >
-            {steps.map((step, idx) => (
+            {(storyConfig.steps && storyConfig.steps.length > 0 ? storyConfig.steps : steps).map((step, idx) => (
               <motion.div
-                key={step.num}
+                key={step.num || idx}
                 initial={{ opacity: 0, y: 30 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
@@ -447,9 +460,9 @@ export const OurStoryPage: React.FC = () => {
               gap: '30px',
             }}
           >
-            {coreValues.map((value, idx) => (
+            {(storyConfig.values && storyConfig.values.length > 0 ? storyConfig.values : DEFAULT_STORY_PAGE_CONFIG.values).map((value, idx) => (
               <motion.div
-                key={value.title}
+                key={value.title || idx}
                 initial={{ opacity: 0, scale: 0.95 }}
                 whileInView={{ opacity: 1, scale: 1 }}
                 viewport={{ once: true }}
@@ -467,7 +480,9 @@ export const OurStoryPage: React.FC = () => {
                   gap: '16px',
                 }}
               >
-                <div style={{ marginBottom: '10px' }}>{value.icon}</div>
+                <div style={{ marginBottom: '10px' }}>
+                  {idx === 0 ? <Leaf className="gold" size={32} /> : idx === 1 ? <Award className="gold" size={32} /> : <Star className="gold" size={32} />}
+                </div>
                 <h4 style={{ color: 'var(--cream)', fontSize: '1.25rem', fontFamily: 'var(--font-display)', fontWeight: 600 }}>
                   {value.title}
                 </h4>

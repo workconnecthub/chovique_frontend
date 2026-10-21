@@ -8,7 +8,7 @@
  *   - No demo mode, no localStorage auth fallbacks.
  */
 
-import { apiGet, apiPost, setAuthToken } from '../lib/api';
+import { apiGet, apiPost, setAuthToken, setRefreshToken, getRefreshToken, clearTokens } from '../lib/api';
 import type {
   User,
   LoginPayload,
@@ -18,12 +18,13 @@ import type {
   VerifyOtpPayload,
   SendOtpResponse,
   GoogleAuthResponse,
+  ForgotPasswordResponse,
 } from '../types';
 
 export const authService = {
   /**
    * Login — POST /auth/login.
-   * Backend sets httpOnly access + refresh cookies on success.
+   * Backend sets httpOnly access + refresh cookies on success and returns tokens.
    */
   login: async (payload: LoginPayload): Promise<AuthResponse> => {
     const res = await apiPost<AuthResponse>('/auth/login', {
@@ -32,6 +33,9 @@ export const authService = {
     });
     if (res?.access_token) {
       setAuthToken(res.access_token);
+    }
+    if (res?.refresh_token) {
+      setRefreshToken(res.refresh_token);
     }
     return res;
   },
@@ -75,6 +79,9 @@ export const authService = {
     if (res?.access_token) {
       setAuthToken(res.access_token);
     }
+    if (res?.refresh_token) {
+      setRefreshToken(res.refresh_token);
+    }
     return res;
   },
 
@@ -88,16 +95,16 @@ export const authService = {
   /**
    * Forgot password — sends reset OTP to email.
    */
-  forgotPassword: async (email: string): Promise<{ message: string }> => {
-    return apiPost<{ message: string }>('/auth/forgot-password', { email });
+  forgotPassword: async (email: string): Promise<ForgotPasswordResponse> => {
+    return apiPost<ForgotPasswordResponse>('/auth/forgot-password', { email });
   },
 
 
   /**
    * Resend forgot-password OTP.
    */
-  resendForgotOtp: async (email: string): Promise<{ message: string }> => {
-    return apiPost<{ message: string }>('/auth/resend-forgot-otp', { email });
+  resendForgotOtp: async (email: string): Promise<ForgotPasswordResponse> => {
+    return apiPost<ForgotPasswordResponse>('/auth/resend-forgot-otp', { email });
   },
 
   /**
@@ -169,6 +176,9 @@ export const authService = {
     if (res?.access_token) {
       setAuthToken(res.access_token);
     }
+    if (res?.refresh_token) {
+      setRefreshToken(res.refresh_token);
+    }
     return res;
   },
 
@@ -183,14 +193,17 @@ export const authService = {
     if (res?.access_token) {
       setAuthToken(res.access_token);
     }
+    if (res?.refresh_token) {
+      setRefreshToken(res.refresh_token);
+    }
     return res;
   },
 
   /**
-   * Logout — clears server-side session (cookie) and client auth token.
+   * Logout — clears server-side session (cookie) and client auth tokens.
    */
   logout: async (): Promise<void> => {
-    setAuthToken(null);
+    clearTokens();
     try {
       await apiPost<void>('/auth/logout');
     } catch {
@@ -199,13 +212,19 @@ export const authService = {
   },
 
   /**
-   * Refresh access token using the httpOnly refresh cookie.
-   * The backend replaces both cookies on success.
+   * Refresh access token using the httpOnly refresh cookie and/or stored refresh token.
+   * The backend replaces both cookies on success and returns new tokens in response.
    */
-  refreshToken: async (): Promise<{ message: string; access_token?: string }> => {
-    const res = await apiPost<{ message: string; access_token?: string }>('/auth/refresh');
+  refreshToken: async (): Promise<{ message: string; access_token?: string; refresh_token?: string }> => {
+    const storedRefreshToken = getRefreshToken();
+    const res = await apiPost<{ message: string; access_token?: string; refresh_token?: string }>('/auth/refresh', {
+      refresh_token: storedRefreshToken,
+    });
     if (res?.access_token) {
       setAuthToken(res.access_token);
+    }
+    if (res?.refresh_token) {
+      setRefreshToken(res.refresh_token);
     }
     return res;
   },

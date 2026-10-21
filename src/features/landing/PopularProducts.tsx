@@ -4,9 +4,16 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useApp } from '../../app/providers';
 import { Card } from '../../components/ui/Card';
 import { fadeInUp } from '../../lib/framer';
+import { DEFAULT_LANDING_SECTIONS } from '../../types';
 
 export const PopularProducts: React.FC = () => {
-  const { products, theme } = useApp();
+  const { products, theme, landingSections } = useApp();
+  const config = landingSections?.popularProducts || DEFAULT_LANDING_SECTIONS.popularProducts;
+  const badge = config.badge || 'Curated Selection';
+  const titleMain = config.titleMain ?? 'Our Most';
+  const titleHighlight = config.titleHighlight ?? 'Loved';
+  const titleSuffix = config.titleSuffix ?? 'Creations';
+  const subtitle = config.subtitle || 'Handpicked favorites that our chocolate lovers keep coming back for — each piece a testament to uncompromising quality and artisanal mastery.';
   const scrollRef = useRef<HTMLDivElement>(null);
 
   // Pick popular items (Bestseller or Premium badge first, followed by others, deduplicated)
@@ -72,15 +79,15 @@ export const PopularProducts: React.FC = () => {
             marginBottom: '28px',
           }}
         >
-          <span className="section-label" style={{ justifyContent: 'center' }}>
-            Curated Selection
-          </span>
+          {badge && (
+            <span className="section-label" style={{ justifyContent: 'center' }}>
+              {badge}
+            </span>
+          )}
           <h2 className="section-title">
-            Our Most <span className="gold">Loved</span> Creations
+            {titleMain}{titleHighlight ? <> <span className="gold">{titleHighlight}</span></> : null}{titleSuffix ? ` ${titleSuffix}` : ''}
           </h2>
-          <p className="section-subtitle">
-            Handpicked favorites that our chocolate lovers keep coming back for — each piece a testament to uncompromising quality and artisanal mastery.
-          </p>
+          {subtitle && <p className="section-subtitle">{subtitle}</p>}
         </motion.div>
 
         {/* Inline CSS to hide scrollbars & responsive helpers */}

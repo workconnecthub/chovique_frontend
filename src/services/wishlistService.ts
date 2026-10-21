@@ -42,4 +42,9 @@ export const wishlistService = {
   /** Check whether a product is wishlisted */
   checkWishlistStatus: (productId: string): Promise<{ is_wishlisted: boolean }> =>
     apiGet<{ is_wishlisted: boolean }>(`/wishlist/check/${productId}`),
+
+  /** Idempotently sync guest wishlist items into customer account */
+  syncWishlist: (productIds: string[]): Promise<WishlistItem[]> =>
+    apiPost<WishlistItem[]>('/wishlist/sync', { product_ids: productIds }),
 };
+

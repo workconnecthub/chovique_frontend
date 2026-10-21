@@ -47,20 +47,12 @@ export const Card: React.FC<CardProps> = ({ product }) => {
   };
 
   const handleCardClick = () => {
-    if (role === 'guest') {
-      navigate('/login');
-    } else {
-      navigate(`/product/${product.id}`);
-    }
+    navigate(`/product/${product.id}`);
   };
 
   const handleWishlistClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (role === 'guest') {
-      navigate('/login');
-    } else {
-      toggleWishlist(product);
-    }
+    toggleWishlist(product);
   };
 
   return (
@@ -392,8 +384,7 @@ export const Card: React.FC<CardProps> = ({ product }) => {
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                if (role === 'guest') navigate('/login');
-                else addToCart(product, 1);
+                addToCart(product, 1);
               }}
               style={{
                 width: '100%',

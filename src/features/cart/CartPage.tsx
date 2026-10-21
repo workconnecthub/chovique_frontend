@@ -171,59 +171,26 @@ export const CartPage: React.FC = () => {
   };
 
   const handleCheckout = () => {
+    sessionStorage.removeItem('chovique_buy_now_item');
+    if (couponData) {
+      sessionStorage.setItem(
+        'chovique_checkout_coupon',
+        JSON.stringify({
+          code: couponData.code,
+          discount_amount: discountAmount,
+        })
+      );
+    } else {
+      sessionStorage.removeItem('chovique_checkout_coupon');
+    }
+
     if (role === 'guest') {
       navigate('/login', { state: { from: '/checkout' } });
     } else {
-      sessionStorage.removeItem('chovique_buy_now_item');
-      if (couponData) {
-        sessionStorage.setItem(
-          'chovique_checkout_coupon',
-          JSON.stringify({
-            code: couponData.code,
-            discount_amount: discountAmount,
-          })
-        );
-      } else {
-        sessionStorage.removeItem('chovique_checkout_coupon');
-      }
       navigate('/checkout');
     }
   };
 
-  if (role === 'guest') {
-    return (
-      <motion.div
-        variants={pageTransition}
-        initial="initial"
-        animate="animate"
-        exit="exit"
-        className="cart-page"
-        style={{
-          minHeight: '80vh',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          textAlign: 'center',
-          background: 'var(--gradient-hero)',
-          padding: '24px 20px 60px 20px',
-        }}
-      >
-        <ShoppingBag size={64} style={{ color: 'var(--gold)', marginBottom: '24px' }} />
-        <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '2rem', color: 'var(--cream)', marginBottom: '10px' }}>
-          Please Log In
-        </h2>
-        <p style={{ color: 'var(--beige)', marginBottom: '30px', maxWidth: '420px', fontSize: '1rem', lineHeight: 1.6 }}>
-          You must be logged in to view and manage your shopping cart and place orders.
-        </p>
-        <Link to="/login" state={{ from: '/cart' }}>
-          <Button variant="gold" size="lg" glow>
-            Log In to Continue
-          </Button>
-        </Link>
-      </motion.div>
-    );
-  }
 
   if (cart.length === 0) {
     return (

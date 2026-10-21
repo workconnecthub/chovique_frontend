@@ -6,9 +6,16 @@ import { useApp } from '../../app/providers';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { fadeInUp } from '../../lib/framer';
+import { DEFAULT_LANDING_SECTIONS } from '../../types';
 
 export const GiftHampers: React.FC = () => {
-  const { products, role } = useApp();
+  const { products, role, landingSections } = useApp();
+  const config = landingSections?.giftHampers || DEFAULT_LANDING_SECTIONS.giftHampers;
+  const badge = config.badge || 'Art of Giving';
+  const titleMain = config.titleMain ?? 'Luxury Gift';
+  const titleHighlight = config.titleHighlight ?? 'Hampers';
+  const titleSuffix = config.titleSuffix ?? '';
+  const subtitle = config.subtitle || 'Celebrate life’s most exquisite moments with Chovique’s bespoke gifting packages and presentation boxes.';
   const navigate = useNavigate();
   const giftScrollRef = useRef<HTMLDivElement>(null);
 
@@ -75,15 +82,15 @@ export const GiftHampers: React.FC = () => {
             marginBottom: '28px',
           }}
         >
-          <span className="section-label" style={{ justifyContent: 'center' }}>
-            Art of Giving
-          </span>
+          {badge && (
+            <span className="section-label" style={{ justifyContent: 'center' }}>
+              {badge}
+            </span>
+          )}
           <h2 className="section-title">
-            Luxury Gift <span className="gold">Hampers</span>
+            {titleMain}{titleHighlight ? <> <span className="gold">{titleHighlight}</span></> : null}{titleSuffix ? ` ${titleSuffix}` : ''}
           </h2>
-          <p className="section-subtitle">
-            Celebrate life’s most exquisite moments with Chovique’s bespoke gifting packages and presentation boxes.
-          </p>
+          {subtitle && <p className="section-subtitle">{subtitle}</p>}
         </motion.div>
 
         {/* Layout: Bespoke card on the left, products grid on the right */}

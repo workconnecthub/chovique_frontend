@@ -4,12 +4,15 @@ import { Volume2, VolumeX, Play, Pause, ChevronLeft, ChevronRight, ExternalLink 
 import { fadeInUp } from '../../lib/framer';
 import { homeService } from '../../services/homeService';
 import { getImageUrl } from '../../utils/imageUrl';
+import { useApp } from '../../app/providers';
+import { DEFAULT_LANDING_SECTIONS } from '../../types';
 
 interface Reel {
   id: string;
   videoUrl?: string;
   instagramUrl?: string;
   accountName?: string;
+  title?: string;
 }
 
 // Inline Instagram SVG Icon
@@ -22,6 +25,14 @@ const InstagramGradientIcon: React.FC<{ size?: number }> = ({ size = 18 }) => (
 );
 
 export const InstagramReels: React.FC = () => {
+  const { landingSections } = useApp();
+  const config = landingSections?.instagramReels || DEFAULT_LANDING_SECTIONS.instagramReels;
+  const badge = config.badge || 'Social Buzz';
+  const titleMain = config.titleMain ?? 'Trending on';
+  const titleHighlight = config.titleHighlight ?? 'Instagram';
+  const titleSuffix = config.titleSuffix ?? '';
+  const subtitle = config.subtitle || 'Hover to play our artisanal crafting process and delicious chocolate stories.';
+
   const [hoveredReelId, setHoveredReelId] = useState<string | null>(null);
   const [playingMap, setPlayingMap] = useState<{ [key: string]: boolean }>({});
   const [mutedMap, setMutedMap] = useState<{ [key: string]: boolean }>({});
@@ -57,6 +68,7 @@ export const InstagramReels: React.FC = () => {
               videoUrl: playable,
               instagramUrl: rawIg.startsWith('http') ? rawIg : `https://www.instagram.com/reel/${r.id}/`,
               accountName: r.accountName || r.account_name || '',
+              title: r.title || '',
             };
           });
           setReelsData(mapped);
@@ -232,15 +244,15 @@ export const InstagramReels: React.FC = () => {
             marginBottom: '40px',
           }}
         >
-          <span className="section-label" style={{ justifyContent: 'center' }}>
-            Social Buzz
-          </span>
+          {badge && (
+            <span className="section-label" style={{ justifyContent: 'center' }}>
+              {badge}
+            </span>
+          )}
           <h2 className="section-title">
-            Trending on <span className="gold">Instagram</span>
+            {titleMain}{titleHighlight ? <> <span className="gold">{titleHighlight}</span></> : null}{titleSuffix ? ` ${titleSuffix}` : ''}
           </h2>
-          <p className="section-subtitle">
-            Hover to play our artisanal crafting process and delicious chocolate stories.
-          </p>
+          {subtitle && <p className="section-subtitle">{subtitle}</p>}
         </motion.div>
 
         {/* Global Reel Styles */}
@@ -388,7 +400,11 @@ export const InstagramReels: React.FC = () => {
                   }}
                   onMouseEnter={() => handleReelMouseEnter(reel.id)}
                   onMouseLeave={() => handleReelMouseLeave(reel.id)}
-                  onClick={(e) => handleTogglePlayPause(reel.id, e)}
+                  onClick={() => {
+                    if (directInstagramUrl) {
+                      window.open(directInstagramUrl, '_blank', 'noopener,noreferrer');
+                    }
+                  }}
                 >
                   {/* HTML5 Video Container */}
                   <div style={{ position: 'relative', width: '100%', flex: 1, minHeight: 0, overflow: 'hidden', background: '#000' }}>
@@ -593,6 +609,7 @@ export const InstagramReels: React.FC = () => {
                   </div>
 
                   {/* Bottom Redirect Button */}
+                  {/* Bottom Panel: Title/Caption and Redirect Button */}
                   <div
                     style={{
                       padding: '12px 14px',
@@ -604,6 +621,27 @@ export const InstagramReels: React.FC = () => {
                     }}
                     onClick={(e) => e.stopPropagation()}
                   >
+                    {reel.title && (
+                      <div style={{ marginBottom: '10px' }}>
+                        <p
+                          style={{
+                            margin: 0,
+                            fontSize: '0.86rem',
+                            color: 'var(--cream)',
+                            fontWeight: 600,
+                            lineHeight: 1.4,
+                            display: '-webkit-box',
+                            WebkitLineClamp: 2,
+                            WebkitBoxOrient: 'vertical',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                          }}
+                          title={reel.title}
+                        >
+                          {reel.title}
+                        </p>
+                      </div>
+                    )}
                     <a
                       href={directInstagramUrl}
                       target="_blank"

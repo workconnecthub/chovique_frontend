@@ -132,7 +132,7 @@ export const DeliveryLocationPicker: React.FC<DeliveryLocationPickerProps> = ({
     } catch {}
 
     // Check if initial value already has complete address
-    const hasExistingAddress = Boolean(value.street && value.pincode && value.house_number);
+    const hasExistingAddress = Boolean((value.street || value.house_number) && value.pincode);
 
     userService
       .getAddresses()
@@ -308,9 +308,9 @@ export const DeliveryLocationPicker: React.FC<DeliveryLocationPickerProps> = ({
     } else if (!/^\d{10}$/.test(formDraft.phone.replace(/\D/g, ''))) {
       errs.phone = 'Enter a valid 10-digit mobile number.';
     }
-    if (!formDraft.house_number.trim()) errs.house_number = 'House / Flat number is required.';
-    if (!formDraft.street.trim()) errs.street = 'Street name is required.';
-    if (!formDraft.area.trim()) errs.area = 'Area / Locality is required.';
+    const addressLine = (formDraft.street || formDraft.house_number || '').trim();
+    if (!addressLine) errs.street = 'Flat / House / Street address is required.';
+    if (!formDraft.area.trim()) errs.area = 'Area / Locality / Landmark is required.';
     if (!formDraft.city.trim()) errs.city = 'City is required.';
     if (!formDraft.state.trim()) errs.state = 'State is required.';
     if (!formDraft.pincode.trim()) {
@@ -327,6 +327,8 @@ export const DeliveryLocationPicker: React.FC<DeliveryLocationPickerProps> = ({
     setFormValidationErrors({});
     const cleanedDraft: AddressFormData = {
       ...formDraft,
+      house_number: addressLine,
+      street: addressLine,
       phone: formDraft.phone.replace(/\D/g, '').slice(0, 10),
       pincode: formDraft.pincode.replace(/\D/g, '').slice(0, 6),
     };
@@ -470,7 +472,7 @@ export const DeliveryLocationPicker: React.FC<DeliveryLocationPickerProps> = ({
   // VIEW MODE 1: AMAZON / ZEPTO SELECTED ADDRESS CARD
   // ═══════════════════════════════════════════════════════════════════════════
   if (viewMode === 'selected') {
-    const isComplete = Boolean(value.street && value.pincode && value.house_number);
+    const isComplete = Boolean((value.street || value.house_number) && value.pincode);
 
     return (
       <div className="delivery-location-picker" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -577,7 +579,11 @@ export const DeliveryLocationPicker: React.FC<DeliveryLocationPickerProps> = ({
 
           {/* Formatted Address Lines */}
           <div style={{ fontSize: '0.94rem', color: 'rgba(255, 255, 255, 0.88)', lineHeight: 1.6, marginBottom: '16px' }}>
-            <div>{[value.house_number, value.street].filter(Boolean).join(', ')}</div>
+            <div>
+              {value.house_number && value.house_number !== value.street
+                ? `${value.house_number}, ${value.street}`
+                : value.street || value.house_number}
+            </div>
             <div>
               {[value.area, value.city, value.state].filter(Boolean).join(', ')} —{' '}
               <strong style={{ color: '#f5d77f' }}>{value.pincode}</strong>
@@ -1175,57 +1181,36 @@ export const DeliveryLocationPicker: React.FC<DeliveryLocationPickerProps> = ({
           />
         </div>
 
-        {/* Flat / Door and Street */}
+        {/* Flat / Street and Area / Landmark */}
         <div className="checkout-grid-two">
           <Input
-            label="Flat / House / Door / Floor No."
-            placeholder="e.g. Flat 304, Royal Palms"
-            value={formDraft.house_number}
+            label="Flat / House / Street / Road"
+            placeholder="e.g. Flat 304, Royal Palms, Beach Road"
+            value={formDraft.street || formDraft.house_number}
             onChange={(e) => {
-              setFormDraft({ ...formDraft, house_number: e.target.value });
-              setFormValidationErrors((prev) => ({ ...prev, house_number: '' }));
+              const val = e.target.value;
+              setFormDraft({ ...formDraft, street: val, house_number: val });
+              setFormValidationErrors((prev) => ({ ...prev, street: '', house_number: '' }));
             }}
-            error={formValidationErrors.house_number || errors.house_number}
+            error={formValidationErrors.street || formValidationErrors.house_number || errors.street || errors.house_number}
             required
           />
           <Input
-            label="Street / Road"
-            placeholder="e.g. Beach Road, Sector 3"
-            value={formDraft.street}
-            onChange={(e) => {
-              setFormDraft({ ...formDraft, street: e.target.value });
-              setFormValidationErrors((prev) => ({ ...prev, street: '' }));
-            }}
-            error={formValidationErrors.street || errors.street}
-            required
-          />
-        </div>
-
-        {/* Area and Landmark */}
-        <div className="checkout-grid-two">
-          <Input
-            label="Area / Locality / Sector"
-            placeholder="e.g. MVP Colony"
+            label="Area / Locality / Landmark"
+            placeholder="e.g. MVP Colony, Near Apollo Hospital"
             value={formDraft.area}
             onChange={(e) => {
-              setFormDraft({ ...formDraft, area: e.target.value });
-              setFormValidationErrors((prev) => ({ ...prev, area: '' }));
+              const val = e.target.value;
+              setFormDraft({ ...formDraft, area: val, landmark: val });
+              setFormValidationErrors((prev) => ({ ...prev, area: '', landmark: '' }));
             }}
             error={formValidationErrors.area || errors.area}
             required
           />
-          <Input
-            label="Landmark (Optional)"
-            placeholder="e.g. Near Apollo Hospital"
-            value={formDraft.landmark}
-            onChange={(e) => {
-              setFormDraft({ ...formDraft, landmark: e.target.value });
-            }}
-          />
         </div>
 
-        {/* City, District, State, PIN */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '12px' }}>
+        {/* City, State, PIN Code (District removed as requested) */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '12px' }}>
           <Input
             label="City"
             value={formDraft.city}
@@ -1235,11 +1220,6 @@ export const DeliveryLocationPicker: React.FC<DeliveryLocationPickerProps> = ({
             }}
             error={formValidationErrors.city || errors.city}
             required
-          />
-          <Input
-            label="District"
-            value={formDraft.district}
-            onChange={(e) => setFormDraft({ ...formDraft, district: e.target.value })}
           />
           <Input
             label="State"

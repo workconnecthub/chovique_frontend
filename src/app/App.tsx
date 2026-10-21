@@ -23,6 +23,7 @@ import {
   Mail,
   LogOut,
   ShieldCheck,
+  LayoutDashboard,
 } from 'lucide-react';
 import { getImageUrl } from '../utils/imageUrl';
 
@@ -129,10 +130,11 @@ const CustomerMobileNav: React.FC = () => {
   const section = new URLSearchParams(location.search).get('section') || '';
 
   const isHome = pathname === '/';
+  const isOverview = pathname === '/dashboard' && (section.toLowerCase() === 'overview' || (!section && pathname === '/dashboard'));
   const isOrders = pathname === '/dashboard' && ['orders', 'order-history', 'track'].includes(section.toLowerCase());
   const isShop = pathname === '/shop' || pathname.startsWith('/product');
   const isWishlist = pathname === '/wishlist';
-  const isAccount = pathname === '/dashboard' && (section.toLowerCase() === 'account' || section.toLowerCase() === 'my-account' || (!isOrders && !['notifications', 'coupons', 'help', 'rewards', 'overview'].includes(section.toLowerCase())));
+  const isAccount = pathname === '/dashboard' && !isOverview && (section.toLowerCase() === 'account' || section.toLowerCase() === 'my-account' || (!isOrders && !['notifications', 'coupons', 'help', 'rewards'].includes(section.toLowerCase())));
 
   return (
     <>
@@ -347,20 +349,20 @@ const CustomerMobileNav: React.FC = () => {
           <span>Home</span>
         </button>
 
-        {/* 2. Orders → dashboard orders section */}
+        {/* 2. Overview → dashboard overview section */}
         <button
-          className={`cust-mobile-bottom-btn ${isOrders ? 'active' : ''}`}
+          className={`cust-mobile-bottom-btn ${isOverview ? 'active' : ''}`}
           onClick={() => {
             if (role === 'customer') {
-              navigate('/dashboard?section=orders');
+              navigate('/dashboard?section=overview');
             } else {
-              navigate('/login', { state: { from: '/dashboard?section=orders' } });
+              navigate('/login', { state: { from: '/dashboard?section=overview' } });
             }
           }}
-          aria-label="My Orders"
+          aria-label="Overview"
         >
-          <Package size={21} />
-          <span>Orders</span>
+          <LayoutDashboard size={21} />
+          <span>Overview</span>
         </button>
 
         {/* 3. Shop - shop page */}

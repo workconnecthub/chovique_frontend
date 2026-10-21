@@ -4,9 +4,33 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useApp } from '../../app/providers';
 import { Card } from '../../components/ui/Card';
 import { fadeInUp } from '../../lib/framer';
+import { DEFAULT_LANDING_SECTIONS } from '../../types';
 
 export const BestsellersNewArrivals: React.FC = () => {
-  const { products } = useApp();
+  const { products, landingSections } = useApp();
+  const secConfig = landingSections?.bestsellersNewArrivals || DEFAULT_LANDING_SECTIONS.bestsellersNewArrivals;
+  const header = secConfig.header || DEFAULT_LANDING_SECTIONS.bestsellersNewArrivals.header;
+  const bestsellersPart = secConfig.bestsellersPart || DEFAULT_LANDING_SECTIONS.bestsellersNewArrivals.bestsellersPart;
+  const newArrivalsPart = secConfig.newArrivalsPart || DEFAULT_LANDING_SECTIONS.bestsellersNewArrivals.newArrivalsPart;
+
+  const mainBadge = header.badge || 'Exclusive Showroom';
+  const mainTitle = header.titleMain ?? 'Bestsellers';
+  const mainHighlight = header.titleHighlight ?? '&';
+  const mainSuffix = header.titleSuffix ?? 'New Arrivals';
+  const mainSubtitle = header.subtitle || 'Indulge in our curated selections — showcasing both our legendary, time-honored classics and our latest avant-garde culinary creations.';
+
+  const bsTag = bestsellersPart.tag || 'Connoisseur Choice';
+  const bsTitle = bestsellersPart.title || 'The Bestsellers';
+  const bsHighlight = bestsellersPart.titleHighlight || '';
+  const bsSuffix = bestsellersPart.titleSuffix || '';
+  const bsDesc = bestsellersPart.description || 'Artisanal icons that have won the hearts of fine chocolate lovers globally. Elegant, refined, and rich in depth.';
+
+  const naTag = newArrivalsPart.tag || 'Freshly Tempered';
+  const naTitle = newArrivalsPart.title || 'New Arrivals';
+  const naHighlight = newArrivalsPart.titleHighlight || '';
+  const naSuffix = newArrivalsPart.titleSuffix || '';
+  const naDesc = newArrivalsPart.description || 'Seasonal innovations and brand new releases straight from the kitchen. Discover fresh notes and modern textures.';
+
   const bestsellersRef = useRef<HTMLDivElement>(null);
   const newArrivalsRef = useRef<HTMLDivElement>(null);
 
@@ -73,15 +97,15 @@ export const BestsellersNewArrivals: React.FC = () => {
             marginBottom: '28px',
           }}
         >
-          <span className="section-label" style={{ justifyContent: 'center' }}>
-            Exclusive Showroom
-          </span>
+          {mainBadge && (
+            <span className="section-label" style={{ justifyContent: 'center' }}>
+              {mainBadge}
+            </span>
+          )}
           <h2 className="section-title">
-            Bestsellers <span className="gold">&</span> New Arrivals
+            {mainTitle}{mainHighlight ? <> <span className="gold">{mainHighlight}</span></> : null}{mainSuffix ? ` ${mainSuffix}` : ''}
           </h2>
-          <p className="section-subtitle">
-            Indulge in our curated selections — showcasing both our legendary, time-honored classics and our latest avant-garde culinary creations.
-          </p>
+          {mainSubtitle && <p className="section-subtitle">{mainSubtitle}</p>}
         </motion.div>
 
         {/* Dual Sections Side-by-Side */}
@@ -98,10 +122,12 @@ export const BestsellersNewArrivals: React.FC = () => {
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
               <div className="collection-header-group" style={{ marginBottom: 0, flex: 1 }}>
-                <span className="collection-tag gold">Connoisseur Choice</span>
-                <h3 className="collection-title">The Bestsellers</h3>
+                <span className="collection-tag gold">{bsTag}</span>
+                <h3 className="collection-title">
+                  {bsTitle}{bsHighlight ? <> <span className="gold">{bsHighlight}</span></> : null}{bsSuffix ? ` ${bsSuffix}` : ''}
+                </h3>
                 <p className="collection-desc">
-                  Artisanal icons that have won the hearts of fine chocolate lovers globally. Elegant, refined, and rich in depth.
+                  {bsDesc}
                 </p>
               </div>
               {bestsellersList.length > 2 && (
@@ -220,10 +246,12 @@ export const BestsellersNewArrivals: React.FC = () => {
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
               <div className="collection-header-group" style={{ marginBottom: 0, flex: 1 }}>
-                <span className="collection-tag silver">Freshly Tempered</span>
-                <h3 className="collection-title">New Arrivals</h3>
+                <span className="collection-tag silver">{naTag}</span>
+                <h3 className="collection-title">
+                  {naTitle}{naHighlight ? <> <span className="gold">{naHighlight}</span></> : null}{naSuffix ? ` ${naSuffix}` : ''}
+                </h3>
                 <p className="collection-desc">
-                  Seasonal innovations and brand new releases straight from the kitchen. Discover fresh notes and modern textures.
+                  {naDesc}
                 </p>
               </div>
               {newArrivalsList.length > 2 && (

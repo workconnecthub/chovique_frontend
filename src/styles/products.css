@@ -47,7 +47,7 @@
 }
 
 .details-actions-row {
-  justify-content: space-between;
+  justify-content: flex-start;
   padding-bottom: 30px;
   border-bottom: 1px solid var(--glass-border);
   flex-wrap: wrap;
@@ -139,6 +139,15 @@
   justify-content: center;
   padding: 20px;
   box-sizing: border-box;
+}
+
+.product-image-wishlist-btn:hover {
+  transform: scale(1.1);
+  box-shadow: 0 6px 20px rgba(201, 168, 76, 0.45) !important;
+}
+
+.product-image-wishlist-btn:active {
+  transform: scale(0.92);
 }
 
 .zoom-image {

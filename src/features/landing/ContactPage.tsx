@@ -26,7 +26,9 @@ import { Footer } from '../../components/Footer';
 import { slideInLeft, slideInRight } from '../../lib/framer';
 import { apiPost } from '../../lib/api';
 
+import { homeService } from '../../services/homeService';
 import { adminService } from '../../services/adminService';
+import { ContactPageConfig, DEFAULT_CONTACT_PAGE_CONFIG } from '../../types';
 
 export const ContactPage: React.FC = () => {
   const location = useLocation();
@@ -44,6 +46,8 @@ export const ContactPage: React.FC = () => {
   const [submittedWhatsappUrl, setSubmittedWhatsappUrl] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState('');
 
+  const [contactConfig, setContactConfig] = useState<ContactPageConfig>(DEFAULT_CONTACT_PAGE_CONFIG);
+
   useEffect(() => {
     if (location.hash) {
       const id = location.hash.replace('#', '');
@@ -59,21 +63,24 @@ export const ContactPage: React.FC = () => {
   }, [location.hash]);
 
   const [contactInfo, setContactInfo] = useState({
-    phone: '+91 83098 54870',
-    whatsapp: '+91 83098 54870',
-    email: 'support@chovique.com',
-    support_hours: 'Mon - Sat: 10:00 AM - 8:00 PM | Sunday: 11:00 AM - 6:00 PM',
+    phone: DEFAULT_CONTACT_PAGE_CONFIG.phone,
+    whatsapp: DEFAULT_CONTACT_PAGE_CONFIG.whatsapp,
+    email: DEFAULT_CONTACT_PAGE_CONFIG.email,
+    support_hours: DEFAULT_CONTACT_PAGE_CONFIG.support_hours,
+    address: DEFAULT_CONTACT_PAGE_CONFIG.address,
   });
 
   useEffect(() => {
-    adminService.getContactInfo()
+    homeService.getContactPageConfig()
       .then((res) => {
-        if (res) {
+        if (res && typeof res === 'object' && Object.keys(res).length > 0) {
+          setContactConfig((prev) => ({ ...prev, ...res }));
           setContactInfo({
-            phone: res.phone || '+91 83098 54870',
-            whatsapp: res.whatsapp || res.phone || '+91 83098 54870',
-            email: res.email || 'support@chovique.com',
-            support_hours: res.support_hours || 'Mon - Sat: 10:00 AM - 8:00 PM | Sunday: 11:00 AM - 6:00 PM',
+            phone: res.phone || DEFAULT_CONTACT_PAGE_CONFIG.phone,
+            whatsapp: res.whatsapp || res.phone || DEFAULT_CONTACT_PAGE_CONFIG.whatsapp,
+            email: res.email || DEFAULT_CONTACT_PAGE_CONFIG.email,
+            support_hours: res.support_hours || DEFAULT_CONTACT_PAGE_CONFIG.support_hours,
+            address: res.address || DEFAULT_CONTACT_PAGE_CONFIG.address,
           });
         }
       })
@@ -191,7 +198,7 @@ export const ContactPage: React.FC = () => {
                   marginBottom: '12px',
                 }}
               >
-                CONTACT US
+                {contactConfig.hero_badge || 'CONTACT US'}
               </span>
               <h1
                 style={{
@@ -203,7 +210,7 @@ export const ContactPage: React.FC = () => {
                   fontWeight: 700,
                 }}
               >
-                We're Here to Help!
+                {contactConfig.hero_title || "We're Here to Help!"}
               </h1>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--gold)', marginBottom: '20px' }}>
                 <Heart size={16} fill="currentColor" />
@@ -217,8 +224,7 @@ export const ContactPage: React.FC = () => {
                   marginBottom: '35px',
                 }}
               >
-                Have questions about your order, our products, or gifting? Our team is here to make your chocolate
-                experience smooth and delightful.
+                {contactConfig.hero_subtitle}
               </p>
 
               {/* 3 Pill Badges */}
@@ -237,7 +243,7 @@ export const ContactPage: React.FC = () => {
                   }}
                 >
                   <Clock size={16} style={{ color: 'var(--gold)' }} />
-                  <span>Replies within 24 Hours</span>
+                  <span>{contactConfig.badge_1 || 'Replies within 24 Hours'}</span>
                 </div>
                 <div
                   style={{
@@ -253,7 +259,7 @@ export const ContactPage: React.FC = () => {
                   }}
                 >
                   <Headphones size={16} style={{ color: 'var(--gold)' }} />
-                  <span>Dedicated Support</span>
+                  <span>{contactConfig.badge_2 || 'Dedicated Support'}</span>
                 </div>
                 <div
                   style={{
@@ -269,7 +275,7 @@ export const ContactPage: React.FC = () => {
                   }}
                 >
                   <ShieldCheck size={16} style={{ color: 'var(--gold)' }} />
-                  <span>Reliable & Quick Assistance</span>
+                  <span>{contactConfig.badge_3 || 'Reliable & Quick Assistance'}</span>
                 </div>
               </div>
             </motion.div>
@@ -289,7 +295,7 @@ export const ContactPage: React.FC = () => {
               }}
             >
               <img
-                src="/assets/contact-hero.png"
+                src={contactConfig.hero_image || '/assets/contact-hero.png'}
                 alt="Chovique Luxury Chocolates Gift Box"
                 onError={(e) => {
                   (e.target as HTMLImageElement).src = '/assets/popular-bg.jpg';

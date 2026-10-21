@@ -37,10 +37,49 @@ export const getAuthToken = (): string | null => {
   return localStorage.getItem('chovique_access_token');
 };
 
+export const setRefreshToken = (token?: string | null): void => {
+  if (token) {
+    localStorage.setItem('chovique_refresh_token', token);
+  } else {
+    localStorage.removeItem('chovique_refresh_token');
+  }
+};
+
+export const getRefreshToken = (): string | null => {
+  return localStorage.getItem('chovique_refresh_token');
+};
+
+export const clearTokens = (): void => {
+  setAuthToken(null);
+  setRefreshToken(null);
+};
+
+export const isTokenExpired = (token: string | null): boolean => {
+  if (!token) return true;
+  try {
+    const parts = token.split('.');
+    if (parts.length !== 3) return false;
+    const base64Url = parts[1];
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const jsonPayload = decodeURIComponent(
+      atob(base64)
+        .split('')
+        .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+        .join('')
+    );
+    const payload = JSON.parse(jsonPayload);
+    if (!payload.exp) return false;
+    // Buffer of 30 seconds
+    return payload.exp * 1000 - Date.now() < 30000;
+  } catch {
+    return false;
+  }
+};
+
 /** Build default headers — JSON + Bearer token fallback (cookies also sent via credentials: include) */
-const buildHeaders = (isFormData = false): HeadersInit => {
+export const buildHeaders = (isFormData = false, overrideToken?: string | null): HeadersInit => {
   const headers: Record<string, string> = isFormData ? {} : { 'Content-Type': 'application/json' };
-  const token = getAuthToken();
+  const token = overrideToken !== undefined ? overrideToken : getAuthToken();
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
   }
@@ -218,6 +257,56 @@ const fetchWithAuth = async (path: string, init: RequestInit & { _isCsrfRetry?: 
     }
   }
 
+  // Proactive refresh: if access token is expired and we have a session/refresh token,
+  // refresh before calling protected endpoints so users never get interrupted mid-flow
+  if (
+    !path.includes('/auth/') &&
+    (Boolean(getRefreshToken()) || Boolean(getAuthToken())) &&
+    isTokenExpired(getAuthToken())
+  ) {
+    if (!refreshPromise) {
+      const rToken = getRefreshToken();
+      refreshPromise = safeFetch(`${BASE_URL}/auth/refresh`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(rToken ? { 'x-refresh-token': rToken } : {}),
+        },
+        credentials: 'include',
+        body: JSON.stringify({ refresh_token: rToken }),
+      }).then(async (res) => {
+        refreshPromise = null;
+        if (!res.ok) return false;
+        try {
+          const data = await res.json();
+          if (data?.access_token) {
+            setAuthToken(data.access_token);
+          }
+          if (data?.refresh_token) {
+            setRefreshToken(data.refresh_token);
+          }
+          return true;
+        } catch {
+          return true;
+        }
+      }).catch(() => {
+        refreshPromise = null;
+        return false;
+      });
+    }
+
+    const proactiveSuccess = await refreshPromise;
+    if (proactiveSuccess) {
+      const newToken = getAuthToken();
+      if (newToken) {
+        init.headers = {
+          ...(init.headers as Record<string, string> || {}),
+          'Authorization': `Bearer ${newToken}`,
+        };
+      }
+    }
+  }
+
   let response = await safeFetch(`${BASE_URL}${path}`, init);
 
   if (response.status === 403 && !init._isCsrfRetry) {
@@ -244,16 +333,33 @@ const fetchWithAuth = async (path: string, init: RequestInit & { _isCsrfRetry?: 
     !path.includes('/auth/refresh') && 
     !path.includes('/auth/login') && 
     !path.includes('/auth/register') &&
-    Boolean(getAuthToken())
+    (Boolean(getAuthToken()) || Boolean(getRefreshToken()))
   ) {
     if (!refreshPromise) {
+      const rToken = getRefreshToken();
       refreshPromise = safeFetch(`${BASE_URL}/auth/refresh`, {
         method: 'POST',
-        headers: buildHeaders(),
+        headers: {
+          'Content-Type': 'application/json',
+          ...(rToken ? { 'x-refresh-token': rToken } : {}),
+        },
         credentials: 'include',
-      }).then(res => {
+        body: JSON.stringify({ refresh_token: rToken }),
+      }).then(async (res) => {
         refreshPromise = null;
-        return res.ok;
+        if (!res.ok) return false;
+        try {
+          const data = await res.json();
+          if (data?.access_token) {
+            setAuthToken(data.access_token);
+          }
+          if (data?.refresh_token) {
+            setRefreshToken(data.refresh_token);
+          }
+          return true;
+        } catch {
+          return true;
+        }
       }).catch(() => {
         refreshPromise = null;
         return false;
@@ -262,10 +368,21 @@ const fetchWithAuth = async (path: string, init: RequestInit & { _isCsrfRetry?: 
 
     const refreshSuccess = await refreshPromise;
     if (refreshSuccess) {
-      // Retry original request
-      response = await safeFetch(`${BASE_URL}${path}`, init);
+      // Retry original request with the fresh token in Authorization header
+      const updatedToken = getAuthToken();
+      const updatedHeaders: Record<string, string> = {
+        ...(init?.headers as Record<string, string> || {}),
+      };
+      if (updatedToken) {
+        updatedHeaders['Authorization'] = `Bearer ${updatedToken}`;
+      }
+      const retryInit = {
+        ...init,
+        headers: updatedHeaders,
+      };
+      response = await safeFetch(`${BASE_URL}${path}`, retryInit);
     } else {
-      setAuthToken(null);
+      clearTokens();
     }
   }
 

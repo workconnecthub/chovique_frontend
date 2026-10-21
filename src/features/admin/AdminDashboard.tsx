@@ -50,6 +50,7 @@ import {
   XCircle,
   ShieldCheck,
   Lock,
+  Sparkles,
 } from 'lucide-react';
 import { exportToCSV } from '../../utils/exportCsv';
 import { useApp } from '../../app/providers';
@@ -78,6 +79,7 @@ import { CustomerDirectory } from './CustomerDirectory';
 import { OfflineSalesView } from './OfflineSalesView';
 import { DeliveryBoysView } from './DeliveryBoysView';
 import { CreateCouponView } from './CreateCouponView';
+import { HomepageCmsView } from './HomepageCmsView';
 import { Product, OfflineSale, SystemUser, Banner } from '../../types';
 import { BASE_URL, apiGet } from '../../lib/api';
 import {
@@ -131,6 +133,8 @@ export const AdminDashboard: React.FC = () => {
       const mapping: Record<string, string> = {
         'inventory': 'products',
         'products': 'products',
+        'categories': 'categories',
+        'category': 'categories',
         'orders': 'orders',
         'delivery-boys': 'delivery-boys',
         'delivery': 'delivery-boys',
@@ -142,6 +146,13 @@ export const AdminDashboard: React.FC = () => {
         'reward-settings': 'reward-settings',
         'rewards': 'reward-settings',
         'coins': 'reward-settings',
+        'home-mgmt': 'home-mgmt',
+        'homepage-cms': 'home-mgmt',
+        'cms': 'home-mgmt',
+        'banners': 'home-mgmt',
+        'carousel': 'home-mgmt',
+        'testimonials': 'testimonials',
+        'reviews': 'testimonials',
         'tickets': 'complaints',
         'complaints': 'complaints',
         'support': 'complaints',
@@ -149,6 +160,8 @@ export const AdminDashboard: React.FC = () => {
         'dashboard': 'dashboard',
         'reports': 'reports',
         'analytics': 'reports',
+        'profile': 'profile',
+        'change-password': 'change-password',
       };
       if (mapping[tabParam]) {
         setActiveTab(mapping[tabParam]);
@@ -179,6 +192,7 @@ export const AdminDashboard: React.FC = () => {
     } else {
       setShowCreateCouponForm(false);
       setActiveTab(tab);
+      navigate(`/admin?tab=${tab}`, { replace: true });
     }
   };
 
@@ -579,6 +593,8 @@ export const AdminDashboard: React.FC = () => {
     imagePreviewUrls: [] as string[],
     stock: 10,
     rating: 4.0,
+    isSample: false,
+    samplePrice: 0,
     servingSize: '100g',
     calories: '550 kcal',
     totalFat: '35g',
@@ -696,6 +712,8 @@ export const AdminDashboard: React.FC = () => {
       imagePreviewUrls: [],
       stock: 10,
       rating: 4.0,
+      isSample: false,
+      samplePrice: 0,
       servingSize: '100g',
       calories: '550 kcal',
       totalFat: '35g',
@@ -807,6 +825,8 @@ export const AdminDashboard: React.FC = () => {
       imagePreviewUrls: [...item.imagePreviewUrls],
       stock: item.stock,
       rating: item.rating,
+      isSample: Boolean(item.isSample),
+      samplePrice: item.samplePrice || 0,
       servingSize: item.servingSize,
       calories: item.calories,
       totalFat: item.totalFat,
@@ -848,6 +868,8 @@ export const AdminDashboard: React.FC = () => {
         badge: newProd.badge,
         stock: newProd.stock,
         rating: newProd.rating,
+        isSample: newProd.isSample,
+        samplePrice: newProd.samplePrice,
         imageFiles: [...newProd.imageFiles],
         imagePreviewUrls: [...newProd.imagePreviewUrls],
         servingSize: trimValue(newProd.servingSize),
@@ -889,6 +911,8 @@ export const AdminDashboard: React.FC = () => {
         formData.append('stock', String(item.stock));
         if (item.badge) formData.append('badge', item.badge);
         formData.append('rating', String(item.rating !== undefined && item.rating !== null ? item.rating : 4.8));
+        formData.append('is_sample', String(item.isSample || false));
+        if (item.samplePrice) formData.append('sample_price', String(item.samplePrice));
         if (item.imageFiles.length > 0) {
           formData.append('image', item.imageFiles[0]);
           item.imageFiles.slice(1).forEach((file: File) => formData.append('gallery_images', file));
@@ -950,6 +974,9 @@ export const AdminDashboard: React.FC = () => {
         description: editingProduct.description,
         ingredients: editingProduct.ingredients,
         nutrition: editingProduct.nutrition,
+        is_sample: editingProduct.isSample,
+        sample_price: editingProduct.samplePrice,
+        rating: editingProduct.rating,
       });
       if (editingProductImageFiles.length > 0) {
         const formData = new FormData();
@@ -1331,7 +1358,7 @@ export const AdminDashboard: React.FC = () => {
       if (vidUrl) {
         fd.append('video_url', vidUrl);
       }
-      fd.append('title', accName || 'Instagram Reel');
+      fd.append('title', (editingReel.title || accName || 'Instagram Reel').trim());
       fd.append('likes', '0');
       fd.append('comments', '0');
       fd.append('views', '0 views');
@@ -1622,7 +1649,7 @@ export const AdminDashboard: React.FC = () => {
   // --- Instagram Reels State & Handlers ---
   const [cmsReels, setCmsReels] = useState<any[]>([]);
   const [showAddReelModal, setShowAddReelModal] = useState(false);
-  const [newReelData, setNewReelData] = useState({ instagram_url: '', account_name: '', video_url: '' });
+  const [newReelData, setNewReelData] = useState({ instagram_url: '', account_name: '', video_url: '', title: '' });
   const [newReelVideoFile, setNewReelVideoFile] = useState<File | null>(null);
   const [isCreatingReel, setIsCreatingReel] = useState(false);
   const [isFetchingReelMeta, setIsFetchingReelMeta] = useState(false);
@@ -1703,7 +1730,7 @@ export const AdminDashboard: React.FC = () => {
     if (newReelData.video_url) {
       formData.append('video_url', newReelData.video_url);
     }
-    formData.append('title', cleanAccount || 'Instagram Reel');
+    formData.append('title', (newReelData.title || cleanAccount || 'Instagram Reel').trim());
     formData.append('likes', '0');
     formData.append('comments', '0');
     formData.append('views', '0 views');
@@ -1713,7 +1740,7 @@ export const AdminDashboard: React.FC = () => {
       await adminService.createReel(formData);
       fetchCmsReels();
       setShowAddReelModal(false);
-      setNewReelData({ instagram_url: '', account_name: '', video_url: '' });
+      setNewReelData({ instagram_url: '', account_name: '', video_url: '', title: '' });
       setNewReelVideoFile(null);
       setFetchReelSuccessMsg('');
       setFetchReelErrorMsg('');
@@ -2315,7 +2342,12 @@ export const AdminDashboard: React.FC = () => {
           {/* Live Home Button */}
           <button
             className="view-home-btn"
-            onClick={() => navigate('/')}
+            onClick={() => {
+              const returnPath = `/admin?tab=${encodeURIComponent(activeTab)}`;
+              sessionStorage.setItem('chovique_dashboard_return_path', returnPath);
+              sessionStorage.setItem('chovique_dashboard_return_label', 'Admin Dashboard');
+              navigate('/', { state: { returnTo: returnPath } });
+            }}
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -3309,7 +3341,27 @@ export const AdminDashboard: React.FC = () => {
                                         />
                                       </td>
                                       <td style={{ padding: '14px 18px' }}>
-                                        <div style={{ fontWeight: 600, color: 'var(--cream)', fontSize: '0.92rem' }}>{prod.name}</div>
+                                        <div style={{ fontWeight: 600, color: 'var(--cream)', fontSize: '0.92rem', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                                          {prod.name}
+                                          {(prod.isSample || (prod as any).is_sample) && (
+                                            <span style={{
+                                              display: 'inline-flex',
+                                              alignItems: 'center',
+                                              gap: '4px',
+                                              padding: '2px 8px',
+                                              borderRadius: '10px',
+                                              background: 'rgba(212, 175, 55, 0.18)',
+                                              border: '1px solid rgba(212, 175, 55, 0.5)',
+                                              color: 'var(--gold)',
+                                              fontSize: '0.68rem',
+                                              fontWeight: 700,
+                                              textTransform: 'uppercase',
+                                              letterSpacing: '0.5px'
+                                            }}>
+                                              ✨ Sample Piece (₹{prod.samplePrice ?? (prod as any).sample_price ?? prod.price})
+                                            </span>
+                                          )}
+                                        </div>
                                         <div style={{ fontSize: '0.75rem', color: 'var(--beige)', marginTop: '2px' }}>SKU: {skuText}</div>
                                       </td>
                                       <td style={{ padding: '14px 18px', color: 'var(--beige)', fontSize: '0.88rem' }}>
@@ -3562,6 +3614,108 @@ export const AdminDashboard: React.FC = () => {
                         1. Basic Information
                       </h3>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                        {/* Product Type: Regular vs Sample Tasting Piece */}
+                        <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid var(--glass-border)', borderRadius: '10px', padding: '16px' }}>
+                          <label style={{ display: 'block', fontSize: '0.82rem', color: 'var(--gold)', fontWeight: 700, marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                            Choose Product Type: Regular vs Sample Tasting Piece
+                          </label>
+                          <div style={{ display: 'grid', gridTemplateColumns: isMobileGrid ? '1fr' : '1fr 1fr', gap: '12px' }}>
+                            {/* Option 1: Regular Chocolate */}
+                            <div
+                              onClick={() => setNewProd({ ...newProd, isSample: false, badge: newProd.badge === 'Sample Piece' ? '' : newProd.badge })}
+                              style={{
+                                cursor: 'pointer',
+                                padding: '14px 16px',
+                                borderRadius: '8px',
+                                background: !newProd.isSample
+                                  ? 'linear-gradient(135deg, rgba(212, 175, 55, 0.22) 0%, rgba(184, 134, 11, 0.12) 100%)'
+                                  : 'rgba(255, 255, 255, 0.03)',
+                                border: !newProd.isSample ? '1.5px solid var(--gold)' : '1px solid var(--glass-border)',
+                                boxShadow: !newProd.isSample ? '0 4px 16px rgba(212, 175, 55, 0.15)' : 'none',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '12px',
+                                transition: 'all 0.2s ease',
+                              }}
+                            >
+                              <div
+                                style={{
+                                  width: '20px',
+                                  height: '20px',
+                                  borderRadius: '50%',
+                                  border: `2px solid ${!newProd.isSample ? 'var(--gold)' : 'rgba(255,255,255,0.3)'}`,
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  flexShrink: 0,
+                                }}
+                              >
+                                {!newProd.isSample && <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: 'var(--gold)' }} />}
+                              </div>
+                              <div>
+                                <div style={{ fontWeight: 700, fontSize: '0.92rem', color: !newProd.isSample ? 'var(--gold)' : 'var(--cream)' }}>
+                                  🍫 Regular Chocolate Product
+                                </div>
+                                <div style={{ fontSize: '0.74rem', color: 'var(--beige)', opacity: 0.8, marginTop: '2px' }}>
+                                  Standard catalog product (Full box, bar, gift hamper, or boutique creation)
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Option 2: Sample Tasting Piece */}
+                            <div
+                              onClick={() =>
+                                setNewProd({
+                                  ...newProd,
+                                  isSample: true,
+                                  badge: newProd.badge || 'Sample Piece',
+                                  samplePrice: newProd.samplePrice || (newProd.price ? Math.round(newProd.price * 0.1) : 49),
+                                })
+                              }
+                              style={{
+                                cursor: 'pointer',
+                                padding: '14px 16px',
+                                borderRadius: '8px',
+                                background: newProd.isSample
+                                  ? 'linear-gradient(135deg, rgba(46, 204, 113, 0.2) 0%, rgba(39, 174, 96, 0.1) 100%)'
+                                  : 'rgba(255, 255, 255, 0.03)',
+                                border: newProd.isSample ? '1.5px solid #2ecc71' : '1px solid var(--glass-border)',
+                                boxShadow: newProd.isSample ? '0 4px 16px rgba(46, 204, 113, 0.2)' : 'none',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '12px',
+                                transition: 'all 0.2s ease',
+                              }}
+                            >
+                              <div
+                                style={{
+                                  width: '20px',
+                                  height: '20px',
+                                  borderRadius: '50%',
+                                  border: `2px solid ${newProd.isSample ? '#2ecc71' : 'rgba(255,255,255,0.3)'}`,
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  flexShrink: 0,
+                                }}
+                              >
+                                {newProd.isSample && <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#2ecc71' }} />}
+                              </div>
+                              <div>
+                                <div style={{ fontWeight: 700, fontSize: '0.92rem', color: newProd.isSample ? '#2ecc71' : 'var(--cream)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                  ✨ Sample Tasting Piece
+                                  <span style={{ fontSize: '0.65rem', background: '#2ecc71', color: '#000', padding: '1px 5px', borderRadius: '3px', fontWeight: 700 }}>
+                                    HOMEPAGE SEC 2
+                                  </span>
+                                </div>
+                                <div style={{ fontSize: '0.74rem', color: 'var(--beige)', opacity: 0.8, marginTop: '2px' }}>
+                                  Featured directly in landing page "Taste Our Sample Piece" showcase
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
                         <div>
                           <Input
                             label="Chocolate Name"
@@ -3590,6 +3744,7 @@ export const AdminDashboard: React.FC = () => {
                             label="Badge / Section Tag"
                             options={[
                               { value: '', label: 'Select badge / section tag' },
+                              { value: 'Sample Piece', label: 'Sample Piece (Shows in Taste Our Sample section)' },
                               { value: 'New', label: 'New (Shows in New Arrivals section)' },
                               { value: 'Bestseller', label: 'Bestseller (Shows in Bestsellers section)' },
                               { value: 'Premium', label: 'Premium (Shows in Popular / Premium section)' },
@@ -3598,7 +3753,14 @@ export const AdminDashboard: React.FC = () => {
                               { value: 'Limited', label: 'Limited Edition' },
                             ]}
                             value={newProd.badge || ''}
-                            onChange={(e) => setNewProd({ ...newProd, badge: e.target.value as any })}
+                            onChange={(e) => {
+                              const b = e.target.value;
+                              setNewProd({
+                                ...newProd,
+                                badge: b as any,
+                                isSample: b === 'Sample Piece' ? true : newProd.isSample,
+                              });
+                            }}
                           />
                         </div>
 
@@ -3634,6 +3796,103 @@ export const AdminDashboard: React.FC = () => {
                             )}
                           </div>
                         </div>
+
+                        {/* Sample Piece Configuration */}
+                        {newProd.isSample ? (
+                          <div
+                            style={{
+                              background: 'rgba(46, 204, 113, 0.08)',
+                              border: '1.5px solid rgba(46, 204, 113, 0.35)',
+                              borderRadius: '8px',
+                              padding: '16px',
+                            }}
+                          >
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px', marginBottom: '8px' }}>
+                              <span style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#2ecc71', fontWeight: 700, fontSize: '0.9rem' }}>
+                                <Sparkles size={16} /> Sample Tasting Piece Active
+                              </span>
+                              <span style={{ fontSize: '0.72rem', background: '#2ecc71', color: '#000', padding: '2px 8px', borderRadius: '4px', fontWeight: 700 }}>
+                                FEATURED IN HOMEPAGE SECTION 2
+                              </span>
+                            </div>
+                            <p style={{ margin: '0 0 14px 0', fontSize: '0.78rem', color: 'var(--beige)' }}>
+                              This product will automatically display in the landing page <strong>"Taste Our Sample Piece"</strong> showcase so customers can order this single tasting piece.
+                            </p>
+                            <div
+                              style={{
+                                display: 'grid',
+                                gridTemplateColumns: isMobileGrid ? '1fr' : '1fr 1fr',
+                                gap: '14px',
+                                paddingTop: '10px',
+                                borderTop: '1px dashed rgba(46, 204, 113, 0.25)',
+                              }}
+                            >
+                              <div>
+                                <Input
+                                  label="Sample Piece Tasting Price (₹)"
+                                  type="number"
+                                  placeholder="e.g. 49 (or leave blank to use full price)"
+                                  value={newProd.samplePrice || ''}
+                                  onChange={(e) =>
+                                    setNewProd({ ...newProd, samplePrice: parseFloat(e.target.value) || 0 })
+                                  }
+                                />
+                                <span style={{ fontSize: '0.72rem', color: 'var(--beige)', opacity: 0.8 }}>
+                                  Individual tasting piece rate displayed on the sample card.
+                                </span>
+                              </div>
+                              <div>
+                                <Input
+                                  label="Sample Rating (1.0 - 5.0)"
+                                  type="number"
+                                  step="0.1"
+                                  min="1"
+                                  max="5"
+                                  placeholder="e.g. 5.0"
+                                  value={newProd.rating || 5.0}
+                                  onChange={(e) =>
+                                    setNewProd({ ...newProd, rating: parseFloat(e.target.value) || 5.0 })
+                                  }
+                                />
+                                <span style={{ fontSize: '0.72rem', color: 'var(--beige)', opacity: 0.8 }}>
+                                  Displays in the gold star pill on the sample card.
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        ) : (
+                          <div
+                            style={{
+                              background: 'rgba(255, 255, 255, 0.02)',
+                              border: '1px dashed var(--glass-border)',
+                              borderRadius: '8px',
+                              padding: '12px 16px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                              fontSize: '0.82rem',
+                              color: 'var(--beige)',
+                            }}
+                          >
+                            <span>Regular Chocolate Product selected. Want to offer this as an individual sample piece too?</span>
+                            <button
+                              type="button"
+                              onClick={() => setNewProd({ ...newProd, isSample: true, badge: newProd.badge || 'Sample Piece', samplePrice: newProd.samplePrice || (newProd.price ? Math.round(newProd.price * 0.1) : 49) })}
+                              style={{
+                                background: 'rgba(46, 204, 113, 0.15)',
+                                border: '1px solid #2ecc71',
+                                color: '#2ecc71',
+                                padding: '4px 10px',
+                                borderRadius: '4px',
+                                cursor: 'pointer',
+                                fontSize: '0.78rem',
+                                fontWeight: 600,
+                              }}
+                            >
+                              + Enable Sample Piece
+                            </button>
+                          </div>
+                        )}
                       </div>
                     </div>
 
@@ -4157,6 +4416,182 @@ export const AdminDashboard: React.FC = () => {
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                       <Input label="Stock Units" type="number" value={editingProduct.stock ?? 10} onChange={(e) => setEditingProduct({ ...editingProduct, stock: parseInt(e.target.value) || 0 })} required />
                       <Select label="Category" options={dynamicCategoryOptions} value={editingProduct.category_id || editingProduct.category} onChange={(e) => setEditingProduct({ ...editingProduct, category_id: e.target.value, category: e.target.value as any })} />
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                      <Select
+                        label="Product Badge / Tag"
+                        options={[
+                          { value: '', label: 'None' },
+                          { value: 'Sample Piece', label: 'Sample Piece' },
+                          { value: 'Bestseller', label: 'Bestseller' },
+                          { value: 'Signature', label: 'Signature' },
+                          { value: 'New Arrival', label: 'New Arrival' },
+                          { value: 'Limited Edition', label: 'Limited Edition' },
+                          { value: 'Chef Exclusive', label: 'Chef Exclusive' },
+                        ]}
+                        value={editingProduct.badge || ''}
+                        onChange={(e) => setEditingProduct({ ...editingProduct, badge: e.target.value })}
+                      />
+                      <Input
+                        label="Rating (1.0 - 5.0)"
+                        type="number"
+                        step="0.1"
+                        min="1"
+                        max="5"
+                        value={editingProduct.rating ?? 4.9}
+                        onChange={(e) => setEditingProduct({ ...editingProduct, rating: parseFloat(e.target.value) || 4.9 })}
+                      />
+                    </div>
+
+                    {/* Product Type Selector: Regular vs Sample Tasting Piece */}
+                    <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid var(--glass-border)', borderRadius: '10px', padding: '16px' }}>
+                      <label style={{ display: 'block', fontSize: '0.82rem', color: 'var(--gold)', fontWeight: 700, marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                        Product Classification
+                      </label>
+                      <div style={{ display: 'grid', gridTemplateColumns: isMobileGrid ? '1fr' : '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
+                        {/* Option 1: Regular Chocolate */}
+                        <div
+                          onClick={() =>
+                            setEditingProduct({
+                              ...editingProduct,
+                              isSample: false,
+                              is_sample: false as any,
+                            })
+                          }
+                          style={{
+                            cursor: 'pointer',
+                            padding: '12px 14px',
+                            borderRadius: '8px',
+                            background: !Boolean(editingProduct.isSample ?? (editingProduct as any).is_sample)
+                              ? 'linear-gradient(135deg, rgba(212, 175, 55, 0.22) 0%, rgba(184, 134, 11, 0.12) 100%)'
+                              : 'rgba(255, 255, 255, 0.03)',
+                            border: !Boolean(editingProduct.isSample ?? (editingProduct as any).is_sample)
+                              ? '1.5px solid var(--gold)'
+                              : '1px solid var(--glass-border)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '10px',
+                            transition: 'all 0.2s ease',
+                          }}
+                        >
+                          <div
+                            style={{
+                              width: '18px',
+                              height: '18px',
+                              borderRadius: '50%',
+                              border: `2px solid ${!Boolean(editingProduct.isSample ?? (editingProduct as any).is_sample) ? 'var(--gold)' : 'rgba(255,255,255,0.3)'}`,
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              flexShrink: 0,
+                            }}
+                          >
+                            {!Boolean(editingProduct.isSample ?? (editingProduct as any).is_sample) && (
+                              <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--gold)' }} />
+                            )}
+                          </div>
+                          <div>
+                            <div style={{ fontWeight: 700, fontSize: '0.88rem', color: !Boolean(editingProduct.isSample ?? (editingProduct as any).is_sample) ? 'var(--gold)' : 'var(--cream)' }}>
+                              🍫 Regular Chocolate
+                            </div>
+                            <div style={{ fontSize: '0.72rem', color: 'var(--beige)', opacity: 0.8 }}>
+                              Standard store catalog
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Option 2: Sample Tasting Piece */}
+                        <div
+                          onClick={() =>
+                            setEditingProduct({
+                              ...editingProduct,
+                              isSample: true,
+                              is_sample: true as any,
+                              samplePrice: editingProduct.samplePrice || Math.round(editingProduct.price * 0.1) || 49,
+                              sample_price: (editingProduct.samplePrice || Math.round(editingProduct.price * 0.1) || 49) as any,
+                              badge: !editingProduct.badge ? 'Sample Piece' : editingProduct.badge,
+                            })
+                          }
+                          style={{
+                            cursor: 'pointer',
+                            padding: '12px 14px',
+                            borderRadius: '8px',
+                            background: Boolean(editingProduct.isSample ?? (editingProduct as any).is_sample)
+                              ? 'linear-gradient(135deg, rgba(46, 204, 113, 0.2) 0%, rgba(39, 174, 96, 0.1) 100%)'
+                              : 'rgba(255, 255, 255, 0.03)',
+                            border: Boolean(editingProduct.isSample ?? (editingProduct as any).is_sample)
+                              ? '1.5px solid #2ecc71'
+                              : '1px solid var(--glass-border)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '10px',
+                            transition: 'all 0.2s ease',
+                          }}
+                        >
+                          <div
+                            style={{
+                              width: '18px',
+                              height: '18px',
+                              borderRadius: '50%',
+                              border: `2px solid ${Boolean(editingProduct.isSample ?? (editingProduct as any).is_sample) ? '#2ecc71' : 'rgba(255,255,255,0.3)'}`,
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              flexShrink: 0,
+                            }}
+                          >
+                            {Boolean(editingProduct.isSample ?? (editingProduct as any).is_sample) && (
+                              <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#2ecc71' }} />
+                            )}
+                          </div>
+                          <div>
+                            <div style={{ fontWeight: 700, fontSize: '0.88rem', color: Boolean(editingProduct.isSample ?? (editingProduct as any).is_sample) ? '#2ecc71' : 'var(--cream)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              ✨ Sample Tasting Piece
+                            </div>
+                            <div style={{ fontSize: '0.72rem', color: 'var(--beige)', opacity: 0.8 }}>
+                              Homepage Section 2 Showcase
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Sample Piece Pricing Configuration when enabled */}
+                      {Boolean(editingProduct.isSample ?? (editingProduct as any).is_sample) && (
+                        <div
+                          style={{
+                            background: 'rgba(46, 204, 113, 0.08)',
+                            border: '1px dashed rgba(46, 204, 113, 0.35)',
+                            borderRadius: '8px',
+                            padding: '14px',
+                            marginTop: '8px',
+                          }}
+                        >
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                            <Input
+                              label="Sample Piece Tasting Price (₹)"
+                              type="number"
+                              value={editingProduct.samplePrice ?? (editingProduct as any).sample_price ?? 49}
+                              onChange={(e) =>
+                                setEditingProduct({
+                                  ...editingProduct,
+                                  samplePrice: parseFloat(e.target.value) || 0,
+                                  sample_price: (parseFloat(e.target.value) || 0) as any,
+                                })
+                              }
+                              placeholder="e.g. 49"
+                              required
+                            />
+                            <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                              <span style={{ fontSize: '0.75rem', color: 'var(--beige)' }}>
+                                Original Box Price: <strong style={{ color: 'var(--cream)' }}>₹{editingProduct.price}</strong>
+                              </span>
+                              <span style={{ fontSize: '0.72rem', color: '#2ecc71', marginTop: '4px', fontWeight: 600 }}>
+                                Customer discount: ₹{Math.max(0, (editingProduct.price || 0) - (editingProduct.samplePrice ?? (editingProduct as any).sample_price ?? 0))}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      )}
                     </div>
                     <Input label="Ingredients" value={editingProduct.ingredients || ''} onChange={(e) => setEditingProduct({ ...editingProduct, ingredients: e.target.value })} />
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
@@ -5564,6 +5999,13 @@ export const AdminDashboard: React.FC = () => {
         {/* HOMEPAGE CMS & BANNER MANAGEMENT TAB */}
         {activeTab === 'home-mgmt' && (
           <div>
+            <HomepageCmsView addToast={addToast} />
+          </div>
+        )}
+
+        {/* LEGACY HOME MGMT */}
+        {activeTab === 'home-mgmt-legacy' && (
+          <div>
             <div style={{ display: 'flex', flexDirection: isMobileGrid ? 'column' : 'row', justifyContent: 'space-between', alignItems: isMobileGrid ? 'flex-start' : 'center', marginBottom: '30px', gap: '12px' }}>
               <div>
                 <span className="section-label">Website Settings</span>
@@ -5945,6 +6387,18 @@ export const AdminDashboard: React.FC = () => {
                     />
                   </div>
 
+                  {/* Title / Description Field */}
+                  <div>
+                    <Input
+                      label="Title / Description (Shown on Reel)"
+                      placeholder="e.g. Master Chocolatier at Work"
+                      value={newReelData.title}
+                      containerStyle={{ marginBottom: 0 }}
+                      style={{ height: '46px', fontSize: '0.9rem' }}
+                      onChange={(e) => setNewReelData({ ...newReelData, title: e.target.value })}
+                    />
+                  </div>
+
                   {/* Video Live Preview if fetched */}
                   {newReelData.video_url && (newReelData.video_url.endsWith('.mp4') || newReelData.video_url.includes('cloudinary') || newReelData.video_url.includes('mixkit') || newReelData.video_url.includes('fbcdn')) && (
                     <div
@@ -6053,7 +6507,7 @@ export const AdminDashboard: React.FC = () => {
                       size="sm"
                       onClick={() => {
                         setShowAddReelModal(false);
-                        setNewReelData({ instagram_url: '', account_name: '', video_url: '' });
+                        setNewReelData({ instagram_url: '', account_name: '', video_url: '', title: '' });
                         setNewReelVideoFile(null);
                         setFetchReelSuccessMsg('');
                         setFetchReelErrorMsg('');
@@ -6117,9 +6571,14 @@ export const AdminDashboard: React.FC = () => {
                       </div>
                       {/* Account Name + Link */}
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <p style={{ fontWeight: 700, color: 'var(--cream)', fontSize: '0.88rem', margin: '0 0 4px 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        <p style={{ fontWeight: 700, color: 'var(--cream)', fontSize: '0.88rem', margin: '0 0 2px 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                           {account}
                         </p>
+                        {reel.title && reel.title !== account && (
+                          <p style={{ color: 'var(--beige)', fontSize: '0.78rem', margin: '0 0 4px 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', opacity: 0.9 }}>
+                            {reel.title}
+                          </p>
+                        )}
                         <a
                           href={reelLink}
                           target="_blank"
@@ -8578,6 +9037,18 @@ export const AdminDashboard: React.FC = () => {
                       containerStyle={{ marginBottom: 0 }}
                       style={{ height: '46px', fontSize: '0.9rem' }}
                       onChange={(e) => setEditingReel({ ...editingReel, account_name: e.target.value })}
+                    />
+                  </div>
+
+                  {/* Title / Description Field */}
+                  <div>
+                    <Input
+                      label="Title / Description (Shown on Reel)"
+                      placeholder="e.g. Master Chocolatier at Work"
+                      value={editingReel.title || ''}
+                      containerStyle={{ marginBottom: 0 }}
+                      style={{ height: '46px', fontSize: '0.9rem' }}
+                      onChange={(e) => setEditingReel({ ...editingReel, title: e.target.value })}
                     />
                   </div>
 

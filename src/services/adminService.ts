@@ -618,12 +618,30 @@ export const adminService = {
    * Update homepage site stats (happy customers, flavors, etc.).
    */
   updateSiteStats: (payload: {
-    happy_customers: number;
-    unique_flavors: number;
-    countries_shipped: number;
-    five_star_reviews_percent: number;
+    happy_customers?: number;
+    products_available?: number;
+    orders_delivered?: number;
+    customer_rating_percent?: number;
+    unique_flavors?: number;
+    countries_shipped?: number;
+    five_star_reviews_percent?: number;
   }): Promise<any> =>
     apiPatch<any>('/admin/config/stats', payload),
+
+  /**
+   * Fetch real live counts from database (customers, active products, delivered orders, customer rating)
+   */
+  fetchLiveDbStats: (): Promise<{
+    happy_customers: number;
+    unique_flavors: number;
+    products_available: number;
+    countries_shipped: number;
+    orders_delivered: number;
+    five_star_reviews_percent: number;
+    customer_rating_percent: number;
+    total_orders?: number;
+  }> =>
+    apiGet<any>('/admin/config/stats/live-database'),
 
   /**
    * Upload a banner image for a hero slide (superadmin action).
@@ -675,6 +693,18 @@ export const adminService = {
    */
   uploadStoryVideo: (formData: FormData): Promise<{ video_url: string }> =>
     apiPostFormData<{ video_url: string }>('/admin/story-video', formData),
+
+  /**
+   * Upload generic image to Cloudinary/S3 storage bucket for CMS.
+   */
+  uploadCmsImage: (formData: FormData): Promise<{ image_url: string }> =>
+    apiPostFormData<{ image_url: string }>('/admin/upload-image', formData),
+
+  /**
+   * Upload generic video to Cloudinary/S3 storage bucket for CMS.
+   */
+  uploadCmsVideo: (formData: FormData): Promise<{ video_url: string }> =>
+    apiPostFormData<{ video_url: string }>('/admin/upload-video', formData),
 
   /**
    * Get Our Story video URL.
@@ -739,6 +769,17 @@ export const adminService = {
 
   getPlatformConfig: (): Promise<any> => apiGet<any>('/admin/config/platform'),
   updatePlatformConfig: (payload: any): Promise<any> => apiPatch<any>('/admin/config/platform', payload),
+
+  getLandingSections: (): Promise<any> => apiGet<any>('/admin/config/landing-sections'),
+  updateLandingSections: (payload: any): Promise<any> => apiPatch<any>('/admin/config/landing-sections', payload),
+
+  getStoryPageConfig: (): Promise<any> => apiGet<any>('/admin/config/story-page'),
+  updateStoryPageConfig: (payload: any): Promise<any> => apiPatch<any>('/admin/config/story-page', payload),
+
+  getContactPageConfig: (): Promise<any> => apiGet<any>('/admin/config/contact-page'),
+  updateContactPageConfig: (payload: any): Promise<any> => apiPatch<any>('/admin/config/contact-page', payload),
+
+
 
   // ======================================================
   // Products
