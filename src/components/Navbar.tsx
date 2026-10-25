@@ -111,37 +111,6 @@ export const Navbar: React.FC = () => {
     { name: '✨ New Arrivals', link: '/shop?filter=new', highlight: true },
   ];
 
-  const featuredProducts = [
-    {
-      name: 'Royal Dark Truffle Collection',
-      shortName: 'Dark Truffles',
-      price: 2500,
-      originalPrice: 3249,
-      discount: 23,
-      image: 'https://images.unsplash.com/photo-1549007994-cb92caebd54b?auto=format&fit=crop&w=500&q=80',
-      hoverImage: 'https://images.unsplash.com/photo-1599599810769-bcde5a160d32?auto=format&fit=crop&w=500&q=80',
-      link: '/shop',
-    },
-    {
-      name: 'Belgian Milk Chocolate Pralines',
-      shortName: 'Pralines',
-      price: 2000,
-      image: 'https://images.unsplash.com/photo-1542841791-1925b02a2bcd?auto=format&fit=crop&w=500&q=80',
-      hoverImage: 'https://images.unsplash.com/photo-1606313564200-e75d5e30476c?auto=format&fit=crop&w=500&q=80',
-      link: '/shop',
-    },
-    {
-      name: 'Signature Gold Leaf Pralines',
-      shortName: 'Gold Pralines',
-      price: 1649,
-      originalPrice: 2199,
-      discount: 25,
-      image: 'https://images.unsplash.com/photo-1526081347589-7fa3cb36b312?auto=format&fit=crop&w=500&q=80',
-      hoverImage: 'https://images.unsplash.com/photo-1618354691373-d851c5c3a990?auto=format&fit=crop&w=500&q=80',
-      link: '/shop',
-    },
-  ];
-
   const handleNavScroll = (elementId: string) => {
     setMobileMenuOpen(false);
     if (location.pathname !== '/') {

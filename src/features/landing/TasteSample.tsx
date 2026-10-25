@@ -107,6 +107,11 @@ export const TasteSample: React.FC = () => {
 
   const activeProduct = showcase[activeIdx];
 
+  // If no backend connection or no products available in the showcase, do not display dummy data
+  if (!products || products.length === 0 || showcase.length === 0 || !activeProduct) {
+    return null;
+  }
+
   return (
     <section
       id="taste-sample"
@@ -198,7 +203,7 @@ export const TasteSample: React.FC = () => {
               {/* Product image with animated transition */}
               <div className="taste-img-zone">
                 <AnimatePresence mode="wait">
-                  {activeProduct ? (
+                  {activeProduct && (
                     <motion.img
                       key={activeProduct.id}
                       src={getImageUrl(activeProduct.image)}
@@ -217,15 +222,6 @@ export const TasteSample: React.FC = () => {
                         (e.target as HTMLImageElement).src =
                           'https://images.unsplash.com/photo-1549007953-2f2dc0b24019?auto=format&fit=crop&w=600&q=80';
                       }}
-                    />
-                  ) : (
-                    <motion.img
-                      key="fallback"
-                      src="https://images.unsplash.com/photo-1549007953-2f2dc0b24019?auto=format&fit=crop&w=600&q=80"
-                      alt="Chocolate sample"
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '12px' }}
                     />
                   )}
                 </AnimatePresence>

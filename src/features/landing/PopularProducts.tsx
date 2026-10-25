@@ -21,6 +21,10 @@ export const PopularProducts: React.FC = () => {
     .filter((p) => p.badge === 'Bestseller' || p.badge === 'Premium')
     .concat(products.filter((p) => p.badge !== 'Bestseller' && p.badge !== 'Premium'));
 
+  if (!products || products.length === 0 || popularList.length === 0) {
+    return null;
+  }
+
   const scroll = (direction: 'left' | 'right') => {
     if (scrollRef.current) {
       const { scrollLeft, clientWidth } = scrollRef.current;

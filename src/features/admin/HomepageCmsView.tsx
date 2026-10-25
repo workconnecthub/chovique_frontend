@@ -54,7 +54,7 @@ import { Input } from '../../components/ui/Input';
 import { getImageUrl } from '../../utils/imageUrl';
 import { adminService } from '../../services/adminService';
 import { homeService } from '../../services/homeService';
-import type { Banner, LandingSectionsConfig, InstagramReel, StoryPageConfig, ContactPageConfig } from '../../types';
+import type { Banner, LandingSectionsConfig, InstagramReel, StoryPageConfig, ContactPageConfig, Testimonial } from '../../types';
 import { DEFAULT_LANDING_SECTIONS, DEFAULT_STORY_PAGE_CONFIG, DEFAULT_CONTACT_PAGE_CONFIG } from '../../types';
 
 interface HomepageCmsViewProps {
@@ -432,6 +432,7 @@ export const HomepageCmsView: React.FC<HomepageCmsViewProps> = ({ addToast, addL
   const [editReelError, setEditReelError] = useState('');
   const [editReelSuccess, setEditReelSuccess] = useState('');
   const [isUpdatingReel, setIsUpdatingReel] = useState(false);
+  const [cmsTestimonials, setCmsTestimonials] = useState<Testimonial[]>([]);
 
   const handleAddReelFileChange = (file: File | null) => {
     setAddReelVideoFile(file);
@@ -614,8 +615,17 @@ export const HomepageCmsView: React.FC<HomepageCmsViewProps> = ({ addToast, addL
       .catch((err) => console.error('Failed to load reels:', err));
   };
 
+  const fetchCmsTestimonials = () => {
+    homeService.getTestimonials()
+      .then((data) => {
+        if (Array.isArray(data)) setCmsTestimonials(data);
+      })
+      .catch((err) => console.error('Failed to load testimonials:', err));
+  };
+
   useEffect(() => {
     fetchCmsReels();
+    fetchCmsTestimonials();
   }, []);
 
   // Open Edit Banner Modal & populate data
@@ -2090,29 +2100,49 @@ export const HomepageCmsView: React.FC<HomepageCmsViewProps> = ({ addToast, addL
 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '20px', alignItems: 'center' }}>
                   {/* Preview Left: Card */}
-                  <div style={{ background: 'linear-gradient(145deg, rgba(30,17,8,0.9) 0%, rgba(15,8,3,0.95) 100%)', border: '1px solid rgba(201,168,76,0.4)', borderRadius: '12px', padding: '16px', position: 'relative', boxShadow: '0 8px 30px rgba(0,0,0,0.5)' }}>
-                    <span style={{ position: 'absolute', top: '12px', left: '12px', background: 'var(--gold)', color: '#000', fontSize: '0.68rem', fontWeight: 700, padding: '3px 8px', borderRadius: '20px', zIndex: 2, display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      <Sparkles size={10} /> {sectionsForm.tasteSample?.cardBadgeText || 'Sample Piece'}
-                    </span>
-                    <img
-                      src={products[0]?.image ? getImageUrl(products[0].image) : 'https://images.unsplash.com/photo-1549007953-2f2dc0b24019?auto=format&fit=crop&w=600&q=80'}
-                      alt="Sample"
-                      style={{ width: '100%', height: '180px', objectFit: 'cover', borderRadius: '8px', marginBottom: '12px' }}
-                    />
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <div>
-                        <h4 style={{ color: 'var(--cream)', fontSize: '0.95rem', margin: '0 0 2px 0' }}>
-                          {products[0]?.name || 'Belgian Dark Truffle Bar'}
-                        </h4>
-                        <span style={{ color: 'var(--gold)', fontSize: '0.9rem', fontWeight: 700 }}>
-                          {products[0]?.samplePrice ? `₹${products[0].samplePrice}` : 'Sample Piece'}
+                  {(() => {
+                    const sampleProduct = products.find((p) => Boolean(p.isSample || (p as any).is_sample)) || products[0];
+                    if (!sampleProduct) {
+                      return (
+                        <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px dashed rgba(201,168,76,0.3)', borderRadius: '12px', padding: '32px 16px', textAlign: 'center', color: 'var(--beige)' }}>
+                          <p style={{ margin: 0, fontSize: '0.85rem' }}>No products available in database.</p>
+                          <span style={{ fontSize: '0.75rem', opacity: 0.7 }}>Add products in the Catalog tab to preview this card.</span>
+                        </div>
+                      );
+                    }
+                    const tastingPrice = sampleProduct.samplePrice ?? (sampleProduct as any).sample_price;
+                    return (
+                      <div style={{ background: 'linear-gradient(145deg, rgba(30,17,8,0.9) 0%, rgba(15,8,3,0.95) 100%)', border: '1px solid rgba(201,168,76,0.4)', borderRadius: '12px', padding: '16px', position: 'relative', boxShadow: '0 8px 30px rgba(0,0,0,0.5)' }}>
+                        <span style={{ position: 'absolute', top: '12px', left: '12px', background: 'var(--gold)', color: '#000', fontSize: '0.68rem', fontWeight: 700, padding: '3px 8px', borderRadius: '20px', zIndex: 2, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          <Sparkles size={10} /> {sectionsForm.tasteSample?.cardBadgeText || 'Sample Piece'}
                         </span>
+                        {sampleProduct.image ? (
+                          <img
+                            src={getImageUrl(sampleProduct.image)}
+                            alt={sampleProduct.name}
+                            style={{ width: '100%', height: '180px', objectFit: 'cover', borderRadius: '8px', marginBottom: '12px' }}
+                          />
+                        ) : (
+                          <div style={{ width: '100%', height: '180px', background: 'rgba(255,255,255,0.05)', borderRadius: '8px', marginBottom: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--beige)', fontSize: '0.8rem' }}>
+                            No Image
+                          </div>
+                        )}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <div>
+                            <h4 style={{ color: 'var(--cream)', fontSize: '0.95rem', margin: '0 0 2px 0' }}>
+                              {sampleProduct.name}
+                            </h4>
+                            <span style={{ color: 'var(--gold)', fontSize: '0.9rem', fontWeight: 700 }}>
+                              {tastingPrice ? `₹${tastingPrice}` : (sampleProduct.price ? `₹${sampleProduct.price}` : 'Sample Piece')}
+                            </span>
+                          </div>
+                          <span style={{ background: 'var(--gold)', color: '#000', fontSize: '0.75rem', fontWeight: 600, padding: '6px 12px', borderRadius: '4px' }}>
+                            Taste Now
+                          </span>
+                        </div>
                       </div>
-                      <span style={{ background: 'var(--gold)', color: '#000', fontSize: '0.75rem', fontWeight: 600, padding: '6px 12px', borderRadius: '4px' }}>
-                        Taste Now
-                      </span>
-                    </div>
-                  </div>
+                    );
+                  })()}
 
                   {/* Preview Right: Why */}
                   <div>
@@ -2260,26 +2290,42 @@ export const HomepageCmsView: React.FC<HomepageCmsViewProps> = ({ addToast, addL
                   </p>
                 </div>
 
-                {/* 3 Sample Product Cards Preview */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '14px' }}>
-                  {[
-                    { name: 'Royal Dark Truffles', price: '₹650', img: products[0]?.image ? getImageUrl(products[0].image) : 'https://images.unsplash.com/photo-1549007953-2f2dc0b24019?auto=format&fit=crop&w=300&q=80' },
-                    { name: 'Pink Salt Caramel Bar', price: '₹480', img: products[1]?.image ? getImageUrl(products[1].image) : 'https://images.unsplash.com/photo-1548741487-18d16a145e80?auto=format&fit=crop&w=300&q=80' },
-                    { name: 'Hazelnut Praline Box', price: '₹890', img: products[2]?.image ? getImageUrl(products[2].image) : 'https://images.unsplash.com/photo-1511381939415-e44015466834?auto=format&fit=crop&w=300&q=80' },
-                  ].map((item, idx) => (
-                    <div key={idx} style={{ background: 'rgba(0,0,0,0.5)', border: '1px solid rgba(212,175,55,0.25)', borderRadius: '8px', padding: '12px', position: 'relative' }}>
-                      <span style={{ position: 'absolute', top: '8px', right: '8px', color: 'var(--gold)', opacity: 0.85 }}>
-                        <Heart size={14} fill="var(--gold)" />
-                      </span>
-                      <img src={item.img} alt="" style={{ width: '100%', height: '110px', objectFit: 'cover', borderRadius: '6px', marginBottom: '8px' }} />
-                      <div style={{ color: 'var(--cream)', fontWeight: 600, fontSize: '0.85rem', marginBottom: '2px' }}>{item.name}</div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span style={{ color: 'var(--gold)', fontWeight: 700, fontSize: '0.85rem' }}>{item.price}</span>
-                        <span style={{ fontSize: '0.7rem', color: 'var(--beige)', border: '1px solid rgba(255,255,255,0.15)', padding: '2px 6px', borderRadius: '3px' }}>Taste Now</span>
+                {/* Popular Product Cards Preview */}
+                {(() => {
+                  const popularPreview = products
+                    .filter((p) => p.badge === 'Bestseller' || p.badge === 'Premium')
+                    .concat(products.filter((p) => p.badge !== 'Bestseller' && p.badge !== 'Premium'))
+                    .slice(0, 3);
+                  if (popularPreview.length === 0) {
+                    return (
+                      <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px dashed rgba(201,168,76,0.3)', borderRadius: '12px', padding: '32px 16px', textAlign: 'center', color: 'var(--beige)' }}>
+                        <p style={{ margin: 0, fontSize: '0.85rem' }}>No products available in database.</p>
+                        <span style={{ fontSize: '0.75rem', opacity: 0.7 }}>Add products in the Catalog tab to preview popular cards.</span>
                       </div>
+                    );
+                  }
+                  return (
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '14px' }}>
+                      {popularPreview.map((item) => (
+                        <div key={item.id} style={{ background: 'rgba(0,0,0,0.5)', border: '1px solid rgba(212,175,55,0.25)', borderRadius: '8px', padding: '12px', position: 'relative' }}>
+                          <span style={{ position: 'absolute', top: '8px', right: '8px', color: 'var(--gold)', opacity: 0.85 }}>
+                            <Heart size={14} fill="var(--gold)" />
+                          </span>
+                          {item.image ? (
+                            <img src={getImageUrl(item.image)} alt={item.name} style={{ width: '100%', height: '110px', objectFit: 'cover', borderRadius: '6px', marginBottom: '8px' }} />
+                          ) : (
+                            <div style={{ width: '100%', height: '110px', background: 'rgba(255,255,255,0.05)', borderRadius: '6px', marginBottom: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--beige)', fontSize: '0.8rem' }}>No Image</div>
+                          )}
+                          <div style={{ color: 'var(--cream)', fontWeight: 600, fontSize: '0.85rem', marginBottom: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.name}</div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <span style={{ color: 'var(--gold)', fontWeight: 700, fontSize: '0.85rem' }}>₹{item.price}</span>
+                            <span style={{ fontSize: '0.7rem', color: 'var(--beige)', border: '1px solid rgba(255,255,255,0.15)', padding: '2px 6px', borderRadius: '3px' }}>Taste Now</span>
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
+                  );
+                })()}
               </div>
             </div>
           )}
@@ -2639,37 +2685,37 @@ export const HomepageCmsView: React.FC<HomepageCmsViewProps> = ({ addToast, addL
                       </p>
                     </div>
 
-                    {/* Preview Mock Cards */}
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginTop: 'auto' }}>
-                      <div style={{ background: 'rgba(0,0,0,0.5)', border: '1px solid rgba(212,175,55,0.25)', borderRadius: '8px', padding: '10px', position: 'relative' }}>
-                        <span style={{ position: 'absolute', top: '6px', left: '6px', background: 'var(--gold)', color: '#000', fontSize: '0.62rem', fontWeight: 700, padding: '1px 5px', borderRadius: '3px' }}>
-                          Bestseller
-                        </span>
-                        <img
-                          src={products[0]?.image ? getImageUrl(products[0].image) : 'https://images.unsplash.com/photo-1549007953-2f2dc0b24019?auto=format&fit=crop&w=300&q=80'}
-                          alt=""
-                          style={{ width: '100%', height: '80px', objectFit: 'cover', borderRadius: '4px', marginBottom: '6px' }}
-                        />
-                        <div style={{ fontSize: '0.75rem', color: 'var(--cream)', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                          {products[0]?.name || 'Signature Dark Bar'}
+                    {/* Preview Cards from Database */}
+                    {(() => {
+                      const bestsellers = products.filter((p) => (p.isBestseller || p.badge === 'Bestseller' || p.badge === 'Premium') && p.badge !== 'Limited' && p.badge !== 'Limited Edition').slice(0, 2);
+                      if (bestsellers.length === 0) {
+                        return (
+                          <div style={{ background: 'rgba(0,0,0,0.3)', border: '1px dashed rgba(212,175,55,0.25)', borderRadius: '8px', padding: '16px', textAlign: 'center', color: 'var(--beige)', marginTop: 'auto', fontSize: '0.75rem' }}>
+                            No bestsellers configured in database.
+                          </div>
+                        );
+                      }
+                      return (
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginTop: 'auto' }}>
+                          {bestsellers.map((p) => (
+                            <div key={p.id} style={{ background: 'rgba(0,0,0,0.5)', border: '1px solid rgba(212,175,55,0.25)', borderRadius: '8px', padding: '10px', position: 'relative' }}>
+                              <span style={{ position: 'absolute', top: '6px', left: '6px', background: 'var(--gold)', color: '#000', fontSize: '0.62rem', fontWeight: 700, padding: '1px 5px', borderRadius: '3px' }}>
+                                Bestseller
+                              </span>
+                              {p.image ? (
+                                <img src={getImageUrl(p.image)} alt={p.name} style={{ width: '100%', height: '80px', objectFit: 'cover', borderRadius: '4px', marginBottom: '6px' }} />
+                              ) : (
+                                <div style={{ width: '100%', height: '80px', background: 'rgba(255,255,255,0.05)', borderRadius: '4px', marginBottom: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--beige)', fontSize: '0.7rem' }}>No Image</div>
+                              )}
+                              <div style={{ fontSize: '0.75rem', color: 'var(--cream)', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                {p.name}
+                              </div>
+                              <div style={{ fontSize: '0.72rem', color: 'var(--gold)', fontWeight: 700 }}>₹{p.price}</div>
+                            </div>
+                          ))}
                         </div>
-                        <div style={{ fontSize: '0.72rem', color: 'var(--gold)', fontWeight: 700 }}>₹{products[0]?.price || 450}</div>
-                      </div>
-                      <div style={{ background: 'rgba(0,0,0,0.5)', border: '1px solid rgba(212,175,55,0.25)', borderRadius: '8px', padding: '10px', position: 'relative' }}>
-                        <span style={{ position: 'absolute', top: '6px', left: '6px', background: 'var(--gold)', color: '#000', fontSize: '0.62rem', fontWeight: 700, padding: '1px 5px', borderRadius: '3px' }}>
-                          Bestseller
-                        </span>
-                        <img
-                          src={products[1]?.image ? getImageUrl(products[1].image) : 'https://images.unsplash.com/photo-1548741487-18d16a145e80?auto=format&fit=crop&w=300&q=80'}
-                          alt=""
-                          style={{ width: '100%', height: '80px', objectFit: 'cover', borderRadius: '4px', marginBottom: '6px' }}
-                        />
-                        <div style={{ fontSize: '0.75rem', color: 'var(--cream)', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                          {products[1]?.name || 'Belgian Truffle Box'}
-                        </div>
-                        <div style={{ fontSize: '0.72rem', color: 'var(--gold)', fontWeight: 700 }}>₹{products[1]?.price || 750}</div>
-                      </div>
-                    </div>
+                      );
+                    })()}
                   </div>
 
                   {/* Part 2: New Arrivals Column */}
@@ -2701,37 +2747,37 @@ export const HomepageCmsView: React.FC<HomepageCmsViewProps> = ({ addToast, addL
                       </p>
                     </div>
 
-                    {/* Preview Mock Cards */}
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginTop: 'auto' }}>
-                      <div style={{ background: 'rgba(0,0,0,0.5)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '8px', padding: '10px', position: 'relative' }}>
-                        <span style={{ position: 'absolute', top: '6px', left: '6px', background: '#3498db', color: '#fff', fontSize: '0.62rem', fontWeight: 700, padding: '1px 5px', borderRadius: '3px' }}>
-                          New
-                        </span>
-                        <img
-                          src={products[2]?.image ? getImageUrl(products[2].image) : 'https://images.unsplash.com/photo-1511381939415-e44015466834?auto=format&fit=crop&w=300&q=80'}
-                          alt=""
-                          style={{ width: '100%', height: '80px', objectFit: 'cover', borderRadius: '4px', marginBottom: '6px' }}
-                        />
-                        <div style={{ fontSize: '0.75rem', color: 'var(--cream)', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                          {products[2]?.name || 'Pistachio Crunch Bar'}
+                    {/* Preview Cards from Database */}
+                    {(() => {
+                      const newArrivals = products.filter((p) => (p.isNewArrival || p.badge === 'New') && p.badge !== 'Limited' && p.badge !== 'Limited Edition').slice(0, 2);
+                      if (newArrivals.length === 0) {
+                        return (
+                          <div style={{ background: 'rgba(0,0,0,0.3)', border: '1px dashed rgba(255,255,255,0.15)', borderRadius: '8px', padding: '16px', textAlign: 'center', color: 'var(--beige)', marginTop: 'auto', fontSize: '0.75rem' }}>
+                            No new arrivals configured in database.
+                          </div>
+                        );
+                      }
+                      return (
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginTop: 'auto' }}>
+                          {newArrivals.map((p) => (
+                            <div key={p.id} style={{ background: 'rgba(0,0,0,0.5)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '8px', padding: '10px', position: 'relative' }}>
+                              <span style={{ position: 'absolute', top: '6px', left: '6px', background: '#3498db', color: '#fff', fontSize: '0.62rem', fontWeight: 700, padding: '1px 5px', borderRadius: '3px' }}>
+                                New
+                              </span>
+                              {p.image ? (
+                                <img src={getImageUrl(p.image)} alt={p.name} style={{ width: '100%', height: '80px', objectFit: 'cover', borderRadius: '4px', marginBottom: '6px' }} />
+                              ) : (
+                                <div style={{ width: '100%', height: '80px', background: 'rgba(255,255,255,0.05)', borderRadius: '4px', marginBottom: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--beige)', fontSize: '0.7rem' }}>No Image</div>
+                              )}
+                              <div style={{ fontSize: '0.75rem', color: 'var(--cream)', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                {p.name}
+                              </div>
+                              <div style={{ fontSize: '0.72rem', color: 'var(--gold)', fontWeight: 700 }}>₹{p.price}</div>
+                            </div>
+                          ))}
                         </div>
-                        <div style={{ fontSize: '0.72rem', color: 'var(--gold)', fontWeight: 700 }}>₹{products[2]?.price || 520}</div>
-                      </div>
-                      <div style={{ background: 'rgba(0,0,0,0.5)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '8px', padding: '10px', position: 'relative' }}>
-                        <span style={{ position: 'absolute', top: '6px', left: '6px', background: '#3498db', color: '#fff', fontSize: '0.62rem', fontWeight: 700, padding: '1px 5px', borderRadius: '3px' }}>
-                          New
-                        </span>
-                        <img
-                          src={products[3]?.image ? getImageUrl(products[3].image) : 'https://images.unsplash.com/photo-1549007953-2f2dc0b24019?auto=format&fit=crop&w=300&q=80'}
-                          alt=""
-                          style={{ width: '100%', height: '80px', objectFit: 'cover', borderRadius: '4px', marginBottom: '6px' }}
-                        />
-                        <div style={{ fontSize: '0.75rem', color: 'var(--cream)', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                          {products[3]?.name || 'Espresso Hazelnut Bonbon'}
-                        </div>
-                        <div style={{ fontSize: '0.72rem', color: 'var(--gold)', fontWeight: 700 }}>₹{products[3]?.price || 640}</div>
-                      </div>
-                    </div>
+                      );
+                    })()}
                   </div>
                 </div>
               </div>
@@ -2889,23 +2935,36 @@ export const HomepageCmsView: React.FC<HomepageCmsViewProps> = ({ addToast, addL
                   </div>
 
                   {/* Right: Hamper Products Showcase */}
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                    {[
-                      { name: 'Imperial Grand Hamper', price: '₹4,999', img: 'https://images.unsplash.com/photo-1549007953-2f2dc0b24019?auto=format&fit=crop&w=300&q=80' },
-                      { name: 'Royal Velvet Gift Box', price: '₹2,750', img: 'https://images.unsplash.com/photo-1548741487-18d16a145e80?auto=format&fit=crop&w=300&q=80' },
-                    ].map((hamper, idx) => (
-                      <div key={idx} style={{ background: 'rgba(0,0,0,0.5)', border: '1px solid rgba(212,175,55,0.25)', borderRadius: '8px', padding: '10px', position: 'relative' }}>
-                        <span style={{ position: 'absolute', top: '6px', left: '6px', background: 'var(--gold)', color: '#000', fontSize: '0.62rem', fontWeight: 700, padding: '1px 5px', borderRadius: '3px' }}>
-                          Gift Hamper
-                        </span>
-                        <img src={hamper.img} alt="" style={{ width: '100%', height: '90px', objectFit: 'cover', borderRadius: '4px', marginBottom: '6px' }} />
-                        <div style={{ fontSize: '0.78rem', color: 'var(--cream)', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                          {hamper.name}
+                  {(() => {
+                    const hampers = products.filter((p) => p.category === 'gift' || p.badge === 'Gift Hamper' || p.badge === 'Gift Hampers').slice(0, 2);
+                    if (hampers.length === 0) {
+                      return (
+                        <div style={{ background: 'rgba(0,0,0,0.3)', border: '1px dashed rgba(212,175,55,0.25)', borderRadius: '8px', padding: '24px 12px', textAlign: 'center', color: 'var(--beige)', fontSize: '0.75rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          No gift hampers found in database.
                         </div>
-                        <div style={{ fontSize: '0.75rem', color: 'var(--gold)', fontWeight: 700, marginTop: '2px' }}>{hamper.price}</div>
+                      );
+                    }
+                    return (
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                        {hampers.map((hamper) => (
+                          <div key={hamper.id} style={{ background: 'rgba(0,0,0,0.5)', border: '1px solid rgba(212,175,55,0.25)', borderRadius: '8px', padding: '10px', position: 'relative' }}>
+                            <span style={{ position: 'absolute', top: '6px', left: '6px', background: 'var(--gold)', color: '#000', fontSize: '0.62rem', fontWeight: 700, padding: '1px 5px', borderRadius: '3px' }}>
+                              Gift Hamper
+                            </span>
+                            {hamper.image ? (
+                              <img src={getImageUrl(hamper.image)} alt={hamper.name} style={{ width: '100%', height: '90px', objectFit: 'cover', borderRadius: '4px', marginBottom: '6px' }} />
+                            ) : (
+                              <div style={{ width: '100%', height: '90px', background: 'rgba(255,255,255,0.05)', borderRadius: '4px', marginBottom: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--beige)', fontSize: '0.7rem' }}>No Image</div>
+                            )}
+                            <div style={{ fontSize: '0.78rem', color: 'var(--cream)', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                              {hamper.name}
+                            </div>
+                            <div style={{ fontSize: '0.75rem', color: 'var(--gold)', fontWeight: 700, marginTop: '2px' }}>₹{hamper.price}</div>
+                          </div>
+                        ))}
                       </div>
-                    ))}
-                  </div>
+                    );
+                  })()}
                 </div>
               </div>
             </div>
@@ -3053,25 +3112,38 @@ export const HomepageCmsView: React.FC<HomepageCmsViewProps> = ({ addToast, addL
                   ))}
                 </div>
 
-                {/* 3 Boutique Product Cards Preview */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))', gap: '14px' }}>
-                  {[
-                    { name: '72% Single-Origin Madagascar', price: '₹550', img: 'https://images.unsplash.com/photo-1549007953-2f2dc0b24019?auto=format&fit=crop&w=300&q=80' },
-                    { name: 'Gold Dust Hazelnut Bonbon', price: '₹620', img: 'https://images.unsplash.com/photo-1548741487-18d16a145e80?auto=format&fit=crop&w=300&q=80' },
-                    { name: 'Roasted Almond Bark', price: '₹490', img: 'https://images.unsplash.com/photo-1511381939415-e44015466834?auto=format&fit=crop&w=300&q=80' },
-                  ].map((p, idx) => (
-                    <div key={idx} style={{ background: 'rgba(0,0,0,0.5)', border: '1px solid rgba(212,175,55,0.25)', borderRadius: '8px', padding: '12px' }}>
-                      <img src={p.img} alt="" style={{ width: '100%', height: '100px', objectFit: 'cover', borderRadius: '4px', marginBottom: '8px' }} />
-                      <div style={{ fontSize: '0.8rem', color: 'var(--cream)', fontWeight: 600, marginBottom: '2px' }}>{p.name}</div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '6px' }}>
-                        <span style={{ fontSize: '0.8rem', color: 'var(--gold)', fontWeight: 700 }}>{p.price}</span>
-                        <span style={{ fontSize: '0.7rem', background: 'rgba(212,175,55,0.15)', color: 'var(--gold)', padding: '3px 8px', borderRadius: '3px', fontWeight: 600 }}>
-                          Add to Bag
-                        </span>
+                {/* Boutique Product Cards Preview */}
+                {(() => {
+                  const boutiquePreview = products.slice(0, 3);
+                  if (boutiquePreview.length === 0) {
+                    return (
+                      <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px dashed rgba(201,168,76,0.3)', borderRadius: '12px', padding: '32px 16px', textAlign: 'center', color: 'var(--beige)' }}>
+                        <p style={{ margin: 0, fontSize: '0.85rem' }}>No products available in database.</p>
+                        <span style={{ fontSize: '0.75rem', opacity: 0.7 }}>Add products in the Catalog tab to preview boutique cards.</span>
                       </div>
+                    );
+                  }
+                  return (
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))', gap: '14px' }}>
+                      {boutiquePreview.map((p) => (
+                        <div key={p.id} style={{ background: 'rgba(0,0,0,0.5)', border: '1px solid rgba(212,175,55,0.25)', borderRadius: '8px', padding: '12px' }}>
+                          {p.image ? (
+                            <img src={getImageUrl(p.image)} alt={p.name} style={{ width: '100%', height: '100px', objectFit: 'cover', borderRadius: '4px', marginBottom: '8px' }} />
+                          ) : (
+                            <div style={{ width: '100%', height: '100px', background: 'rgba(255,255,255,0.05)', borderRadius: '4px', marginBottom: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--beige)', fontSize: '0.7rem' }}>No Image</div>
+                          )}
+                          <div style={{ fontSize: '0.8rem', color: 'var(--cream)', fontWeight: 600, marginBottom: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.name}</div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '6px' }}>
+                            <span style={{ fontSize: '0.8rem', color: 'var(--gold)', fontWeight: 700 }}>₹{p.price}</span>
+                            <span style={{ fontSize: '0.7rem', background: 'rgba(212,175,55,0.15)', color: 'var(--gold)', padding: '3px 8px', borderRadius: '3px', fontWeight: 600 }}>
+                              Add to Bag
+                            </span>
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
+                  );
+                })()}
               </div>
             </div>
           )}
@@ -3228,43 +3300,48 @@ export const HomepageCmsView: React.FC<HomepageCmsViewProps> = ({ addToast, addL
                   </div>
                 </div>
 
-                {/* 2 Customer Testimonials Preview */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px' }}>
-                  {[
-                    {
-                      author: 'Ananya Sharma',
-                      title: 'Chocolate Connoisseur',
-                      quote: 'The single-origin dark chocolate truffle bar melted like velvet on the palate. By far the finest chocolate experience in India.',
-                      rating: 5,
-                    },
-                    {
-                      author: 'Vikram Malhotra',
-                      title: 'Luxury Gift Customer',
-                      quote: 'Ordered the Imperial Hamper for a corporate celebration. The packaging, handwritten card, and fresh taste was sheer perfection.',
-                      rating: 5,
-                    },
-                  ].map((rev, idx) => (
-                    <div key={idx} style={{ background: 'rgba(0,0,0,0.5)', border: '1px solid rgba(212,175,55,0.25)', borderRadius: '10px', padding: '16px', position: 'relative' }}>
-                      <div style={{ display: 'flex', gap: '3px', marginBottom: '8px' }}>
-                        {[...Array(5)].map((_, i) => (
-                          <Star key={i} size={14} fill="var(--gold)" color="var(--gold)" />
-                        ))}
+                {/* Customer Testimonials Preview from Database */}
+                {(() => {
+                  if (cmsTestimonials.length === 0) {
+                    return (
+                      <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px dashed rgba(201,168,76,0.3)', borderRadius: '12px', padding: '32px 16px', textAlign: 'center', color: 'var(--beige)' }}>
+                        <p style={{ margin: 0, fontSize: '0.85rem' }}>No customer reviews in database yet.</p>
+                        <span style={{ fontSize: '0.75rem', opacity: 0.7 }}>Approved customer reviews from the Reviews tab will appear here.</span>
                       </div>
-                      <p style={{ color: 'var(--cream)', fontSize: '0.82rem', fontStyle: 'italic', margin: '0 0 12px 0', lineHeight: 1.45 }}>
-                        "{rev.quote}"
-                      </p>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '10px' }}>
-                        <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'linear-gradient(135deg, var(--gold) 0%, #8c6d1f 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#000', fontWeight: 700, fontSize: '0.75rem' }}>
-                          {rev.author.split(' ').map(n => n[0]).join('')}
-                        </div>
-                        <div>
-                          <div style={{ color: 'var(--cream)', fontSize: '0.8rem', fontWeight: 600 }}>{rev.author}</div>
-                          <div style={{ color: 'var(--gold)', fontSize: '0.7rem' }}>{rev.title} • Verified</div>
-                        </div>
-                      </div>
+                    );
+                  }
+                  return (
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px' }}>
+                      {cmsTestimonials.slice(0, 2).map((rev) => {
+                        const authorName = rev.author || (rev as any).name || 'Chocolate Lover';
+                        const revTitle = rev.title || 'Verified Customer';
+                        const revText = rev.text || (rev as any).quote || (rev as any).comment || '';
+                        const initials = authorName.split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase();
+                        return (
+                          <div key={rev.id} style={{ background: 'rgba(0,0,0,0.5)', border: '1px solid rgba(212,175,55,0.25)', borderRadius: '10px', padding: '16px', position: 'relative' }}>
+                            <div style={{ display: 'flex', gap: '3px', marginBottom: '8px' }}>
+                              {[...Array(5)].map((_, i) => (
+                                <Star key={i} size={14} fill={i < (rev.rating || 5) ? 'var(--gold)' : 'rgba(255,255,255,0.2)'} color="var(--gold)" />
+                              ))}
+                            </div>
+                            <p style={{ color: 'var(--cream)', fontSize: '0.82rem', fontStyle: 'italic', margin: '0 0 12px 0', lineHeight: 1.45 }}>
+                              "{revText}"
+                            </p>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '10px' }}>
+                              <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'linear-gradient(135deg, var(--gold) 0%, #8c6d1f 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#000', fontWeight: 700, fontSize: '0.75rem' }}>
+                                {initials}
+                              </div>
+                              <div>
+                                <div style={{ color: 'var(--cream)', fontSize: '0.8rem', fontWeight: 600 }}>{authorName}</div>
+                                <div style={{ color: 'var(--gold)', fontSize: '0.7rem' }}>{revTitle} • Verified</div>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
-                  ))}
-                </div>
+                  );
+                })()}
               </div>
             </div>
           )}
@@ -3391,49 +3468,62 @@ export const HomepageCmsView: React.FC<HomepageCmsViewProps> = ({ addToast, addL
                   </p>
                 </div>
 
-                {/* 3 Reel Preview Cards (Vertical format) */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '14px' }}>
-                  {[
-                    { caption: 'Handcrafting single-origin truffles with 24k gold leaf ✨', img: 'https://images.unsplash.com/photo-1549007953-2f2dc0b24019?auto=format&fit=crop&w=300&q=80' },
-                    { caption: 'The soothing snap of perfectly tempered Belgian dark chocolate 🍫', img: 'https://images.unsplash.com/photo-1548741487-18d16a145e80?auto=format&fit=crop&w=300&q=80' },
-                    { caption: 'Unboxing our festive Luxury Gift Hamper presentation set 🎁', img: 'https://images.unsplash.com/photo-1511381939415-e44015466834?auto=format&fit=crop&w=300&q=80' },
-                  ].map((reel, idx) => (
-                    <div
-                      key={idx}
-                      style={{
-                        background: 'rgba(0,0,0,0.6)',
-                        border: '1px solid rgba(212,175,55,0.25)',
-                        borderRadius: '12px',
-                        overflow: 'hidden',
-                        position: 'relative',
-                        aspectRatio: '9/14',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        justifyContent: 'space-between',
-                        padding: '12px',
-                      }}
-                    >
-                      <img
-                        src={reel.img}
-                        alt=""
-                        style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover', zIndex: 0, filter: 'brightness(0.7)' }}
-                      />
-                      {/* Top Account */}
-                      <div style={{ position: 'relative', zIndex: 1, display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(0,0,0,0.5)', padding: '4px 8px', borderRadius: '20px', alignSelf: 'flex-start' }}>
-                        <InstagramGradientIcon size={13} />
-                        <span style={{ fontSize: '0.68rem', color: '#fff', fontWeight: 600 }}>@choviqueofficial</span>
-                      </div>
-                      {/* Center Play Icon */}
-                      <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', zIndex: 1, width: '38px', height: '38px', borderRadius: '50%', background: 'rgba(0,0,0,0.65)', border: '1px solid rgba(212,175,55,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <Video size={16} color="var(--gold)" />
-                      </div>
-                      {/* Bottom Caption */}
-                      <div style={{ position: 'relative', zIndex: 1, background: 'linear-gradient(to top, rgba(0,0,0,0.85) 0%, transparent 100%)', padding: '6px 4px 0 4px', borderRadius: '4px' }}>
-                        <p style={{ color: 'var(--cream)', fontSize: '0.72rem', margin: 0, lineHeight: 1.3 }}>{reel.caption}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                {/* Reel Preview Cards from Database */}
+                {cmsReels.length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: '24px 16px', background: 'rgba(255,255,255,0.03)', borderRadius: '8px', border: '1px dashed rgba(212,175,55,0.3)', color: 'var(--cream)' }}>
+                    <p style={{ margin: 0, fontSize: '0.85rem', opacity: 0.8 }}>No active Instagram reels in database. Add reels from the <strong>Instagram Reels</strong> tab above to publish live videos.</p>
+                  </div>
+                ) : (
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '14px' }}>
+                    {cmsReels.slice(0, 4).map((reel) => {
+                      const videoSrc = reel.videoUrl || reel.video_url || '';
+                      const account = reel.accountName || reel.account_name || '@choviqueofficial';
+                      const title = reel.title || 'Instagram Reel';
+                      return (
+                        <div
+                          key={reel.id}
+                          style={{
+                            background: 'rgba(0,0,0,0.6)',
+                            border: '1px solid rgba(212,175,55,0.25)',
+                            borderRadius: '12px',
+                            overflow: 'hidden',
+                            position: 'relative',
+                            aspectRatio: '9/14',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            justifyContent: 'space-between',
+                            padding: '12px',
+                          }}
+                        >
+                          {videoSrc ? (
+                            <video
+                              src={getImageUrl(videoSrc)}
+                              style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover', zIndex: 0, filter: 'brightness(0.7)' }}
+                              muted
+                              playsInline
+                              preload="metadata"
+                            />
+                          ) : (
+                            <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', background: 'linear-gradient(135deg, #1f1b24, #120d18)', zIndex: 0 }} />
+                          )}
+                          {/* Top Account */}
+                          <div style={{ position: 'relative', zIndex: 1, display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(0,0,0,0.6)', padding: '4px 8px', borderRadius: '20px', alignSelf: 'flex-start' }}>
+                            <InstagramGradientIcon size={13} />
+                            <span style={{ fontSize: '0.68rem', color: '#fff', fontWeight: 600 }}>{account}</span>
+                          </div>
+                          {/* Center Play Icon */}
+                          <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', zIndex: 1, width: '38px', height: '38px', borderRadius: '50%', background: 'rgba(0,0,0,0.65)', border: '1px solid rgba(212,175,55,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <Video size={16} color="var(--gold)" />
+                          </div>
+                          {/* Bottom Caption */}
+                          <div style={{ position: 'relative', zIndex: 1, background: 'linear-gradient(to top, rgba(0,0,0,0.85) 0%, transparent 100%)', padding: '6px 4px 0 4px', borderRadius: '4px' }}>
+                            <p style={{ color: 'var(--cream)', fontSize: '0.72rem', margin: 0, lineHeight: 1.3 }}>{title}</p>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             </div>
           )}

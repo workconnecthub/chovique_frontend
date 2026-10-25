@@ -16,6 +16,10 @@ export const Boutique: React.FC = () => {
   const subtitle = config.subtitle || 'Browse our complete range of handcrafted chocolates — from pure dark bars to chocolate gift boxes.';
   const scrollRef = useRef<HTMLDivElement>(null);
 
+  if (!products || products.length === 0) {
+    return null;
+  }
+
   const scroll = (direction: 'left' | 'right') => {
     if (scrollRef.current) {
       const { scrollLeft, clientWidth } = scrollRef.current;

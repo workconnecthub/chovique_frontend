@@ -22,6 +22,10 @@ export const GiftHampers: React.FC = () => {
   // Filter gift products strictly (by category 'gift' or badge 'Gift Hamper')
   const displayList = products.filter((p) => p.category === 'gift' || p.badge === 'Gift Hamper' || p.badge === 'Gift Hampers');
 
+  if (!products || products.length === 0 || displayList.length === 0) {
+    return null;
+  }
+
   const scroll = (direction: 'left' | 'right') => {
     if (giftScrollRef.current) {
       const { scrollLeft, clientWidth } = giftScrollRef.current;

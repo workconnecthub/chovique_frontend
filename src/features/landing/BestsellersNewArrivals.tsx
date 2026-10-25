@@ -46,6 +46,10 @@ export const BestsellersNewArrivals: React.FC = () => {
            p.badge !== 'Limited' && p.badge !== 'Limited Edition'
   );
 
+  if (!products || products.length === 0 || (bestsellersList.length === 0 && newArrivalsList.length === 0)) {
+    return null;
+  }
+
   const scroll = (ref: React.RefObject<HTMLDivElement | null>, direction: 'left' | 'right') => {
     if (ref.current) {
       const { scrollLeft, clientWidth } = ref.current;
