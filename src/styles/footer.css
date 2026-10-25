@@ -22,8 +22,8 @@
    ──────────────────────────────────────────────────────────── */
 .footer-main-grid {
   display: grid;
-  grid-template-columns: 260px 1px 1fr 1fr 1fr 340px;
-  gap: 32px;
+  grid-template-columns: minmax(180px, 1.25fr) 1px repeat(3, minmax(95px, 1fr)) minmax(220px, 1.35fr);
+  gap: 24px;
   padding: 36px 0 28px 0;
   align-items: start;
 }
@@ -62,11 +62,12 @@
 
 .footer-main-logo {
   display: block;
-  width: 100%;
-  max-width: 200px;
+  max-width: 190px;
+  max-height: 54px;
+  width: auto;
   height: auto;
-  border-radius: 8px;
-  margin-bottom: 12px;
+  object-fit: contain;
+  margin-bottom: 10px;
 }
 
 .footer-brand-titles {
@@ -519,5 +520,440 @@
 
   .payment-badges-row {
     flex-wrap: wrap;
+  }
+}
+
+/* ────────────────────────────────────────────────────────────
+   ADMIN CMS LIVE PREVIEW HELPER STYLES
+   ──────────────────────────────────────────────────────────── */
+.footer-live-preview-box {
+  background: #090604;
+  border: 2px solid var(--gold);
+  border-radius: 16px;
+  padding: 24px 20px;
+  box-shadow: 0 12px 40px rgba(0,0,0,0.8), 0 0 30px rgba(212,175,55,0.15);
+  margin-top: 16px;
+  margin-bottom: 24px;
+  position: relative;
+  overflow: hidden;
+}
+
+.footer-live-preview-scroll-wrapper {
+  width: 100%;
+  overflow-x: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(201, 168, 76, 0.4) rgba(0, 0, 0, 0.2);
+}
+
+.footer-live-preview-scroll-wrapper::-webkit-scrollbar {
+  height: 6px;
+}
+
+.footer-live-preview-scroll-wrapper::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.footer-live-preview-scroll-wrapper::-webkit-scrollbar-thumb {
+  background: rgba(201, 168, 76, 0.4);
+  border-radius: 4px;
+}
+
+/* ────────────────────────────────────────────────────────────
+   ADMIN CMS PAYMENT BADGES MANAGEMENT RESPONSIVE STYLES
+   ──────────────────────────────────────────────────────────── */
+.payment-badge-cms-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(0, 0, 0, 0.45);
+  padding: 10px 14px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  transition: all 0.2s ease;
+}
+
+.payment-badge-cms-card.is-hidden {
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px dashed rgba(255, 255, 255, 0.06);
+  opacity: 0.65;
+}
+
+.payment-badge-cms-header-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 14px 8px 14px;
+  box-sizing: border-box;
+  width: 100%;
+}
+
+.payment-badge-cms-row-top {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.payment-badge-cms-preview-pill {
+  width: 84px;
+  height: 38px;
+  background: #ffffff;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px 8px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+  flex-shrink: 0;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.payment-badge-cms-name-col {
+  width: 160px;
+  flex-shrink: 0;
+}
+
+.payment-badge-cms-url-col {
+  flex: 1;
+  min-width: 160px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.payment-badge-cms-actions-col {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+@media (max-width: 768px) {
+  .payment-badge-cms-header-row {
+    display: none;
+  }
+
+  .payment-badge-cms-card {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    padding: 12px;
+  }
+
+  .payment-badge-cms-row-top {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+  }
+
+  .payment-badge-cms-name-col {
+    width: 100%;
+    flex: 1;
+  }
+
+  .payment-badge-cms-url-col {
+    width: 100%;
+  }
+
+  .payment-badge-cms-actions-col {
+    width: 100%;
+    justify-content: space-between;
+    padding-top: 8px;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .payment-badge-cms-actions-col button:first-child {
+    flex: 1 !important;
+    width: auto !important;
+  }
+}
+
+/* ────────────────────────────────────────────────────────────
+   ADMIN CMS SECTION HEADER & ADD BUTTONS RESPONSIVE STYLES
+   ──────────────────────────────────────────────────────────── */
+.cms-section-header-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.cms-section-desc {
+  margin: 0;
+  color: var(--beige);
+  font-size: 0.85rem;
+  line-height: 1.45;
+}
+
+.cms-section-add-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+@media (max-width: 768px) {
+  .cms-section-header-bar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+
+  .cms-section-add-btn {
+    width: 100% !important;
+    height: 42px !important;
+    font-size: 0.86rem !important;
+    justify-content: center !important;
+  }
+}
+
+/* ────────────────────────────────────────────────────────────
+   ADMIN CMS SOCIAL PROFILES RESPONSIVE STYLES
+   ──────────────────────────────────────────────────────────── */
+.social-profile-cms-card {
+  display: grid;
+  grid-template-columns: 38px 140px 1fr auto 38px;
+  grid-template-areas: "icon platform url status delete";
+  gap: 12px;
+  align-items: center;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  padding: 10px 14px;
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  transition: all 0.2s ease;
+}
+
+.social-profile-cms-card.is-active {
+  border-color: rgba(212, 175, 55, 0.25);
+  opacity: 1;
+}
+
+.social-profile-cms-card.is-hidden {
+  border-color: rgba(255, 255, 255, 0.06);
+  opacity: 0.6;
+}
+
+.social-profile-area-icon {
+  grid-area: icon;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.social-profile-area-platform {
+  grid-area: platform;
+  height: 38px;
+  padding: 0 10px;
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid var(--glass-border);
+  border-radius: 6px;
+  color: var(--cream);
+  font-size: 0.85rem;
+  box-sizing: border-box;
+  width: 100%;
+}
+
+.social-profile-area-url {
+  grid-area: url;
+  height: 38px;
+  padding: 0 12px;
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid var(--glass-border);
+  border-radius: 6px;
+  color: var(--cream);
+  font-size: 0.85rem;
+  outline: none;
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+}
+
+.social-profile-area-status {
+  grid-area: status;
+  height: 38px;
+  padding: 0 14px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  flex-shrink: 0;
+}
+
+.social-profile-area-delete {
+  grid-area: delete;
+  width: 38px;
+  height: 38px;
+  border-radius: 6px;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  color: #ef4444;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+  box-sizing: border-box;
+}
+
+@media (max-width: 768px) {
+  .social-profile-cms-card {
+    grid-template-columns: 38px 1fr auto 38px;
+    grid-template-areas:
+      "icon platform status delete"
+      "url  url      url    url";
+    gap: 10px 8px;
+    padding: 12px;
+  }
+}
+
+/* ────────────────────────────────────────────────────────────
+   ADMIN CMS NAVIGATION COLUMN LINKS RESPONSIVE STYLES
+   ──────────────────────────────────────────────────────────── */
+.nav-link-cms-card {
+  display: grid;
+  grid-template-columns: minmax(110px, 1fr) minmax(160px, 1.4fr) 38px;
+  grid-template-areas: "label url delete";
+  gap: 8px;
+  align-items: start;
+  background: rgba(0, 0, 0, 0.4);
+  padding: 8px 10px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  box-sizing: border-box;
+  width: 100%;
+}
+
+.nav-link-area-label {
+  grid-area: label;
+  height: 38px;
+  padding: 0 10px;
+  background: rgba(0, 0, 0, 0.6);
+  border: 1px solid var(--glass-border);
+  border-radius: 6px;
+  color: var(--cream);
+  font-size: 0.82rem;
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+}
+
+.nav-link-area-url {
+  grid-area: url;
+  width: 100%;
+  min-width: 0;
+}
+
+.nav-link-area-delete {
+  grid-area: delete;
+  width: 38px;
+  height: 38px;
+  border-radius: 6px;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  color: #ef4444;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+  box-sizing: border-box;
+}
+
+@media (max-width: 768px) {
+  .nav-link-cms-card {
+    grid-template-columns: 1fr 38px;
+    grid-template-areas:
+      "label  delete"
+      "url    url";
+    gap: 8px;
+    padding: 10px;
+  }
+}
+
+/* ────────────────────────────────────────────────────────────
+   ADMIN CMS LEGAL & POLICY LINKS RESPONSIVE STYLES
+   ──────────────────────────────────────────────────────────── */
+.legal-link-cms-card {
+  display: grid;
+  grid-template-columns: minmax(130px, 1fr) minmax(180px, 1.8fr) 38px;
+  grid-template-areas: "label url delete";
+  gap: 10px;
+  align-items: start;
+  background: rgba(0, 0, 0, 0.4);
+  padding: 10px 12px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  box-sizing: border-box;
+  width: 100%;
+}
+
+.legal-link-area-label {
+  grid-area: label;
+  height: 38px;
+  padding: 0 10px;
+  background: rgba(0, 0, 0, 0.6);
+  border: 1px solid var(--glass-border);
+  border-radius: 6px;
+  color: var(--cream);
+  font-size: 0.82rem;
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+}
+
+.legal-link-area-url {
+  grid-area: url;
+  width: 100%;
+  min-width: 0;
+}
+
+.legal-link-area-delete {
+  grid-area: delete;
+  width: 38px;
+  height: 38px;
+  border-radius: 6px;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  color: #ef4444;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+  box-sizing: border-box;
+}
+
+@media (max-width: 768px) {
+  .legal-link-cms-card {
+    grid-template-columns: 1fr 38px;
+    grid-template-areas:
+      "label  delete"
+      "url    url";
+    gap: 10px 8px;
+    padding: 10px;
   }
 }

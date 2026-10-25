@@ -701,6 +701,12 @@ export const adminService = {
     apiPostFormData<{ image_url: string }>('/admin/upload-image', formData),
 
   /**
+   * Download external image URL and store in Tigris/S3 storage bucket for CMS.
+   */
+  uploadCmsImageUrl: (imageUrl: string, folder: string = 'chocolate-world/cms/payments'): Promise<{ image_url: string }> =>
+    apiPost<{ image_url: string }>('/admin/upload-image-url', { image_url: imageUrl, folder }),
+
+  /**
    * Upload generic video to Cloudinary/S3 storage bucket for CMS.
    */
   uploadCmsVideo: (formData: FormData): Promise<{ video_url: string }> =>

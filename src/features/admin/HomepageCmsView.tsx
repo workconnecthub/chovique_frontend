@@ -45,6 +45,7 @@ import {
   Headphones,
   Globe,
   Share2,
+  CreditCard,
 } from 'lucide-react';
 
 const InstagramGradientIcon: React.FC<{ size?: number }> = ({ size = 16 }) => (
@@ -61,7 +62,7 @@ import { getImageUrl } from '../../utils/imageUrl';
 import { adminService } from '../../services/adminService';
 import { homeService } from '../../services/homeService';
 import { renderSocialIcon, renderBenefitIcon } from '../../components/Footer';
-import type { Banner, LandingSectionsConfig, InstagramReel, StoryPageConfig, ContactPageConfig, Testimonial, FooterConfig } from '../../types';
+import type { Banner, LandingSectionsConfig, InstagramReel, StoryPageConfig, ContactPageConfig, Testimonial, FooterConfig, FooterPaymentBadge } from '../../types';
 import { DEFAULT_LANDING_SECTIONS, DEFAULT_STORY_PAGE_CONFIG, DEFAULT_CONTACT_PAGE_CONFIG, DEFAULT_FOOTER_CONFIG } from '../../types';
 
 interface HomepageCmsViewProps {
@@ -84,6 +85,127 @@ export const BANNER_REDIRECT_PRESETS = [
   { label: '🏷️ Categories Page (/categories)', value: '/categories', defaultCta: 'Browse Categories' },
   { label: '🔗 Custom URL / Route...', value: 'custom', defaultCta: 'Learn More' },
 ];
+
+// Preset redirect destination options for footer links
+export const FOOTER_REDIRECT_PRESETS = [
+  { label: 'Shop All Products (/shop)', value: '/shop' },
+  { label: 'Best Sellers Section (/#best-sellers)', value: '/#best-sellers' },
+  { label: 'New Arrivals Section (/#new-arrivals)', value: '/#new-arrivals' },
+  { label: 'Luxury Gift Hampers (/#luxury-gift-hampers)', value: '/#luxury-gift-hampers' },
+  { label: 'Signature Collections (/#popular)', value: '/#popular' },
+  { label: 'Boutique Collection (/#store)', value: '/#store' },
+  { label: 'Our Story Page (/our-story)', value: '/our-story' },
+  { label: 'Our Craft & Process (/our-story#the-bean-to-bar-process)', value: '/our-story#the-bean-to-bar-process' },
+  { label: 'Contact Us Page (/contact)', value: '/contact' },
+  { label: 'Contact Concierge Helpline (/contact#send-us-a-message)', value: '/contact#send-us-a-message' },
+  { label: 'Customer Reviews (/#reviews)', value: '/#reviews' },
+  { label: 'Instagram Stories & Reels (/#instagram-reels)', value: '/#instagram-reels' },
+  { label: 'Track My Order / Orders (/dashboard?section=orders)', value: '/dashboard?section=orders' },
+  { label: 'Shipping & Delivery (/dashboard?section=orders)', value: '/dashboard?section=orders' },
+  { label: 'Help & Concierge Support (/dashboard?section=support)', value: '/dashboard?section=support' },
+  { label: 'Privacy Policy (/privacy-policy)', value: '/privacy-policy' },
+  { label: 'Terms of Service (/terms-of-service)', value: '/terms-of-service' },
+  { label: 'Refund Policy (/refund-policy)', value: '/refund-policy' },
+  { label: 'Other / Custom URL...', value: 'custom' },
+];
+
+// Preset payment gateway options with high quality icons
+export const PAYMENT_GATEWAY_PRESETS = [
+  { id: 'razorpay', name: 'Razorpay', image_url: '/assets/payments/razorpay.png' },
+  { id: 'googlepay', name: 'Google Pay', image_url: '/assets/payments/googlepay.png' },
+  { id: 'upi', name: 'UPI', image_url: '/assets/payments/upi.png' },
+  { id: 'visa', name: 'Visa', image_url: 'https://upload.wikimedia.org/wikipedia/commons/5/5e/Visa_Inc._logo.svg' },
+  { id: 'mastercard', name: 'Mastercard', image_url: 'https://upload.wikimedia.org/wikipedia/commons/2/2a/Mastercard-logo.svg' },
+  { id: 'phonepe', name: 'PhonePe', image_url: 'https://upload.wikimedia.org/wikipedia/commons/7/71/PhonePe_Logo.svg' },
+  { id: 'paytm', name: 'Paytm', image_url: 'https://upload.wikimedia.org/wikipedia/commons/2/24/Paytm_Logo_%28standalone%29.svg' },
+  { id: 'applepay', name: 'Apple Pay', image_url: 'https://upload.wikimedia.org/wikipedia/commons/b/b0/Apple_Pay_logo.svg' },
+  { id: 'cod', name: 'Cash On Delivery', image_url: '' },
+  { id: 'custom', name: 'Custom Gateway / Badge', image_url: '' },
+];
+
+export const FooterUrlPicker: React.FC<{
+  value: string;
+  onChange: (newUrl: string) => void;
+  placeholder?: string;
+  style?: React.CSSProperties;
+}> = ({ value, onChange, placeholder = 'e.g. /custom-page or https://...', style }) => {
+  const isPreset = FOOTER_REDIRECT_PRESETS.some((p) => p.value !== 'custom' && p.value === value);
+  const [showCustomInput, setShowCustomInput] = useState<boolean>(!isPreset && Boolean(value));
+
+  useEffect(() => {
+    const matched = FOOTER_REDIRECT_PRESETS.some((p) => p.value !== 'custom' && p.value === value);
+    if (!matched && Boolean(value)) {
+      setShowCustomInput(true);
+    }
+  }, [value]);
+
+  const selectedDropdownValue = showCustomInput ? 'custom' : (isPreset ? value : 'custom');
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', width: '100%', ...style }}>
+      <select
+        value={selectedDropdownValue}
+        onChange={(e) => {
+          const val = e.target.value;
+          if (val === 'custom') {
+            setShowCustomInput(true);
+            if (isPreset) {
+              onChange('');
+            }
+          } else {
+            setShowCustomInput(false);
+            onChange(val);
+          }
+        }}
+        style={{
+          width: '100%',
+          height: '38px',
+          padding: '0 10px',
+          background: 'rgba(0,0,0,0.6)',
+          border: '1px solid var(--glass-border)',
+          borderRadius: '6px',
+          color: 'var(--cream)',
+          fontSize: '0.82rem',
+          outline: 'none',
+          boxSizing: 'border-box',
+          cursor: 'pointer',
+        }}
+      >
+        <optgroup label="Popular Site Routes">
+          {FOOTER_REDIRECT_PRESETS.filter((p) => p.value !== 'custom').map((p) => (
+            <option key={p.value} value={p.value}>
+              {p.label}
+            </option>
+          ))}
+        </optgroup>
+        <optgroup label="Custom / External">
+          <option value="custom">Other / Custom URL...</option>
+        </optgroup>
+      </select>
+
+      {showCustomInput && (
+        <input
+          type="text"
+          placeholder={placeholder}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          style={{
+            width: '100%',
+            height: '36px',
+            padding: '0 10px',
+            background: 'rgba(0,0,0,0.7)',
+            border: '1px solid rgba(212,175,55,0.4)',
+            borderRadius: '6px',
+            color: 'var(--cream)',
+            fontSize: '0.82rem',
+            outline: 'none',
+            boxSizing: 'border-box',
+          }}
+        />
+      )}
+    </div>
+  );
+};
 
 export const HomepageCmsView: React.FC<HomepageCmsViewProps> = ({ addToast, addLogEntry }) => {
   const {
@@ -128,6 +250,13 @@ export const HomepageCmsView: React.FC<HomepageCmsViewProps> = ({ addToast, addL
   const [newSocialPlatform, setNewSocialPlatform] = useState('instagram');
   const [newSocialName, setNewSocialName] = useState('Instagram');
   const [newSocialUrl, setNewSocialUrl] = useState('');
+
+  // New payment gateway/badge input state
+  const [newPaymentPreset, setNewPaymentPreset] = useState('razorpay');
+  const [newPaymentName, setNewPaymentName] = useState('Razorpay');
+  const [newPaymentImageUrl, setNewPaymentImageUrl] = useState('/assets/payments/razorpay.png');
+  const [isUploadingBadge, setIsUploadingBadge] = useState(false);
+  const [syncingBadgeId, setSyncingBadgeId] = useState<string | null>(null);
 
   // Sync footer form when footerConfig changes
   useEffect(() => {
@@ -5490,11 +5619,11 @@ export const HomepageCmsView: React.FC<HomepageCmsViewProps> = ({ addToast, addL
             }}
           >
             {[
-              { id: 'social', label: '📱 Social Media Handles', icon: Share2 },
-              { id: 'brand', label: '🍫 Brand & Concierge', icon: Headphones },
-              { id: 'nav', label: '🧭 Navigation Link Columns', icon: Layers },
-              { id: 'benefits', label: '✨ Artisanal Benefits Strip', icon: Sparkles },
-              { id: 'legal', label: '⚖️ Legal & Payment Badges', icon: ShieldCheck },
+              { id: 'social', label: 'Social Media Handles', icon: Share2 },
+              { id: 'brand', label: 'Brand & Concierge', icon: Headphones },
+              { id: 'nav', label: 'Navigation Link Columns', icon: Layers },
+              { id: 'benefits', label: 'Artisanal Benefits Strip', icon: Sparkles },
+              { id: 'legal', label: 'Legal & Payment Badges', icon: ShieldCheck },
             ].map((tab) => {
               const Icon = tab.icon;
               const isActive = activeFooterSubTab === tab.id;
@@ -5540,9 +5669,9 @@ export const HomepageCmsView: React.FC<HomepageCmsViewProps> = ({ addToast, addL
                 <h3 style={{ fontFamily: 'var(--font-display)', color: 'var(--gold)', margin: '0 0 12px 0', fontSize: '1.1rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <Plus size={16} /> Add New Social Media Handle
                 </h3>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '14px', alignItems: 'flex-end' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '14px', alignItems: 'flex-end' }}>
                   <div>
-                    <label style={{ display: 'block', fontSize: '0.82rem', color: 'var(--cream)', fontWeight: 600, marginBottom: '6px' }}>
+                    <label style={{ display: 'block', fontSize: '0.8rem', color: 'var(--beige)', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 500, marginBottom: '6px' }}>
                       Platform
                     </label>
                     <select
@@ -5554,13 +5683,15 @@ export const HomepageCmsView: React.FC<HomepageCmsViewProps> = ({ addToast, addL
                       }}
                       style={{
                         width: '100%',
-                        padding: '10px 12px',
+                        height: '42px',
+                        padding: '0 12px',
                         background: 'rgba(0,0,0,0.5)',
                         border: '1px solid var(--glass-border)',
                         borderRadius: '8px',
                         color: 'var(--cream)',
                         fontSize: '0.88rem',
                         outline: 'none',
+                        boxSizing: 'border-box',
                       }}
                     >
                       <option value="instagram">Instagram</option>
@@ -5580,6 +5711,7 @@ export const HomepageCmsView: React.FC<HomepageCmsViewProps> = ({ addToast, addL
                     placeholder="e.g. Instagram"
                     value={newSocialName}
                     onChange={(e) => setNewSocialName(e.target.value)}
+                    containerStyle={{ marginBottom: 0 }}
                   />
 
                   <Input
@@ -5587,6 +5719,7 @@ export const HomepageCmsView: React.FC<HomepageCmsViewProps> = ({ addToast, addL
                     placeholder="https://instagram.com/choviqueofficial"
                     value={newSocialUrl}
                     onChange={(e) => setNewSocialUrl(e.target.value)}
+                    containerStyle={{ marginBottom: 0 }}
                   />
 
                   <div>
@@ -5630,7 +5763,7 @@ export const HomepageCmsView: React.FC<HomepageCmsViewProps> = ({ addToast, addL
                   padding: '20px',
                 }}
               >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '8px' }}>
                   <h3 style={{ fontFamily: 'var(--font-display)', color: 'var(--gold)', margin: 0, fontSize: '1.1rem' }}>
                     Configured Social Profiles ({footerForm.social_links?.length || 0})
                   </h3>
@@ -5648,29 +5781,14 @@ export const HomepageCmsView: React.FC<HomepageCmsViewProps> = ({ addToast, addL
                     {footerForm.social_links.map((social, index) => (
                       <div
                         key={social.id || index}
-                        style={{
-                          display: 'grid',
-                          gridTemplateColumns: 'auto 150px 1fr auto auto',
-                          gap: '12px',
-                          alignItems: 'center',
-                          background: 'rgba(0,0,0,0.4)',
-                          border: social.is_active ? '1px solid rgba(212,175,55,0.25)' : '1px solid rgba(255,255,255,0.08)',
-                          borderRadius: '8px',
-                          padding: '10px 14px',
-                          opacity: social.is_active ? 1 : 0.6,
-                        }}
+                        className={`social-profile-cms-card ${social.is_active ? 'is-active' : 'is-hidden'}`}
                       >
                         {/* Icon Pill */}
                         <div
+                          className="social-profile-area-icon"
                           style={{
-                            width: '38px',
-                            height: '38px',
-                            borderRadius: '50%',
                             background: social.is_active ? 'rgba(212,175,55,0.15)' : 'rgba(255,255,255,0.05)',
                             border: social.is_active ? '1px solid rgba(212,175,55,0.4)' : '1px solid rgba(255,255,255,0.1)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
                             color: social.is_active ? 'var(--gold)' : 'var(--beige)',
                           }}
                         >
@@ -5679,6 +5797,7 @@ export const HomepageCmsView: React.FC<HomepageCmsViewProps> = ({ addToast, addL
 
                         {/* Platform Selector */}
                         <select
+                          className="social-profile-area-platform"
                           value={social.platform}
                           onChange={(e) => {
                             const newPlat = e.target.value;
@@ -5686,14 +5805,6 @@ export const HomepageCmsView: React.FC<HomepageCmsViewProps> = ({ addToast, addL
                               ...prev,
                               social_links: prev.social_links.map((s, i) => i === index ? { ...s, platform: newPlat } : s),
                             }));
-                          }}
-                          style={{
-                            padding: '8px 10px',
-                            background: 'rgba(0,0,0,0.5)',
-                            border: '1px solid var(--glass-border)',
-                            borderRadius: '6px',
-                            color: 'var(--cream)',
-                            fontSize: '0.85rem',
                           }}
                         >
                           <option value="instagram">Instagram</option>
@@ -5710,6 +5821,7 @@ export const HomepageCmsView: React.FC<HomepageCmsViewProps> = ({ addToast, addL
                         {/* URL Input */}
                         <input
                           type="text"
+                          className="social-profile-area-url"
                           placeholder="https://..."
                           value={social.url}
                           onChange={(e) => {
@@ -5719,20 +5831,12 @@ export const HomepageCmsView: React.FC<HomepageCmsViewProps> = ({ addToast, addL
                               social_links: prev.social_links.map((s, i) => i === index ? { ...s, url: val } : s),
                             }));
                           }}
-                          style={{
-                            padding: '8px 12px',
-                            background: 'rgba(0,0,0,0.5)',
-                            border: '1px solid var(--glass-border)',
-                            borderRadius: '6px',
-                            color: 'var(--cream)',
-                            fontSize: '0.85rem',
-                            outline: 'none',
-                          }}
                         />
 
                         {/* Active Toggle Button */}
                         <button
                           type="button"
+                          className="social-profile-area-status"
                           onClick={() => {
                             setFooterForm((prev) => ({
                               ...prev,
@@ -5740,15 +5844,9 @@ export const HomepageCmsView: React.FC<HomepageCmsViewProps> = ({ addToast, addL
                             }));
                           }}
                           style={{
-                            padding: '6px 12px',
-                            borderRadius: '20px',
-                            fontSize: '0.75rem',
-                            fontWeight: 600,
-                            cursor: 'pointer',
                             border: social.is_active ? '1px solid #10b981' : '1px solid #6b7280',
                             background: social.is_active ? 'rgba(16, 185, 129, 0.15)' : 'rgba(107, 114, 128, 0.15)',
                             color: social.is_active ? '#10b981' : '#9ca3af',
-                            whiteSpace: 'nowrap',
                           }}
                         >
                           {social.is_active ? '✓ Active' : '✕ Hidden'}
@@ -5757,23 +5855,13 @@ export const HomepageCmsView: React.FC<HomepageCmsViewProps> = ({ addToast, addL
                         {/* Delete Button */}
                         <button
                           type="button"
+                          className="social-profile-area-delete"
                           onClick={() => {
                             if (!window.confirm(`Delete ${social.name || social.platform} link?`)) return;
                             setFooterForm((prev) => ({
                               ...prev,
                               social_links: prev.social_links.filter((_, i) => i !== index),
                             }));
-                          }}
-                          style={{
-                            background: 'none',
-                            border: 'none',
-                            color: '#ef4444',
-                            cursor: 'pointer',
-                            padding: '6px',
-                            borderRadius: '4px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
                           }}
                           title="Remove handle"
                         >
@@ -5789,7 +5877,7 @@ export const HomepageCmsView: React.FC<HomepageCmsViewProps> = ({ addToast, addL
 
           {/* SUB-TAB 2: BRAND & CONCIERGE */}
           {activeFooterSubTab === 'brand' && (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: '20px', marginBottom: '32px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px', marginBottom: '32px' }}>
               {/* Brand Description Box */}
               <div
                 style={{
@@ -5806,7 +5894,7 @@ export const HomepageCmsView: React.FC<HomepageCmsViewProps> = ({ addToast, addL
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                   <Input
                     label="Footer Brand Logo URL"
-                    placeholder="/assets/popular-bg.jpg"
+                    placeholder="/assets/logo.png"
                     value={footerForm.brand_logo_url || ''}
                     onChange={(e) => setFooterForm({ ...footerForm, brand_logo_url: e.target.value })}
                   />
@@ -5896,15 +5984,19 @@ export const HomepageCmsView: React.FC<HomepageCmsViewProps> = ({ addToast, addL
                     })}
                   />
 
-                  <Input
-                    label="Button Redirect Target"
-                    placeholder="/contact#send-us-a-message"
-                    value={footerForm.concierge?.button_link || ''}
-                    onChange={(e) => setFooterForm({
-                      ...footerForm,
-                      concierge: { ...(footerForm.concierge || DEFAULT_FOOTER_CONFIG.concierge), button_link: e.target.value }
-                    })}
-                  />
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.8rem', color: 'var(--beige)', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 500, marginBottom: '6px' }}>
+                      Button Redirect Destination
+                    </label>
+                    <FooterUrlPicker
+                      value={footerForm.concierge?.button_link || ''}
+                      onChange={(val) => setFooterForm({
+                        ...footerForm,
+                        concierge: { ...(footerForm.concierge || DEFAULT_FOOTER_CONFIG.concierge), button_link: val }
+                      })}
+                      placeholder="/contact#send-us-a-message or custom link"
+                    />
+                  </div>
                 </div>
               </div>
             </div>
@@ -5913,13 +6005,14 @@ export const HomepageCmsView: React.FC<HomepageCmsViewProps> = ({ addToast, addL
           {/* SUB-TAB 3: NAVIGATION LINK COLUMNS */}
           {activeFooterSubTab === 'nav' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', marginBottom: '32px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <p style={{ margin: 0, color: 'var(--beige)', fontSize: '0.85rem' }}>
+              <div className="cms-section-header-bar">
+                <p className="cms-section-desc">
                   Manage the columns and direct links displayed across the footer navigation grid.
                 </p>
                 <Button
                   variant="gold"
                   size="sm"
+                  className="cms-section-add-btn"
                   onClick={() => {
                     const newColId = `col-${Date.now()}`;
                     setFooterForm((prev) => ({
@@ -5930,14 +6023,13 @@ export const HomepageCmsView: React.FC<HomepageCmsViewProps> = ({ addToast, addL
                       ]
                     }));
                   }}
-                  style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
                 >
                   <Plus size={14} />
                   <span>Add Navigation Column</span>
                 </Button>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '20px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px' }}>
                 {(footerForm.nav_columns || []).map((col, colIdx) => (
                   <div
                     key={col.id || colIdx}
@@ -5953,7 +6045,7 @@ export const HomepageCmsView: React.FC<HomepageCmsViewProps> = ({ addToast, addL
                   >
                     <div>
                       {/* Column Header */}
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', gap: '8px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '14px', gap: '8px' }}>
                         <div style={{ flex: 1 }}>
                           <label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--gold)', fontWeight: 700, textTransform: 'uppercase', marginBottom: '4px' }}>
                             Column {colIdx + 1} Title
@@ -5970,13 +6062,15 @@ export const HomepageCmsView: React.FC<HomepageCmsViewProps> = ({ addToast, addL
                             }}
                             style={{
                               width: '100%',
-                              padding: '8px 10px',
+                              height: '38px',
+                              padding: '0 10px',
                               background: 'rgba(0,0,0,0.5)',
                               border: '1px solid var(--glass-border)',
                               borderRadius: '6px',
                               color: 'var(--cream)',
                               fontWeight: 700,
                               fontSize: '0.9rem',
+                              boxSizing: 'border-box',
                             }}
                           />
                         </div>
@@ -5991,7 +6085,20 @@ export const HomepageCmsView: React.FC<HomepageCmsViewProps> = ({ addToast, addL
                                 nav_columns: prev.nav_columns.filter((_, i) => i !== colIdx),
                               }));
                             }}
-                            style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '6px', marginTop: '16px' }}
+                            style={{
+                              width: '38px',
+                              height: '38px',
+                              borderRadius: '6px',
+                              background: 'rgba(239, 68, 68, 0.1)',
+                              border: '1px solid rgba(239, 68, 68, 0.25)',
+                              color: '#ef4444',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              flexShrink: 0,
+                              boxSizing: 'border-box',
+                            }}
                             title="Delete Column"
                           >
                             <Trash2 size={16} />
@@ -6004,19 +6111,11 @@ export const HomepageCmsView: React.FC<HomepageCmsViewProps> = ({ addToast, addL
                         {(col.links || []).map((link, linkIdx) => (
                           <div
                             key={link.id || linkIdx}
-                            style={{
-                              display: 'grid',
-                              gridTemplateColumns: '1fr 1fr auto auto',
-                              gap: '6px',
-                              alignItems: 'center',
-                              background: 'rgba(0,0,0,0.4)',
-                              padding: '8px',
-                              borderRadius: '6px',
-                              border: '1px solid rgba(255,255,255,0.06)',
-                            }}
+                            className="nav-link-cms-card"
                           >
                             <input
                               type="text"
+                              className="nav-link-area-label"
                               placeholder="Label (e.g. Shop All)"
                               value={link.label}
                               onChange={(e) => {
@@ -6029,42 +6128,27 @@ export const HomepageCmsView: React.FC<HomepageCmsViewProps> = ({ addToast, addL
                                   } : c)
                                 }));
                               }}
-                              style={{
-                                padding: '6px 8px',
-                                background: 'rgba(0,0,0,0.6)',
-                                border: '1px solid var(--glass-border)',
-                                borderRadius: '4px',
-                                color: 'var(--cream)',
-                                fontSize: '0.8rem',
-                              }}
                             />
 
-                            <input
-                              type="text"
-                              placeholder="Route / Anchor (e.g. /shop)"
-                              value={link.url}
-                              onChange={(e) => {
-                                const val = e.target.value;
-                                setFooterForm((prev) => ({
-                                  ...prev,
-                                  nav_columns: prev.nav_columns.map((c, cI) => cI === colIdx ? {
-                                    ...c,
-                                    links: c.links.map((l, lI) => lI === linkIdx ? { ...l, url: val } : l)
-                                  } : c)
-                                }));
-                              }}
-                              style={{
-                                padding: '6px 8px',
-                                background: 'rgba(0,0,0,0.6)',
-                                border: '1px solid var(--glass-border)',
-                                borderRadius: '4px',
-                                color: 'var(--cream)',
-                                fontSize: '0.8rem',
-                              }}
-                            />
+                            <div className="nav-link-area-url">
+                              <FooterUrlPicker
+                                value={link.url}
+                                onChange={(newUrl) => {
+                                  setFooterForm((prev) => ({
+                                    ...prev,
+                                    nav_columns: prev.nav_columns.map((c, cI) => cI === colIdx ? {
+                                      ...c,
+                                      links: c.links.map((l, lI) => lI === linkIdx ? { ...l, url: newUrl } : l)
+                                    } : c)
+                                  }));
+                                }}
+                                placeholder="Destination route or link"
+                              />
+                            </div>
 
                             <button
                               type="button"
+                              className="nav-link-area-delete"
                               onClick={() => {
                                 setFooterForm((prev) => ({
                                   ...prev,
@@ -6074,10 +6158,9 @@ export const HomepageCmsView: React.FC<HomepageCmsViewProps> = ({ addToast, addL
                                   } : c)
                                 }));
                               }}
-                              style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '4px' }}
                               title="Delete link"
                             >
-                              <Trash2 size={14} />
+                              <Trash2 size={15} />
                             </button>
                           </div>
                         ))}
@@ -6098,21 +6181,25 @@ export const HomepageCmsView: React.FC<HomepageCmsViewProps> = ({ addToast, addL
                         }));
                       }}
                       style={{
-                        padding: '6px 12px',
+                        padding: '0 12px',
+                        height: '38px',
                         background: 'rgba(212,175,55,0.1)',
                         border: '1px dashed rgba(212,175,55,0.4)',
                         borderRadius: '6px',
                         color: 'var(--gold)',
-                        fontSize: '0.78rem',
+                        fontSize: '0.8rem',
                         fontWeight: 600,
                         cursor: 'pointer',
+                        width: '100%',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        gap: '4px',
+                        gap: '6px',
+                        boxSizing: 'border-box',
+                        transition: 'all 0.2s ease',
                       }}
                     >
-                      <Plus size={13} /> Add Link to {col.title}
+                      <Plus size={14} /> Add Link to {col.title}
                     </button>
                   </div>
                 ))}
@@ -6123,13 +6210,14 @@ export const HomepageCmsView: React.FC<HomepageCmsViewProps> = ({ addToast, addL
           {/* SUB-TAB 4: ARTISANAL BENEFITS STRIP */}
           {activeFooterSubTab === 'benefits' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', marginBottom: '32px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <p style={{ margin: 0, color: 'var(--beige)', fontSize: '0.85rem' }}>
+              <div className="cms-section-header-bar">
+                <p className="cms-section-desc">
                   Manage the 4 trust and quality guarantee boxes featured across the middle of the footer.
                 </p>
                 <Button
                   variant="gold"
                   size="sm"
+                  className="cms-section-add-btn"
                   onClick={() => {
                     const newBox = {
                       id: `ben-${Date.now()}`,
@@ -6142,14 +6230,13 @@ export const HomepageCmsView: React.FC<HomepageCmsViewProps> = ({ addToast, addL
                       benefits: [...(prev.benefits || []), newBox]
                     }));
                   }}
-                  style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
                 >
                   <Plus size={14} />
                   <span>Add Benefit Box</span>
                 </Button>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '16px' }}>
                 {(footerForm.benefits || []).map((box, bIdx) => (
                   <div
                     key={box.id || bIdx}
@@ -6194,7 +6281,21 @@ export const HomepageCmsView: React.FC<HomepageCmsViewProps> = ({ addToast, addL
                             benefits: prev.benefits.filter((_, i) => i !== bIdx)
                           }));
                         }}
-                        style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '4px' }}
+                        style={{
+                          width: '32px',
+                          height: '32px',
+                          borderRadius: '6px',
+                          background: 'rgba(239, 68, 68, 0.1)',
+                          border: '1px solid rgba(239, 68, 68, 0.25)',
+                          color: '#ef4444',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          transition: 'all 0.2s ease',
+                          flexShrink: 0,
+                          boxSizing: 'border-box',
+                        }}
                         title="Delete box"
                       >
                         <Trash2 size={14} />
@@ -6216,12 +6317,14 @@ export const HomepageCmsView: React.FC<HomepageCmsViewProps> = ({ addToast, addL
                         }}
                         style={{
                           width: '100%',
-                          padding: '6px 8px',
+                          height: '38px',
+                          padding: '0 10px',
                           background: 'rgba(0,0,0,0.5)',
                           border: '1px solid var(--glass-border)',
                           borderRadius: '6px',
                           color: 'var(--cream)',
-                          fontSize: '0.8rem',
+                          fontSize: '0.82rem',
+                          boxSizing: 'border-box',
                         }}
                       >
                         <option value="heart">Heart (Handcrafted)</option>
@@ -6251,13 +6354,15 @@ export const HomepageCmsView: React.FC<HomepageCmsViewProps> = ({ addToast, addL
                         }}
                         style={{
                           width: '100%',
-                          padding: '6px 8px',
+                          height: '38px',
+                          padding: '0 10px',
                           background: 'rgba(0,0,0,0.5)',
                           border: '1px solid var(--glass-border)',
                           borderRadius: '6px',
                           color: 'var(--cream)',
                           fontSize: '0.82rem',
                           fontWeight: 700,
+                          boxSizing: 'border-box',
                         }}
                       />
                     </div>
@@ -6278,12 +6383,14 @@ export const HomepageCmsView: React.FC<HomepageCmsViewProps> = ({ addToast, addL
                         }}
                         style={{
                           width: '100%',
-                          padding: '6px 8px',
+                          height: '38px',
+                          padding: '0 10px',
                           background: 'rgba(0,0,0,0.5)',
                           border: '1px solid var(--glass-border)',
                           borderRadius: '6px',
                           color: 'var(--cream)',
-                          fontSize: '0.8rem',
+                          fontSize: '0.82rem',
+                          boxSizing: 'border-box',
                         }}
                       />
                     </div>
@@ -6295,152 +6402,811 @@ export const HomepageCmsView: React.FC<HomepageCmsViewProps> = ({ addToast, addL
 
           {/* SUB-TAB 5: LEGAL & PAYMENT BADGES */}
           {activeFooterSubTab === 'legal' && (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: '20px', marginBottom: '32px' }}>
-              {/* Bottom Copyright & Tagline */}
-              <div
-                style={{
-                  background: 'rgba(26, 16, 10, 0.75)',
-                  border: '1px solid rgba(212, 175, 55, 0.25)',
-                  borderRadius: '12px',
-                  padding: '20px',
-                }}
-              >
-                <h3 style={{ fontFamily: 'var(--font-display)', color: 'var(--gold)', margin: '0 0 14px 0', fontSize: '1.1rem' }}>
-                  Copyright Notice & Tagline
-                </h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '22px', marginBottom: '32px', maxWidth: '100%', boxSizing: 'border-box' }}>
+              {/* Top Row: Copyright Notice and Legal Links */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px', maxWidth: '100%', boxSizing: 'border-box' }}>
+                {/* Bottom Copyright & Tagline */}
+                <div
+                  style={{
+                    background: 'rgba(26, 16, 10, 0.75)',
+                    border: '1px solid rgba(212, 175, 55, 0.25)',
+                    borderRadius: '12px',
+                    padding: 'clamp(14px, 3vw, 20px)',
+                    boxSizing: 'border-box',
+                    maxWidth: '100%',
+                  }}
+                >
+                  <h3 style={{ fontFamily: 'var(--font-display)', color: 'var(--gold)', margin: '0 0 14px 0', fontSize: '1.1rem' }}>
+                    Copyright Notice & Tagline
+                  </h3>
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                  <Input
-                    label="Copyright Line"
-                    placeholder="© 2026 CHOVIQUE. All rights reserved."
-                    value={footerForm.copyright_text || ''}
-                    onChange={(e) => setFooterForm({ ...footerForm, copyright_text: e.target.value })}
-                  />
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                    <Input
+                      label="Copyright Line"
+                      placeholder="© 2026 CHOVIQUE. All rights reserved."
+                      value={footerForm.copyright_text || ''}
+                      onChange={(e) => setFooterForm({ ...footerForm, copyright_text: e.target.value })}
+                    />
 
-                  <Input
-                    label="Italic Brand Tagline"
-                    placeholder="The Art of Fine Chocolate"
-                    value={footerForm.tagline || ''}
-                    onChange={(e) => setFooterForm({ ...footerForm, tagline: e.target.value })}
-                  />
+                    <Input
+                      label="Italic Brand Tagline"
+                      placeholder="The Art of Fine Chocolate"
+                      value={footerForm.tagline || ''}
+                      onChange={(e) => setFooterForm({ ...footerForm, tagline: e.target.value })}
+                    />
+                  </div>
+                </div>
+
+                {/* Legal Links List */}
+                <div
+                  style={{
+                    background: 'rgba(26, 16, 10, 0.75)',
+                    border: '1px solid rgba(212, 175, 55, 0.25)',
+                    borderRadius: '12px',
+                    padding: 'clamp(14px, 3vw, 20px)',
+                    boxSizing: 'border-box',
+                    maxWidth: '100%',
+                  }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', flexWrap: 'wrap', gap: '8px' }}>
+                    <h3 style={{ fontFamily: 'var(--font-display)', color: 'var(--gold)', margin: 0, fontSize: '1.1rem' }}>
+                      Legal & Policy Links
+                    </h3>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const newLeg = {
+                          id: `leg-${Date.now()}`,
+                          label: 'New Policy',
+                          url: '/privacy-policy',
+                        };
+                        setFooterForm((prev) => ({
+                          ...prev,
+                          legal_links: [...(prev.legal_links || []), newLeg]
+                        }));
+                      }}
+                      style={{
+                        background: 'rgba(212,175,55,0.15)',
+                        border: '1px solid rgba(212,175,55,0.3)',
+                        borderRadius: '6px',
+                        color: 'var(--gold)',
+                        fontSize: '0.75rem',
+                        fontWeight: 600,
+                        padding: '4px 10px',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                      }}
+                    >
+                      <Plus size={12} /> Add Link
+                    </button>
+                  </div>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxWidth: '100%' }}>
+                    {(footerForm.legal_links || []).map((leg, lIdx) => (
+                      <div
+                        key={leg.id || lIdx}
+                        className="legal-link-cms-card"
+                      >
+                        <input
+                          type="text"
+                          className="legal-link-area-label"
+                          placeholder="Label (e.g. Privacy Policy)"
+                          value={leg.label}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setFooterForm((prev) => ({
+                              ...prev,
+                              legal_links: prev.legal_links.map((l, i) => i === lIdx ? { ...l, label: val } : l)
+                            }));
+                          }}
+                        />
+
+                        <div className="legal-link-area-url">
+                          <FooterUrlPicker
+                            value={leg.url}
+                            onChange={(newUrl) => {
+                              setFooterForm((prev) => ({
+                                ...prev,
+                                legal_links: prev.legal_links.map((l, i) => i === lIdx ? { ...l, url: newUrl } : l)
+                              }));
+                            }}
+                            placeholder="/privacy-policy or custom path"
+                          />
+                        </div>
+
+                        <button
+                          type="button"
+                          className="legal-link-area-delete"
+                          onClick={() => {
+                            setFooterForm((prev) => ({
+                              ...prev,
+                              legal_links: prev.legal_links.filter((_, i) => i !== lIdx)
+                            }));
+                          }}
+                          title="Delete policy link"
+                        >
+                          <Trash2 size={15} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
 
-              {/* Legal Links List */}
+              {/* Card 3: Secure Payment Gateways & Trust Badges */}
               <div
                 style={{
                   background: 'rgba(26, 16, 10, 0.75)',
                   border: '1px solid rgba(212, 175, 55, 0.25)',
                   borderRadius: '12px',
-                  padding: '20px',
+                  padding: 'clamp(14px, 3vw, 24px)',
+                  boxSizing: 'border-box',
+                  width: '100%',
+                  maxWidth: '100%',
                 }}
               >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
-                  <h3 style={{ fontFamily: 'var(--font-display)', color: 'var(--gold)', margin: 0, fontSize: '1.1rem' }}>
-                    Legal & Policy Links
-                  </h3>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px', flexWrap: 'wrap', gap: '12px' }}>
+                  <div>
+                    <h3 style={{ fontFamily: 'var(--font-display)', color: 'var(--gold)', margin: 0, fontSize: '1.15rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <CreditCard size={18} /> Secure Payment Gateways & Trust Badges
+                    </h3>
+                    <p style={{ margin: '4px 0 0 0', color: 'var(--beige)', fontSize: '0.82rem' }}>
+                      Configure security badges and payment logos shown in the bottom footer row. Logos are stored in the S3 bucket.
+                    </p>
+                  </div>
                   <button
                     type="button"
                     onClick={() => {
-                      const newLeg = {
-                        id: `leg-${Date.now()}`,
-                        label: 'New Policy',
-                        url: '/privacy-policy',
-                      };
                       setFooterForm((prev) => ({
                         ...prev,
-                        legal_links: [...(prev.legal_links || []), newLeg]
+                        payment_badges: [...DEFAULT_FOOTER_CONFIG.payment_badges],
+                        payment_badges_label: DEFAULT_FOOTER_CONFIG.payment_badges_label,
                       }));
+                      if (addToast) addToast('info', 'Reset payment badges to default gateways.', 'Badges Reset');
                     }}
                     style={{
-                      background: 'rgba(212,175,55,0.15)',
-                      border: '1px solid rgba(212,175,55,0.3)',
+                      background: 'rgba(255, 255, 255, 0.05)',
+                      border: '1px solid rgba(255, 255, 255, 0.15)',
                       borderRadius: '6px',
-                      color: 'var(--gold)',
-                      fontSize: '0.75rem',
+                      color: 'var(--cream)',
+                      fontSize: '0.78rem',
                       fontWeight: 600,
-                      padding: '4px 10px',
+                      padding: '6px 12px',
                       cursor: 'pointer',
-                      display: 'flex',
+                      display: 'inline-flex',
                       alignItems: 'center',
-                      gap: '4px',
+                      gap: '6px',
+                      transition: 'all 0.2s ease',
                     }}
                   >
-                    <Plus size={12} /> Add Link
+                    <RotateCcw size={13} /> Reset to Defaults
                   </button>
                 </div>
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  {(footerForm.legal_links || []).map((leg, lIdx) => (
-                    <div
-                      key={leg.id || lIdx}
-                      style={{
-                        display: 'grid',
-                        gridTemplateColumns: '1fr 1fr auto',
-                        gap: '8px',
-                        alignItems: 'center',
-                        background: 'rgba(0,0,0,0.4)',
-                        padding: '8px',
-                        borderRadius: '6px',
-                        border: '1px solid rgba(255,255,255,0.06)',
-                      }}
-                    >
-                      <input
-                        type="text"
-                        placeholder="Label"
-                        value={leg.label}
+                {/* Section Title Input */}
+                <div style={{ marginBottom: '22px', maxWidth: '420px', width: '100%' }}>
+                  <Input
+                    label="Badges Section Heading"
+                    placeholder="SECURE PAYMENTS"
+                    value={footerForm.payment_badges_label ?? 'SECURE PAYMENTS'}
+                    onChange={(e) => setFooterForm({ ...footerForm, payment_badges_label: e.target.value })}
+                  />
+                  <span style={{ fontSize: '0.75rem', color: 'var(--beige)', opacity: 0.7, marginTop: '4px', display: 'block' }}>
+                    Displays above the gateway logos in the bottom right corner of the footer.
+                  </span>
+                </div>
+
+                {/* Add New Gateway Form Card */}
+                <div
+                  style={{
+                    background: 'rgba(0, 0, 0, 0.4)',
+                    border: '1px solid rgba(212, 175, 55, 0.25)',
+                    borderRadius: '10px',
+                    padding: 'clamp(14px, 2.5vw, 20px)',
+                    marginBottom: '24px',
+                    boxSizing: 'border-box',
+                    width: '100%',
+                    maxWidth: '100%',
+                  }}
+                >
+                  <div style={{ fontSize: '0.88rem', fontWeight: 600, color: 'var(--gold)', marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <Plus size={16} /> Add New Gateway or Trust Badge
+                  </div>
+
+                  {/* Input Fields Grid */}
+                  <div
+                    style={{
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))',
+                      gap: '14px',
+                      alignItems: 'start',
+                      marginBottom: '16px',
+                      width: '100%',
+                      boxSizing: 'border-box',
+                    }}
+                  >
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'center', minHeight: '22px', marginBottom: '6px' }}>
+                        <label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--beige)', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 600 }}>
+                          Preset Gateway
+                        </label>
+                      </div>
+                      <select
+                        value={newPaymentPreset}
                         onChange={(e) => {
-                          const val = e.target.value;
-                          setFooterForm((prev) => ({
-                            ...prev,
-                            legal_links: prev.legal_links.map((l, i) => i === lIdx ? { ...l, label: val } : l)
-                          }));
+                          const selectedVal = e.target.value;
+                          setNewPaymentPreset(selectedVal);
+                          const presetObj = PAYMENT_GATEWAY_PRESETS.find(p => p.id === selectedVal);
+                          if (presetObj) {
+                            if (presetObj.id !== 'custom') {
+                              setNewPaymentName(presetObj.name);
+                              setNewPaymentImageUrl(presetObj.image_url);
+                            } else {
+                              setNewPaymentName('');
+                              setNewPaymentImageUrl('');
+                            }
+                          }
                         }}
                         style={{
-                          padding: '6px 8px',
+                          width: '100%',
+                          height: '42px',
+                          padding: '0 10px',
                           background: 'rgba(0,0,0,0.6)',
                           border: '1px solid var(--glass-border)',
-                          borderRadius: '4px',
+                          borderRadius: '8px',
                           color: 'var(--cream)',
-                          fontSize: '0.8rem',
+                          fontSize: '0.84rem',
+                          boxSizing: 'border-box',
                         }}
-                      />
+                      >
+                        {PAYMENT_GATEWAY_PRESETS.map((p) => (
+                          <option key={p.id} value={p.id}>
+                            {p.name} {p.image_url ? (p.image_url.startsWith('/') ? '(Local)' : '(Cloud)') : ''}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
 
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'center', minHeight: '22px', marginBottom: '6px' }}>
+                        <label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--beige)', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 600 }}>
+                          Gateway Name
+                        </label>
+                      </div>
                       <input
                         type="text"
-                        placeholder="URL path"
-                        value={leg.url}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          setFooterForm((prev) => ({
-                            ...prev,
-                            legal_links: prev.legal_links.map((l, i) => i === lIdx ? { ...l, url: val } : l)
-                          }));
-                        }}
+                        placeholder="e.g. Razorpay"
+                        value={newPaymentName}
+                        onChange={(e) => setNewPaymentName(e.target.value)}
                         style={{
-                          padding: '6px 8px',
+                          width: '100%',
+                          height: '42px',
+                          padding: '0 12px',
                           background: 'rgba(0,0,0,0.6)',
                           border: '1px solid var(--glass-border)',
-                          borderRadius: '4px',
+                          borderRadius: '8px',
                           color: 'var(--cream)',
-                          fontSize: '0.8rem',
+                          fontSize: '0.84rem',
+                          boxSizing: 'border-box',
                         }}
                       />
+                    </div>
 
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', minHeight: '22px', marginBottom: '6px', flexWrap: 'wrap', gap: '4px' }}>
+                        <label style={{ fontSize: '0.75rem', color: 'var(--beige)', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 600 }}>
+                          Badge Logo URL / Path
+                        </label>
+                        {/* Direct File Upload to Bucket Trigger */}
+                        <label
+                          style={{
+                            fontSize: '0.72rem',
+                            color: 'var(--gold)',
+                            cursor: 'pointer',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            fontWeight: 600,
+                          }}
+                        >
+                          <Upload size={12} /> Upload to Bucket
+                          <input
+                            type="file"
+                            accept="image/*,.svg"
+                            style={{ display: 'none' }}
+                            onChange={async (e) => {
+                              const file = e.target.files?.[0];
+                              if (!file) return;
+                              setIsUploadingBadge(true);
+                              try {
+                                const fd = new FormData();
+                                fd.append('image', file);
+                                const res = await adminService.uploadCmsImage(fd);
+                                if (res?.image_url) {
+                                  setNewPaymentImageUrl(res.image_url);
+                                  if (addToast) addToast('success', 'Badge logo uploaded directly to S3 storage bucket!', 'Bucket Uploaded');
+                                }
+                              } catch (err: any) {
+                                if (addToast) addToast('error', err.message || 'Failed to upload badge file to bucket.', 'Upload Error');
+                              } finally {
+                                setIsUploadingBadge(false);
+                              }
+                            }}
+                          />
+                        </label>
+                      </div>
+
+                      <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                        <input
+                          type="text"
+                          placeholder="/assets/payments/... or https://..."
+                          value={newPaymentImageUrl}
+                          onChange={(e) => setNewPaymentImageUrl(e.target.value)}
+                          style={{
+                            width: '100%',
+                            height: '42px',
+                            padding: '0 12px',
+                            background: 'rgba(0,0,0,0.6)',
+                            border: '1px solid var(--glass-border)',
+                            borderRadius: '8px',
+                            color: 'var(--cream)',
+                            fontSize: '0.84rem',
+                            boxSizing: 'border-box',
+                            minWidth: 0,
+                          }}
+                        />
+                        {/* If user pasted an external URL, allow instant 1-click Store in Bucket */}
+                        {newPaymentImageUrl && (newPaymentImageUrl.startsWith('http://') || newPaymentImageUrl.startsWith('https://')) && !newPaymentImageUrl.includes('tigris') && (
+                          <button
+                            type="button"
+                            disabled={isUploadingBadge}
+                            onClick={async () => {
+                              setIsUploadingBadge(true);
+                              try {
+                                const res = await adminService.uploadCmsImageUrl(newPaymentImageUrl);
+                                if (res?.image_url) {
+                                  setNewPaymentImageUrl(res.image_url);
+                                  if (addToast) addToast('success', 'External logo stored in bucket permanently!', 'Bucket Synced');
+                                }
+                              } catch (err: any) {
+                                if (addToast) addToast('error', err.message || 'Failed to mirror URL to bucket.', 'Sync Error');
+                              } finally {
+                                setIsUploadingBadge(false);
+                              }
+                            }}
+                            style={{
+                              height: '42px',
+                              padding: '0 12px',
+                              background: 'rgba(212,175,55,0.18)',
+                              border: '1px solid rgba(212,175,55,0.45)',
+                              borderRadius: '8px',
+                              color: 'var(--gold)',
+                              fontSize: '0.75rem',
+                              fontWeight: 600,
+                              cursor: 'pointer',
+                              whiteSpace: 'nowrap',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '6px',
+                              flexShrink: 0,
+                            }}
+                            title="Download and store this image in S3 Tigris Bucket"
+                          >
+                            {isUploadingBadge ? <Loader2 size={13} className="animate-spin" /> : <Database size={13} />}
+                            <span>Store in Bucket</span>
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Action Row: Preview Pill & + Add Gateway Button (Fully Contained Inside the Card) */}
+                  <div
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      flexWrap: 'wrap',
+                      gap: '12px',
+                      paddingTop: '14px',
+                      borderTop: '1px solid rgba(255, 255, 255, 0.08)',
+                      boxSizing: 'border-box',
+                      width: '100%',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+                      <span style={{ fontSize: '0.78rem', color: 'var(--beige)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                        Preview:
+                      </span>
+                      <div
+                        style={{
+                          height: '38px',
+                          minWidth: '84px',
+                          maxWidth: '120px',
+                          background: '#ffffff',
+                          borderRadius: '6px',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          padding: '4px 10px',
+                          boxShadow: '0 2px 6px rgba(0,0,0,0.3)',
+                          boxSizing: 'border-box',
+                          overflow: 'hidden',
+                          userSelect: 'none',
+                        }}
+                      >
+                        {newPaymentImageUrl ? (
+                          <img
+                            src={getImageUrl(newPaymentImageUrl)}
+                            alt="preview"
+                            style={{ maxHeight: '22px', maxWidth: '100%', objectFit: 'contain' }}
+                            onError={(e) => {
+                              (e.target as HTMLElement).style.display = 'none';
+                            }}
+                          />
+                        ) : (
+                          <span style={{ fontSize: '0.68rem', color: '#333', fontWeight: 700, textTransform: 'uppercase' }}>
+                            {newPaymentName || 'Badge'}
+                          </span>
+                        )}
+                      </div>
+                      {newPaymentImageUrl && newPaymentImageUrl.includes('tigris') && (
+                        <span style={{ fontSize: '0.72rem', color: '#4ade80', background: 'rgba(34, 197, 94, 0.12)', border: '1px solid rgba(34, 197, 94, 0.3)', padding: '3px 8px', borderRadius: '4px', display: 'inline-flex', alignItems: 'center', gap: '4px', fontWeight: 600 }}>
+                          <Check size={12} /> Stored in S3 Bucket
+                        </span>
+                      )}
+                    </div>
+
+                    <div>
+                      <Button
+                        variant="gold"
+                        glow
+                        disabled={isUploadingBadge}
+                        onClick={async () => {
+                          if (!newPaymentName.trim()) {
+                            if (addToast) addToast('warning', 'Please enter a gateway name.', 'Name Required');
+                            return;
+                          }
+                          let finalImageUrl = newPaymentImageUrl.trim();
+                          // If it's a remote URL not yet stored in bucket, auto-store in bucket
+                          if (
+                            (finalImageUrl.startsWith('http://') || finalImageUrl.startsWith('https://')) &&
+                            !finalImageUrl.includes('tigris') &&
+                            !finalImageUrl.includes('railway')
+                          ) {
+                            setIsUploadingBadge(true);
+                            try {
+                              const uploadRes = await adminService.uploadCmsImageUrl(finalImageUrl);
+                              if (uploadRes?.image_url) {
+                                finalImageUrl = uploadRes.image_url;
+                                setNewPaymentImageUrl(finalImageUrl);
+                                if (addToast) addToast('info', 'External logo mirrored and saved to storage bucket!', 'Bucket Stored');
+                              }
+                            } catch (err: any) {
+                              console.warn('Failed to mirror badge to bucket on add:', err);
+                            } finally {
+                              setIsUploadingBadge(false);
+                            }
+                          }
+
+                          const newBadge: FooterPaymentBadge = {
+                            id: `pay-${Date.now()}`,
+                            name: newPaymentName.trim(),
+                            image_url: finalImageUrl,
+                            is_active: true,
+                          };
+                          setFooterForm((prev) => ({
+                            ...prev,
+                            payment_badges: [...(prev.payment_badges || []), newBadge],
+                          }));
+                          if (addToast) addToast('success', `Added ${newBadge.name} payment badge!`, 'Badge Added');
+                        }}
+                        style={{ height: '42px', display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '0 20px', whiteSpace: 'nowrap' }}
+                      >
+                        {isUploadingBadge ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />}
+                        <span>Add Gateway</span>
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Configured Payment Badges List */}
+                <div style={{ width: '100%', boxSizing: 'border-box' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
+                    <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--cream)' }}>
+                      Active & Configured Gateways ({(footerForm.payment_badges || []).length})
+                    </span>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--beige)', opacity: 0.7 }}>
+                      Toggle switch to show/hide without deleting
+                    </span>
+                  </div>
+
+                  {(!footerForm.payment_badges || footerForm.payment_badges.length === 0) ? (
+                    <div style={{ padding: '24px', textAlign: 'center', background: 'rgba(0,0,0,0.3)', borderRadius: '8px', border: '1px dashed rgba(212,175,55,0.3)', color: 'var(--beige)' }}>
+                      <p style={{ margin: '0 0 10px 0', fontSize: '0.85rem' }}>No payment badges configured yet.</p>
                       <button
                         type="button"
                         onClick={() => {
                           setFooterForm((prev) => ({
                             ...prev,
-                            legal_links: prev.legal_links.filter((_, i) => i !== lIdx)
+                            payment_badges: [...DEFAULT_FOOTER_CONFIG.payment_badges],
                           }));
                         }}
-                        style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '4px' }}
+                        style={{
+                          background: 'rgba(212,175,55,0.15)',
+                          border: '1px solid rgba(212,175,55,0.3)',
+                          borderRadius: '6px',
+                          color: 'var(--gold)',
+                          padding: '6px 14px',
+                          fontSize: '0.8rem',
+                          cursor: 'pointer',
+                        }}
                       >
-                        <Trash2 size={14} />
+                        Restore Default Badges (Razorpay, GPay, UPI)
                       </button>
                     </div>
-                  ))}
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', width: '100%', boxSizing: 'border-box' }}>
+                      {/* Desktop Column Header Labels */}
+                      <div className="payment-badge-cms-header-row">
+                        <span style={{ width: '84px', flexShrink: 0, fontSize: '0.72rem', color: 'var(--gold)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                          Preview
+                        </span>
+                        <span style={{ width: '160px', flexShrink: 0, fontSize: '0.72rem', color: 'var(--gold)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                          Gateway Name
+                        </span>
+                        <span style={{ flex: 1, minWidth: '160px', fontSize: '0.72rem', color: 'var(--gold)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                          Logo URL / S3 Bucket Source
+                        </span>
+                        <span style={{ width: '134px', flexShrink: 0, textAlign: 'right', fontSize: '0.72rem', color: 'var(--gold)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px', paddingRight: '4px' }}>
+                          Status & Actions
+                        </span>
+                      </div>
+
+                      {footerForm.payment_badges.map((badge, bIdx) => {
+                        const isBucketUrl = badge.image_url && badge.image_url.includes('tigris');
+                        const isRemoteUrl = badge.image_url && (badge.image_url.startsWith('http://') || badge.image_url.startsWith('https://')) && !isBucketUrl;
+                        const isSyncing = syncingBadgeId === badge.id;
+
+                        return (
+                          <div
+                            key={badge.id || bIdx}
+                            className={`payment-badge-cms-card ${badge.is_active === false ? 'is-hidden' : ''}`}
+                          >
+                            {/* Mobile Top Row or Desktop First Columns */}
+                            <div className="payment-badge-cms-row-top">
+                              {/* Visual Badge Pill Preview */}
+                              <div className="payment-badge-cms-preview-pill" title={badge.name}>
+                                {badge.image_url ? (
+                                  <img
+                                    src={getImageUrl(badge.image_url)}
+                                    alt={badge.name}
+                                    style={{
+                                      maxHeight: badge.name.toLowerCase().includes('upi') ? '22px' : '18px',
+                                      maxWidth: '100%',
+                                      objectFit: 'contain',
+                                    }}
+                                    onError={(e) => {
+                                      (e.target as HTMLElement).style.display = 'none';
+                                      const fallback = (e.target as HTMLElement).nextElementSibling as HTMLElement;
+                                      if (fallback) fallback.style.display = 'inline-block';
+                                    }}
+                                  />
+                                ) : null}
+                                <span
+                                  style={{
+                                    display: badge.image_url ? 'none' : 'inline-block',
+                                    fontSize: '0.65rem',
+                                    fontWeight: 700,
+                                    color: '#333',
+                                    textTransform: 'uppercase',
+                                    textAlign: 'center',
+                                  }}
+                                >
+                                  {badge.name}
+                                </span>
+                              </div>
+
+                              {/* Gateway Name Input */}
+                              <div className="payment-badge-cms-name-col">
+                                <input
+                                  type="text"
+                                  placeholder="Gateway Name"
+                                  value={badge.name}
+                                  onChange={(e) => {
+                                    const val = e.target.value;
+                                    setFooterForm((prev) => ({
+                                      ...prev,
+                                      payment_badges: prev.payment_badges.map((b, i) => i === bIdx ? { ...b, name: val } : b)
+                                    }));
+                                  }}
+                                  style={{
+                                    height: '38px',
+                                    padding: '0 10px',
+                                    background: 'rgba(0,0,0,0.5)',
+                                    border: '1px solid var(--glass-border)',
+                                    borderRadius: '6px',
+                                    color: 'var(--cream)',
+                                    fontSize: '0.84rem',
+                                    fontWeight: 600,
+                                    boxSizing: 'border-box',
+                                    width: '100%',
+                                  }}
+                                />
+                              </div>
+                            </div>
+
+                            {/* Image URL Input + Store to Bucket Action */}
+                            <div className="payment-badge-cms-url-col">
+                              <input
+                                type="text"
+                                placeholder="Image URL or Path (/assets/payments/...)"
+                                value={badge.image_url}
+                                onChange={(e) => {
+                                  const val = e.target.value;
+                                  setFooterForm((prev) => ({
+                                    ...prev,
+                                    payment_badges: prev.payment_badges.map((b, i) => i === bIdx ? { ...b, image_url: val } : b)
+                                  }));
+                                }}
+                                style={{
+                                  height: '38px',
+                                  padding: '0 10px',
+                                  background: 'rgba(0,0,0,0.5)',
+                                  border: '1px solid var(--glass-border)',
+                                  borderRadius: '6px',
+                                  color: 'var(--cream)',
+                                  fontSize: '0.82rem',
+                                  boxSizing: 'border-box',
+                                  width: '100%',
+                                  minWidth: 0,
+                                }}
+                              />
+                              {isRemoteUrl && (
+                                <button
+                                  type="button"
+                                  disabled={isSyncing}
+                                  onClick={async () => {
+                                    setSyncingBadgeId(badge.id);
+                                    try {
+                                      const res = await adminService.uploadCmsImageUrl(badge.image_url);
+                                      if (res?.image_url) {
+                                        setFooterForm((prev) => ({
+                                          ...prev,
+                                          payment_badges: prev.payment_badges.map((b, i) => i === bIdx ? { ...b, image_url: res.image_url } : b),
+                                        }));
+                                        if (addToast) addToast('success', `${badge.name} logo stored in S3 bucket!`, 'Bucket Stored');
+                                      }
+                                    } catch (err: any) {
+                                      if (addToast) addToast('error', err.message || 'Failed to sync to bucket.', 'Sync Error');
+                                    } finally {
+                                      setSyncingBadgeId(null);
+                                    }
+                                  }}
+                                  style={{
+                                    height: '38px',
+                                    padding: '0 10px',
+                                    background: 'rgba(212,175,55,0.18)',
+                                    border: '1px solid rgba(212,175,55,0.4)',
+                                    borderRadius: '6px',
+                                    color: 'var(--gold)',
+                                    fontSize: '0.72rem',
+                                    fontWeight: 600,
+                                    cursor: 'pointer',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '4px',
+                                    whiteSpace: 'nowrap',
+                                    flexShrink: 0,
+                                  }}
+                                  title="Store this remote image into Tigris S3 Bucket"
+                                >
+                                  {isSyncing ? <Loader2 size={12} className="animate-spin" /> : <Database size={12} />}
+                                  <span>To Bucket</span>
+                                </button>
+                              )}
+                              {isBucketUrl && (
+                                <span
+                                  style={{
+                                    fontSize: '0.68rem',
+                                    color: '#4ade80',
+                                    background: 'rgba(34, 197, 94, 0.1)',
+                                    border: '1px solid rgba(34, 197, 94, 0.25)',
+                                    padding: '2px 6px',
+                                    borderRadius: '4px',
+                                    whiteSpace: 'nowrap',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '3px',
+                                    flexShrink: 0,
+                                  }}
+                                  title="Logo is hosted permanently in Tigris S3 Bucket"
+                                >
+                                  <Check size={11} /> Bucket
+                                </span>
+                              )}
+                            </div>
+
+                            {/* Active Toggle & Delete Buttons */}
+                            <div className="payment-badge-cms-actions-col">
+                              {/* Active / Hidden Toggle Button */}
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setFooterForm((prev) => ({
+                                    ...prev,
+                                    payment_badges: prev.payment_badges.map((b, i) => i === bIdx ? { ...b, is_active: b.is_active === false ? true : false } : b)
+                                  }));
+                                }}
+                                style={{
+                                  height: '38px',
+                                  padding: '0 10px',
+                                  borderRadius: '6px',
+                                  border: badge.is_active !== false ? '1px solid rgba(34, 197, 94, 0.4)' : '1px solid rgba(255, 255, 255, 0.15)',
+                                  background: badge.is_active !== false ? 'rgba(34, 197, 94, 0.15)' : 'rgba(255, 255, 255, 0.05)',
+                                  color: badge.is_active !== false ? '#4ade80' : 'var(--beige)',
+                                  fontSize: '0.75rem',
+                                  fontWeight: 600,
+                                  cursor: 'pointer',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  gap: '4px',
+                                  whiteSpace: 'nowrap',
+                                  transition: 'all 0.2s ease',
+                                  boxSizing: 'border-box',
+                                  width: '88px',
+                                  flexShrink: 0,
+                                }}
+                                title={badge.is_active !== false ? 'Click to hide from footer' : 'Click to activate in footer'}
+                              >
+                                {badge.is_active !== false ? (
+                                  <>
+                                    <Check size={13} /> Active
+                                  </>
+                                ) : (
+                                  <>
+                                    <X size={13} /> Hidden
+                                  </>
+                                )}
+                              </button>
+
+                              {/* Delete Button */}
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setFooterForm((prev) => ({
+                                    ...prev,
+                                    payment_badges: prev.payment_badges.filter((_, i) => i !== bIdx)
+                                  }));
+                                }}
+                                style={{
+                                  width: '38px',
+                                  height: '38px',
+                                  borderRadius: '6px',
+                                  background: 'rgba(239, 68, 68, 0.1)',
+                                  border: '1px solid rgba(239, 68, 68, 0.25)',
+                                  color: '#ef4444',
+                                  cursor: 'pointer',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  transition: 'all 0.2s ease',
+                                  flexShrink: 0,
+                                  boxSizing: 'border-box',
+                                }}
+                                title={`Delete ${badge.name} badge`}
+                              >
+                                <Trash2 size={15} />
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -6449,21 +7215,9 @@ export const HomepageCmsView: React.FC<HomepageCmsViewProps> = ({ addToast, addL
           {/* =========================================================================
               LIVE FOOTER PREVIEW (CUSTOMER VIEW)
               ========================================================================= */}
-          <div
-            style={{
-              background: '#0a0a0a',
-              border: '2px solid var(--gold)',
-              borderRadius: '16px',
-              padding: '24px 20px',
-              boxShadow: '0 12px 40px rgba(0,0,0,0.8), 0 0 30px rgba(212,175,55,0.15)',
-              marginTop: '16px',
-              marginBottom: '32px',
-              position: 'relative',
-              overflow: 'hidden',
-            }}
-          >
+          <div className="footer-live-preview-box">
             {/* Top Preview Banner */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '8px', borderBottom: '1px solid rgba(212,175,55,0.2)', paddingBottom: '12px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px', flexWrap: 'wrap', gap: '8px', borderBottom: '1px solid rgba(212,175,55,0.2)', paddingBottom: '12px' }}>
               <span style={{ fontSize: '0.75rem', color: 'var(--gold)', background: 'rgba(212, 175, 55, 0.15)', padding: '4px 12px', borderRadius: '4px', border: '1px solid rgba(var(--gold-rgb), 0.4)', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
                 <Sparkles size={13} /> LIVE FOOTER PREVIEW (CUSTOMER VIEW)
               </span>
@@ -6472,114 +7226,140 @@ export const HomepageCmsView: React.FC<HomepageCmsViewProps> = ({ addToast, addL
               </span>
             </div>
 
-            {/* Rendered Live Customer Footer Container */}
-            <div className="chovique-footer" style={{ background: 'transparent', padding: '10px 0' }}>
-              <div className="chovique-footer-container">
-                {/* 1. Main Grid */}
-                <div className="footer-main-grid">
-                  {/* Brand Column */}
-                  <div className="footer-brand-col">
-                    <div className="footer-brand-header" style={{ cursor: 'pointer' }}>
-                      <img 
-                        src={getImageUrl(footerForm.brand_logo_url || '/assets/popular-bg.jpg')} 
-                        alt="Chovique Logo" 
-                        className="footer-main-logo" 
-                      />
-                    </div>
-                    <p className="footer-brand-description">
-                      {footerForm.brand_description || 'Luxury handmade chocolates crafted with the finest cocoa and pure ingredients.'}
-                    </p>
-                    <div className="footer-social-row">
-                      {(footerForm.social_links || []).filter(s => s.is_active !== false).map((social) => (
-                        <div key={social.id} className="footer-social-btn" title={social.name || social.platform}>
-                          {renderSocialIcon(social.platform, 16)}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="footer-col-divider" />
-
-                  {/* Navigation Columns */}
-                  {(footerForm.nav_columns || []).map((col) => (
-                    <div key={col.id} className="footer-nav-col">
-                      <h3 className="footer-col-title">{col.title}</h3>
-                      <ul className="footer-nav-links">
-                        {(col.links || []).map((link) => (
-                          <li key={link.id}>
-                            <span style={{ display: 'inline-flex', alignItems: 'center', color: 'var(--beige)', fontSize: '0.85rem' }}>
-                              {link.label} <ChevronRight size={13} className="nav-chevron" style={{ marginLeft: '4px' }} />
-                            </span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  ))}
-
-                  {/* Concierge Card */}
-                  {footerForm.concierge?.is_enabled !== false && (
-                    <div className="footer-concierge-card">
-                      <div className="concierge-icon-circle">
-                        <Headphones size={22} className="concierge-headphone-icon" />
-                      </div>
-                      <h4 className="concierge-title">{footerForm.concierge?.title || 'Need Help?'}</h4>
-                      <p className="concierge-subtitle">{footerForm.concierge?.subtitle || 'Our chocolate concierge is here for you.'}</p>
-                      <div className="concierge-contact-btn" style={{ cursor: 'pointer' }}>
-                        <span>{footerForm.concierge?.button_text || 'CONTACT CONCIERGE'}</span>
-                        <ArrowRight size={14} />
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* 2. Benefits Strip */}
-                {(footerForm.benefits || []).length > 0 && (
-                  <div className="footer-benefits-strip">
-                    {footerForm.benefits.map((box, idx) => (
-                      <React.Fragment key={box.id || idx}>
-                        {idx > 0 && <div className="benefit-divider" />}
-                        <div className="footer-benefit-box">
-                          <div className="benefit-icon-circle">
-                            {renderBenefitIcon(box.icon)}
-                          </div>
-                          <div className="benefit-text">
-                            <h4 className="benefit-title">{box.title}</h4>
-                            <p className="benefit-desc">{box.desc}</p>
-                          </div>
-                        </div>
-                      </React.Fragment>
-                    ))}
-                  </div>
-                )}
-
-                {/* 3. Bottom Legal & Payment Bar */}
-                <div className="footer-bottom-bar">
-                  <div className="footer-bottom-left">
-                    <p className="copyright-text">{footerForm.copyright_text || '© 2026 CHOVIQUE. All rights reserved.'}</p>
-                    {footerForm.tagline && <span className="footer-italic-tagline">{footerForm.tagline}</span>}
-                  </div>
-
-                  <div className="footer-bottom-center">
-                    {(footerForm.legal_links || []).map((item, index) => (
-                      <React.Fragment key={item.id || index}>
-                        {index > 0 && <span className="legal-pipe">|</span>}
-                        <span style={{ color: 'var(--beige)', fontSize: '0.8rem' }}>{item.label}</span>
-                      </React.Fragment>
-                    ))}
-                  </div>
-
-                  <div className="footer-bottom-right">
-                    <span className="secure-payments-label">{footerForm.payment_badges_label || 'SECURE PAYMENTS'}</span>
-                    <div className="payment-badges-row">
-                      {(footerForm.payment_badges || DEFAULT_FOOTER_CONFIG.payment_badges).filter(b => b.is_active !== false).map((b) => (
-                        <div key={b.id} className="payment-badge-pill" title={b.name}>
-                          <img
-                            src={getImageUrl(b.image_url)}
-                            alt={b.name}
-                            className="payment-badge-logo-img"
+            {/* Scrollable Container so Concierge Card and columns are never clipped */}
+            <div className="footer-live-preview-scroll-wrapper">
+              <div style={{ minWidth: '880px', width: '100%' }}>
+                <div className="chovique-footer" style={{ background: 'transparent', padding: '6px 0' }}>
+                  <div className="chovique-footer-container" style={{ padding: '0 8px', maxWidth: '100%' }}>
+                    {/* 1. Main Grid */}
+                    <div className="footer-main-grid">
+                      {/* Brand Column */}
+                      <div className="footer-brand-col">
+                        <div className="footer-brand-header">
+                          <img 
+                            src={getImageUrl(footerForm.brand_logo_url || '/assets/logo.png')} 
+                            alt="Chovique Logo" 
+                            className="footer-main-logo"
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).src = '/assets/logo.png';
+                            }}
                           />
                         </div>
+                        <p className="footer-brand-description">
+                          {footerForm.brand_description || 'Luxury handmade chocolates crafted with the finest cocoa and pure ingredients.'}
+                        </p>
+                        <div className="footer-social-row">
+                          {(footerForm.social_links || []).filter(s => s.is_active !== false).map((social) => (
+                            <div key={social.id} className="footer-social-btn" title={social.name || social.platform}>
+                              {renderSocialIcon(social.platform, 16)}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="footer-col-divider" />
+
+                      {/* Navigation Columns */}
+                      {(footerForm.nav_columns || []).map((col) => (
+                        <div key={col.id} className="footer-nav-col">
+                          <h3 className="footer-col-title">{col.title}</h3>
+                          <ul className="footer-nav-links">
+                            {(col.links || []).map((link) => (
+                              <li key={link.id}>
+                                <span style={{ display: 'inline-flex', alignItems: 'center', color: 'var(--beige)', fontSize: '0.85rem' }}>
+                                  {link.label} <ChevronRight size={13} className="nav-chevron" style={{ marginLeft: '4px' }} />
+                                </span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
                       ))}
+
+                      {/* Concierge Card */}
+                      {footerForm.concierge?.is_enabled !== false && (
+                        <div className="footer-concierge-card">
+                          <div className="concierge-icon-circle">
+                            <Headphones size={22} className="concierge-headphone-icon" />
+                          </div>
+                          <h4 className="concierge-title">{footerForm.concierge?.title || 'Need Help?'}</h4>
+                          <p className="concierge-subtitle">{footerForm.concierge?.subtitle || 'Our chocolate concierge is here for you.'}</p>
+                          <div className="concierge-contact-btn" style={{ cursor: 'pointer' }}>
+                            <span>{footerForm.concierge?.button_text || 'CONTACT CONCIERGE'}</span>
+                            <ArrowRight size={14} />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* 2. Benefits Strip */}
+                    {(footerForm.benefits || []).length > 0 && (
+                      <div className="footer-benefits-strip">
+                        {footerForm.benefits.map((box, idx) => (
+                          <React.Fragment key={box.id || idx}>
+                            {idx > 0 && <div className="benefit-divider" />}
+                            <div className="footer-benefit-box">
+                              <div className="benefit-icon-circle">
+                                {renderBenefitIcon(box.icon)}
+                              </div>
+                              <div className="benefit-text">
+                                <h4 className="benefit-title">{box.title}</h4>
+                                <p className="benefit-desc">{box.desc}</p>
+                              </div>
+                            </div>
+                          </React.Fragment>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* 3. Bottom Legal & Payment Bar */}
+                    <div className="footer-bottom-bar">
+                      <div className="footer-bottom-left">
+                        <p className="copyright-text">{footerForm.copyright_text || '© 2026 CHOVIQUE. All rights reserved.'}</p>
+                        {footerForm.tagline && <span className="footer-italic-tagline">{footerForm.tagline}</span>}
+                      </div>
+
+                      <div className="footer-bottom-center">
+                        {(footerForm.legal_links || []).map((item, index) => (
+                          <React.Fragment key={item.id || index}>
+                            {index > 0 && <span className="legal-pipe">|</span>}
+                            <span style={{ color: 'var(--beige)', fontSize: '0.8rem' }}>{item.label}</span>
+                          </React.Fragment>
+                        ))}
+                      </div>
+
+                      <div className="footer-bottom-right">
+                        <span className="secure-payments-label">{footerForm.payment_badges_label || 'SECURE PAYMENTS'}</span>
+                        <div className="payment-badges-row">
+                          {(footerForm.payment_badges || DEFAULT_FOOTER_CONFIG.payment_badges).filter(b => b.is_active !== false).map((b) => (
+                            <div key={b.id} className="payment-badge-pill" title={b.name}>
+                              {b.image_url ? (
+                                <img
+                                  src={getImageUrl(b.image_url)}
+                                  alt={b.name}
+                                  className={`payment-badge-logo-img ${b.id === 'pay-3' || b.name.toLowerCase().includes('upi') ? 'payment-badge-upi' : ''}`}
+                                  onError={(e) => {
+                                    (e.target as HTMLElement).style.display = 'none';
+                                    const fallback = (e.target as HTMLElement).nextElementSibling as HTMLElement;
+                                    if (fallback) fallback.style.display = 'inline-block';
+                                  }}
+                                />
+                              ) : null}
+                              <span
+                                style={{
+                                  display: b.image_url ? 'none' : 'inline-block',
+                                  fontSize: '0.65rem',
+                                  fontWeight: 700,
+                                  color: '#333',
+                                  textTransform: 'uppercase',
+                                  textAlign: 'center',
+                                }}
+                              >
+                                {b.name}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
