@@ -816,6 +816,163 @@ export interface StoreConfig {
   store_front_name: string;
 }
 
+// =============================================================================
+// FOOTER CMS TYPES & DEFAULTS
+// =============================================================================
+
+export interface FooterSocialLink {
+  id: string;
+  platform: 'instagram' | 'facebook' | 'youtube' | 'pinterest' | 'twitter' | 'linkedin' | 'whatsapp' | 'tiktok' | string;
+  name: string;
+  url: string;
+  is_active: boolean;
+}
+
+export interface FooterNavLink {
+  id: string;
+  label: string;
+  url: string;
+  is_external?: boolean;
+}
+
+export interface FooterNavColumn {
+  id: string;
+  title: string;
+  links: FooterNavLink[];
+}
+
+export interface FooterBenefitBox {
+  id: string;
+  title: string;
+  desc: string;
+  icon: 'heart' | 'sparkles' | 'gift' | 'shield' | 'truck' | 'award' | 'leaf' | 'clock' | string;
+}
+
+export interface FooterConciergeConfig {
+  title: string;
+  subtitle: string;
+  button_text: string;
+  button_link: string;
+  is_enabled: boolean;
+}
+
+export interface FooterLegalLink {
+  id: string;
+  label: string;
+  url: string;
+}
+
+export interface FooterPaymentBadge {
+  id: string;
+  name: string;
+  image_url: string;
+  is_active: boolean;
+}
+
+export interface FooterConfig {
+  brand_logo_url?: string;
+  brand_description: string;
+  social_links: FooterSocialLink[];
+  nav_columns: FooterNavColumn[];
+  concierge: FooterConciergeConfig;
+  benefits: FooterBenefitBox[];
+  copyright_text: string;
+  tagline: string;
+  legal_links: FooterLegalLink[];
+  payment_badges_label: string;
+  payment_badges: FooterPaymentBadge[];
+}
+
+export const DEFAULT_FOOTER_CONFIG: FooterConfig = {
+  brand_logo_url: '/assets/popular-bg.jpg',
+  brand_description: 'Luxury handmade chocolates crafted with the finest cocoa and pure ingredients.',
+  social_links: [
+    { id: 'soc-1', platform: 'instagram', name: 'Instagram', url: 'https://instagram.com', is_active: true },
+    { id: 'soc-2', platform: 'facebook', name: 'Facebook', url: 'https://facebook.com', is_active: true },
+    { id: 'soc-3', platform: 'youtube', name: 'YouTube', url: 'https://youtube.com', is_active: true },
+    { id: 'soc-4', platform: 'pinterest', name: 'Pinterest', url: 'https://pinterest.com', is_active: true },
+  ],
+  nav_columns: [
+    {
+      id: 'col-shop',
+      title: 'SHOP',
+      links: [
+        { id: 'link-1', label: 'Shop All', url: '/shop' },
+        { id: 'link-2', label: 'Best Sellers', url: '/#best-sellers' },
+        { id: 'link-3', label: 'New Arrivals', url: '/#new-arrivals' },
+        { id: 'link-4', label: 'Gift Boxes', url: '/shop?category=gift' },
+        { id: 'link-5', label: 'All Collections', url: '/shop' },
+      ],
+    },
+    {
+      id: 'col-chovique',
+      title: 'CHOVIQUE',
+      links: [
+        { id: 'link-6', label: 'Our Story', url: '/our-story' },
+        { id: 'link-7', label: 'Our Craft', url: '/our-story#the-bean-to-bar-process' },
+        { id: 'link-8', label: 'Contact Us', url: '/contact' },
+      ],
+    },
+    {
+      id: 'col-help',
+      title: 'HELP',
+      links: [
+        { id: 'link-9', label: 'Track My Order', url: '/dashboard?section=orders' },
+        { id: 'link-10', label: 'Shipping & Delivery', url: '/dashboard?section=orders' },
+        { id: 'link-11', label: 'Returns & Refunds', url: '/refund-policy' },
+        { id: 'link-12', label: 'Help & Support', url: '/dashboard?section=support' },
+      ],
+    },
+  ],
+  concierge: {
+    title: 'Need Help?',
+    subtitle: 'Our chocolate concierge is here for you.',
+    button_text: 'CONTACT CONCIERGE',
+    button_link: '/contact#send-us-a-message',
+    is_enabled: true,
+  },
+  benefits: [
+    {
+      id: 'ben-1',
+      title: 'HANDCRAFTED CHOCOLATES',
+      desc: 'Made with passion and perfection',
+      icon: 'heart',
+    },
+    {
+      id: 'ben-2',
+      title: 'PREMIUM INGREDIENTS',
+      desc: 'Finest cocoa, sourced ethically',
+      icon: 'sparkles',
+    },
+    {
+      id: 'ben-3',
+      title: 'BEAUTIFULLY PACKED',
+      desc: 'Perfect for gifting every occasion',
+      icon: 'gift',
+    },
+    {
+      id: 'ben-4',
+      title: 'SECURE PAYMENTS',
+      desc: 'Safe, encrypted & trusted checkout',
+      icon: 'shield',
+    },
+  ],
+  copyright_text: '© 2026 CHOVIQUE. All rights reserved.',
+  tagline: 'The Art of Fine Chocolate',
+  legal_links: [
+    { id: 'leg-1', label: 'Privacy Policy', url: '/privacy-policy' },
+    { id: 'leg-2', label: 'Terms of Service', url: '/terms-of-service' },
+    { id: 'leg-3', label: 'Refund Policy', url: '/refund-policy' },
+  ],
+  payment_badges_label: 'SECURE PAYMENTS',
+  payment_badges: [
+    { id: 'pay-1', name: 'Razorpay', image_url: '/assets/payments/razorpay.png', is_active: true },
+    { id: 'pay-2', name: 'Google Pay', image_url: '/assets/payments/googlepay.png', is_active: true },
+    { id: 'pay-3', name: 'UPI', image_url: '/assets/payments/upi.png', is_active: true },
+  ],
+};
+
+
 
 // =============================================================================
 // CATEGORY TYPES

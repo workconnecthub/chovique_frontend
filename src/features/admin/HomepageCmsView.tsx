@@ -39,6 +39,12 @@ import {
   Target,
   Leaf,
   Award,
+  Truck,
+  Clock,
+  ShieldCheck,
+  Headphones,
+  Globe,
+  Share2,
 } from 'lucide-react';
 
 const InstagramGradientIcon: React.FC<{ size?: number }> = ({ size = 16 }) => (
@@ -54,8 +60,9 @@ import { Input } from '../../components/ui/Input';
 import { getImageUrl } from '../../utils/imageUrl';
 import { adminService } from '../../services/adminService';
 import { homeService } from '../../services/homeService';
-import type { Banner, LandingSectionsConfig, InstagramReel, StoryPageConfig, ContactPageConfig, Testimonial } from '../../types';
-import { DEFAULT_LANDING_SECTIONS, DEFAULT_STORY_PAGE_CONFIG, DEFAULT_CONTACT_PAGE_CONFIG } from '../../types';
+import { renderSocialIcon, renderBenefitIcon } from '../../components/Footer';
+import type { Banner, LandingSectionsConfig, InstagramReel, StoryPageConfig, ContactPageConfig, Testimonial, FooterConfig } from '../../types';
+import { DEFAULT_LANDING_SECTIONS, DEFAULT_STORY_PAGE_CONFIG, DEFAULT_CONTACT_PAGE_CONFIG, DEFAULT_FOOTER_CONFIG } from '../../types';
 
 interface HomepageCmsViewProps {
   addToast?: (type: any, message: string, title?: string) => void;
@@ -88,10 +95,13 @@ export const HomepageCmsView: React.FC<HomepageCmsViewProps> = ({ addToast, addL
     landingSections,
     updateLandingSections,
     products,
+    footerConfig,
+    updateFooterConfigState,
+    refreshFooterConfig,
   } = useApp();
 
-  // Active sub-tab inside Website CMS: 'banners' | 'sections' | 'story' | 'contact' | 'stats' | 'reels'
-  const [cmsTab, setCmsTab] = useState<'banners' | 'sections' | 'story' | 'contact' | 'stats' | 'reels'>('banners');
+  // Active sub-tab inside Website CMS: 'banners' | 'sections' | 'story' | 'contact' | 'stats' | 'reels' | 'footer'
+  const [cmsTab, setCmsTab] = useState<'banners' | 'sections' | 'story' | 'contact' | 'stats' | 'reels' | 'footer'>('banners');
 
   // Mobile viewport detection for responsive tab layout
   const [isMobile, setIsMobile] = useState(false);
@@ -104,6 +114,67 @@ export const HomepageCmsView: React.FC<HomepageCmsViewProps> = ({ addToast, addL
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
+
+  // --- Footer CMS State ---
+  const [footerForm, setFooterForm] = useState<FooterConfig>(() => ({
+    ...DEFAULT_FOOTER_CONFIG,
+    ...(footerConfig || {}),
+  }));
+  const [isSavingFooter, setIsSavingFooter] = useState(false);
+  const [footerSaveSuccess, setFooterSaveSuccess] = useState(false);
+  const [activeFooterSubTab, setActiveFooterSubTab] = useState<'social' | 'brand' | 'nav' | 'benefits' | 'legal'>('social');
+
+  // New social link input state
+  const [newSocialPlatform, setNewSocialPlatform] = useState('instagram');
+  const [newSocialName, setNewSocialName] = useState('Instagram');
+  const [newSocialUrl, setNewSocialUrl] = useState('');
+
+  // Sync footer form when footerConfig changes
+  useEffect(() => {
+    if (footerConfig) {
+      setFooterForm({
+        ...DEFAULT_FOOTER_CONFIG,
+        ...footerConfig,
+        social_links: Array.isArray(footerConfig.social_links) ? footerConfig.social_links : DEFAULT_FOOTER_CONFIG.social_links,
+        nav_columns: Array.isArray(footerConfig.nav_columns) ? footerConfig.nav_columns : DEFAULT_FOOTER_CONFIG.nav_columns,
+        concierge: footerConfig.concierge ? { ...DEFAULT_FOOTER_CONFIG.concierge, ...footerConfig.concierge } : DEFAULT_FOOTER_CONFIG.concierge,
+        benefits: Array.isArray(footerConfig.benefits) ? footerConfig.benefits : DEFAULT_FOOTER_CONFIG.benefits,
+        legal_links: Array.isArray(footerConfig.legal_links) ? footerConfig.legal_links : DEFAULT_FOOTER_CONFIG.legal_links,
+        payment_badges: Array.isArray(footerConfig.payment_badges) ? footerConfig.payment_badges : DEFAULT_FOOTER_CONFIG.payment_badges,
+      });
+    }
+  }, [footerConfig]);
+
+  // Handle save footer config
+  const handleSaveFooter = async () => {
+    setIsSavingFooter(true);
+    try {
+      await adminService.updateFooterConfig(footerForm);
+      updateFooterConfigState(footerForm);
+      if (refreshFooterConfig) await refreshFooterConfig();
+      setFooterSaveSuccess(true);
+      setTimeout(() => setFooterSaveSuccess(false), 3000);
+      if (addToast) {
+        addToast('success', 'Footer content saved and updated live across the entire store!', 'Footer CMS Saved');
+      }
+      if (addLogEntry) {
+        addLogEntry('Updated Website Footer content management configuration', 'setting');
+      }
+    } catch (err: any) {
+      const msg = err?.detail || err?.message || 'Failed to save footer configuration.';
+      if (addToast) addToast('error', msg, 'Save Failed');
+    } finally {
+      setIsSavingFooter(false);
+    }
+  };
+
+  // Handle reset footer to defaults
+  const handleResetFooter = () => {
+    if (!window.confirm('Reset all footer configuration back to default values?')) return;
+    setFooterForm(JSON.parse(JSON.stringify(DEFAULT_FOOTER_CONFIG)));
+    if (addToast) addToast('info', 'Footer reset to default copy. Click "Save Changes" to publish.', 'Reset Footer');
+  };
+
 
   // --- Our Story Page State ---
   const [storyForm, setStoryForm] = useState<StoryPageConfig>(DEFAULT_STORY_PAGE_CONFIG);
@@ -899,7 +970,7 @@ export const HomepageCmsView: React.FC<HomepageCmsViewProps> = ({ addToast, addL
       <div
         style={{
           display: 'grid',
-          gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(6, minmax(0, 1fr))',
+          gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(7, minmax(0, 1fr))',
           gap: '8px',
           background: 'rgba(26, 16, 10, 0.85)',
           border: '1px solid rgba(212, 175, 55, 0.3)',
@@ -1053,6 +1124,30 @@ export const HomepageCmsView: React.FC<HomepageCmsViewProps> = ({ addToast, addL
         >
           <Video size={15} color={cmsTab === 'reels' ? 'var(--gold)' : 'var(--cream)'} />
           <span>Instagram Reels ({cmsReels?.length || 0})</span>
+        </button>
+
+        <button
+          onClick={() => setCmsTab('footer')}
+          style={{
+            background: cmsTab === 'footer' ? 'linear-gradient(135deg, rgba(212, 175, 55, 0.28) 0%, rgba(184, 134, 11, 0.18) 100%)' : 'rgba(255, 255, 255, 0.05)',
+            border: cmsTab === 'footer' ? '1px solid var(--gold)' : '1px solid rgba(255, 255, 255, 0.14)',
+            color: cmsTab === 'footer' ? 'var(--gold)' : '#ffffff',
+            boxShadow: cmsTab === 'footer' ? '0 4px 14px rgba(212, 175, 55, 0.25)' : 'none',
+            padding: '10px 8px',
+            borderRadius: '8px',
+            fontWeight: cmsTab === 'footer' ? 700 : 500,
+            fontSize: '0.84rem',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '6px',
+            transition: 'all 0.2s ease',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          <Sliders size={15} color={cmsTab === 'footer' ? 'var(--gold)' : 'var(--cream)'} />
+          <span>Footer CMS</span>
         </button>
       </div>
 
@@ -5326,6 +5421,1196 @@ export const HomepageCmsView: React.FC<HomepageCmsViewProps> = ({ addToast, addL
               </motion.div>
             )}
           </AnimatePresence>
+        </div>
+      )}
+
+      {/* =========================================================================
+          TAB 7: FOOTER CONTENT MANAGEMENT SYSTEM (CMS)
+          ========================================================================= */}
+      {cmsTab === 'footer' && (
+        <div>
+          {/* Header & Main Save Bar */}
+          <div
+            style={{
+              background: 'rgba(26, 16, 10, 0.85)',
+              border: '1px solid rgba(212, 175, 55, 0.3)',
+              borderRadius: '12px',
+              padding: '20px 24px',
+              marginBottom: '24px',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              flexWrap: 'wrap',
+              gap: '16px',
+            }}
+          >
+            <div>
+              <span className="section-label">Global Website Footer</span>
+              <h2 style={{ fontFamily: 'var(--font-display)', color: 'var(--cream)', fontSize: '1.5rem', margin: '4px 0 0 0' }}>
+                Footer Content Management System
+              </h2>
+              <p style={{ margin: '4px 0 0 0', color: 'var(--beige)', fontSize: '0.85rem' }}>
+                Manage brand presentation, social media handles, navigation link columns, concierge helpline card, handcrafted benefit badges, and legal & payment policies displayed across the entire store.
+              </p>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+              <Button
+                variant="glass"
+                size="sm"
+                onClick={handleResetFooter}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+              >
+                <RotateCcw size={14} />
+                <span>Reset to Defaults</span>
+              </Button>
+
+              <Button
+                variant="gold"
+                glow
+                size="md"
+                disabled={isSavingFooter}
+                onClick={handleSaveFooter}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}
+              >
+                {footerSaveSuccess ? <Check size={16} /> : <Save size={16} />}
+                <span>{isSavingFooter ? 'Saving Changes...' : footerSaveSuccess ? 'Saved Live!' : 'Save & Publish Footer'}</span>
+              </Button>
+            </div>
+          </div>
+
+          {/* Footer Sub-Tabs Navigation */}
+          <div
+            style={{
+              display: 'flex',
+              gap: '8px',
+              marginBottom: '24px',
+              overflowX: 'auto',
+              paddingBottom: '4px',
+            }}
+          >
+            {[
+              { id: 'social', label: '📱 Social Media Handles', icon: Share2 },
+              { id: 'brand', label: '🍫 Brand & Concierge', icon: Headphones },
+              { id: 'nav', label: '🧭 Navigation Link Columns', icon: Layers },
+              { id: 'benefits', label: '✨ Artisanal Benefits Strip', icon: Sparkles },
+              { id: 'legal', label: '⚖️ Legal & Payment Badges', icon: ShieldCheck },
+            ].map((tab) => {
+              const Icon = tab.icon;
+              const isActive = activeFooterSubTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveFooterSubTab(tab.id as any)}
+                  style={{
+                    background: isActive ? 'linear-gradient(135deg, rgba(212, 175, 55, 0.25) 0%, rgba(184, 134, 11, 0.15) 100%)' : 'rgba(255, 255, 255, 0.05)',
+                    border: isActive ? '1px solid var(--gold)' : '1px solid rgba(255, 255, 255, 0.1)',
+                    color: isActive ? 'var(--gold)' : 'var(--cream)',
+                    padding: '8px 16px',
+                    borderRadius: '8px',
+                    fontSize: '0.84rem',
+                    fontWeight: isActive ? 700 : 500,
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    whiteSpace: 'nowrap',
+                    transition: 'all 0.2s ease',
+                  }}
+                >
+                  <Icon size={14} color={isActive ? 'var(--gold)' : 'var(--beige)'} />
+                  <span>{tab.label}</span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* SUB-TAB 1: SOCIAL MEDIA LINKS */}
+          {activeFooterSubTab === 'social' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', marginBottom: '32px' }}>
+              {/* Add New Social Link Form Card */}
+              <div
+                style={{
+                  background: 'rgba(26, 16, 10, 0.75)',
+                  border: '1px solid rgba(212, 175, 55, 0.25)',
+                  borderRadius: '12px',
+                  padding: '20px',
+                }}
+              >
+                <h3 style={{ fontFamily: 'var(--font-display)', color: 'var(--gold)', margin: '0 0 12px 0', fontSize: '1.1rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <Plus size={16} /> Add New Social Media Handle
+                </h3>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '14px', alignItems: 'flex-end' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.82rem', color: 'var(--cream)', fontWeight: 600, marginBottom: '6px' }}>
+                      Platform
+                    </label>
+                    <select
+                      value={newSocialPlatform}
+                      onChange={(e) => {
+                        const plat = e.target.value;
+                        setNewSocialPlatform(plat);
+                        setNewSocialName(plat.charAt(0).toUpperCase() + plat.slice(1));
+                      }}
+                      style={{
+                        width: '100%',
+                        padding: '10px 12px',
+                        background: 'rgba(0,0,0,0.5)',
+                        border: '1px solid var(--glass-border)',
+                        borderRadius: '8px',
+                        color: 'var(--cream)',
+                        fontSize: '0.88rem',
+                        outline: 'none',
+                      }}
+                    >
+                      <option value="instagram">Instagram</option>
+                      <option value="facebook">Facebook</option>
+                      <option value="youtube">YouTube</option>
+                      <option value="pinterest">Pinterest</option>
+                      <option value="twitter">Twitter / X</option>
+                      <option value="linkedin">LinkedIn</option>
+                      <option value="whatsapp">WhatsApp</option>
+                      <option value="tiktok">TikTok</option>
+                      <option value="other">Other / Website</option>
+                    </select>
+                  </div>
+
+                  <Input
+                    label="Display Label"
+                    placeholder="e.g. Instagram"
+                    value={newSocialName}
+                    onChange={(e) => setNewSocialName(e.target.value)}
+                  />
+
+                  <Input
+                    label="Profile / Direct URL"
+                    placeholder="https://instagram.com/choviqueofficial"
+                    value={newSocialUrl}
+                    onChange={(e) => setNewSocialUrl(e.target.value)}
+                  />
+
+                  <div>
+                    <Button
+                      variant="gold"
+                      glow
+                      onClick={() => {
+                        if (!newSocialUrl.trim()) {
+                          if (addToast) addToast('warning', 'Please enter a valid social profile URL.', 'URL Required');
+                          return;
+                        }
+                        const newLink = {
+                          id: `soc-${Date.now()}`,
+                          platform: newSocialPlatform,
+                          name: newSocialName.trim() || newSocialPlatform,
+                          url: newSocialUrl.trim(),
+                          is_active: true,
+                        };
+                        setFooterForm((prev) => ({
+                          ...prev,
+                          social_links: [...(prev.social_links || []), newLink],
+                        }));
+                        setNewSocialUrl('');
+                        if (addToast) addToast('success', `Added ${newLink.name} profile! Click "Save & Publish" to update live.`, 'Social Added');
+                      }}
+                      style={{ width: '100%', height: '42px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+                    >
+                      <Plus size={16} />
+                      <span>Add Profile</span>
+                    </Button>
+                  </div>
+                </div>
+              </div>
+
+              {/* List of Configured Social Links */}
+              <div
+                style={{
+                  background: 'rgba(26, 16, 10, 0.75)',
+                  border: '1px solid rgba(212, 175, 55, 0.25)',
+                  borderRadius: '12px',
+                  padding: '20px',
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                  <h3 style={{ fontFamily: 'var(--font-display)', color: 'var(--gold)', margin: 0, fontSize: '1.1rem' }}>
+                    Configured Social Profiles ({footerForm.social_links?.length || 0})
+                  </h3>
+                  <span style={{ fontSize: '0.78rem', color: 'var(--beige)', opacity: 0.8 }}>
+                    Toggle visibility or update links below
+                  </span>
+                </div>
+
+                {(!footerForm.social_links || footerForm.social_links.length === 0) ? (
+                  <div style={{ textAlign: 'center', padding: '24px', background: 'rgba(255,255,255,0.03)', borderRadius: '8px', border: '1px dashed rgba(212,175,55,0.3)', color: 'var(--cream)' }}>
+                    <p style={{ margin: 0, fontSize: '0.85rem' }}>No social media profiles configured. Use the form above to add your official social links.</p>
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    {footerForm.social_links.map((social, index) => (
+                      <div
+                        key={social.id || index}
+                        style={{
+                          display: 'grid',
+                          gridTemplateColumns: 'auto 150px 1fr auto auto',
+                          gap: '12px',
+                          alignItems: 'center',
+                          background: 'rgba(0,0,0,0.4)',
+                          border: social.is_active ? '1px solid rgba(212,175,55,0.25)' : '1px solid rgba(255,255,255,0.08)',
+                          borderRadius: '8px',
+                          padding: '10px 14px',
+                          opacity: social.is_active ? 1 : 0.6,
+                        }}
+                      >
+                        {/* Icon Pill */}
+                        <div
+                          style={{
+                            width: '38px',
+                            height: '38px',
+                            borderRadius: '50%',
+                            background: social.is_active ? 'rgba(212,175,55,0.15)' : 'rgba(255,255,255,0.05)',
+                            border: social.is_active ? '1px solid rgba(212,175,55,0.4)' : '1px solid rgba(255,255,255,0.1)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            color: social.is_active ? 'var(--gold)' : 'var(--beige)',
+                          }}
+                        >
+                          {renderSocialIcon(social.platform, 18)}
+                        </div>
+
+                        {/* Platform Selector */}
+                        <select
+                          value={social.platform}
+                          onChange={(e) => {
+                            const newPlat = e.target.value;
+                            setFooterForm((prev) => ({
+                              ...prev,
+                              social_links: prev.social_links.map((s, i) => i === index ? { ...s, platform: newPlat } : s),
+                            }));
+                          }}
+                          style={{
+                            padding: '8px 10px',
+                            background: 'rgba(0,0,0,0.5)',
+                            border: '1px solid var(--glass-border)',
+                            borderRadius: '6px',
+                            color: 'var(--cream)',
+                            fontSize: '0.85rem',
+                          }}
+                        >
+                          <option value="instagram">Instagram</option>
+                          <option value="facebook">Facebook</option>
+                          <option value="youtube">YouTube</option>
+                          <option value="pinterest">Pinterest</option>
+                          <option value="twitter">Twitter / X</option>
+                          <option value="linkedin">LinkedIn</option>
+                          <option value="whatsapp">WhatsApp</option>
+                          <option value="tiktok">TikTok</option>
+                          <option value="other">Other</option>
+                        </select>
+
+                        {/* URL Input */}
+                        <input
+                          type="text"
+                          placeholder="https://..."
+                          value={social.url}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setFooterForm((prev) => ({
+                              ...prev,
+                              social_links: prev.social_links.map((s, i) => i === index ? { ...s, url: val } : s),
+                            }));
+                          }}
+                          style={{
+                            padding: '8px 12px',
+                            background: 'rgba(0,0,0,0.5)',
+                            border: '1px solid var(--glass-border)',
+                            borderRadius: '6px',
+                            color: 'var(--cream)',
+                            fontSize: '0.85rem',
+                            outline: 'none',
+                          }}
+                        />
+
+                        {/* Active Toggle Button */}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setFooterForm((prev) => ({
+                              ...prev,
+                              social_links: prev.social_links.map((s, i) => i === index ? { ...s, is_active: !s.is_active } : s),
+                            }));
+                          }}
+                          style={{
+                            padding: '6px 12px',
+                            borderRadius: '20px',
+                            fontSize: '0.75rem',
+                            fontWeight: 600,
+                            cursor: 'pointer',
+                            border: social.is_active ? '1px solid #10b981' : '1px solid #6b7280',
+                            background: social.is_active ? 'rgba(16, 185, 129, 0.15)' : 'rgba(107, 114, 128, 0.15)',
+                            color: social.is_active ? '#10b981' : '#9ca3af',
+                            whiteSpace: 'nowrap',
+                          }}
+                        >
+                          {social.is_active ? '✓ Active' : '✕ Hidden'}
+                        </button>
+
+                        {/* Delete Button */}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (!window.confirm(`Delete ${social.name || social.platform} link?`)) return;
+                            setFooterForm((prev) => ({
+                              ...prev,
+                              social_links: prev.social_links.filter((_, i) => i !== index),
+                            }));
+                          }}
+                          style={{
+                            background: 'none',
+                            border: 'none',
+                            color: '#ef4444',
+                            cursor: 'pointer',
+                            padding: '6px',
+                            borderRadius: '4px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                          }}
+                          title="Remove handle"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* SUB-TAB 2: BRAND & CONCIERGE */}
+          {activeFooterSubTab === 'brand' && (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: '20px', marginBottom: '32px' }}>
+              {/* Brand Description Box */}
+              <div
+                style={{
+                  background: 'rgba(26, 16, 10, 0.75)',
+                  border: '1px solid rgba(212, 175, 55, 0.25)',
+                  borderRadius: '12px',
+                  padding: '20px',
+                }}
+              >
+                <h3 style={{ fontFamily: 'var(--font-display)', color: 'var(--gold)', margin: '0 0 14px 0', fontSize: '1.1rem' }}>
+                  Brand Identity & Narrative
+                </h3>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                  <Input
+                    label="Footer Brand Logo URL"
+                    placeholder="/assets/popular-bg.jpg"
+                    value={footerForm.brand_logo_url || ''}
+                    onChange={(e) => setFooterForm({ ...footerForm, brand_logo_url: e.target.value })}
+                  />
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.82rem', color: 'var(--cream)', fontWeight: 600, marginBottom: '6px' }}>
+                      Brand Description / Summary:
+                    </label>
+                    <textarea
+                      rows={4}
+                      value={footerForm.brand_description || ''}
+                      onChange={(e) => setFooterForm({ ...footerForm, brand_description: e.target.value })}
+                      placeholder="Luxury handmade chocolates crafted with the finest cocoa and pure ingredients."
+                      style={{
+                        width: '100%',
+                        padding: '10px 12px',
+                        background: 'rgba(0,0,0,0.5)',
+                        border: '1px solid var(--glass-border)',
+                        borderRadius: '8px',
+                        color: 'var(--cream)',
+                        fontSize: '0.9rem',
+                        outline: 'none',
+                        lineHeight: 1.45,
+                      }}
+                    />
+                    <span style={{ fontSize: '0.75rem', color: 'var(--beige)', opacity: 0.7 }}>
+                      Displays directly beneath the brand logo in the footer.
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Concierge Helpline Card Settings */}
+              <div
+                style={{
+                  background: 'rgba(26, 16, 10, 0.75)',
+                  border: '1px solid rgba(212, 175, 55, 0.25)',
+                  borderRadius: '12px',
+                  padding: '20px',
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+                  <h3 style={{ fontFamily: 'var(--font-display)', color: 'var(--gold)', margin: 0, fontSize: '1.1rem' }}>
+                    Need Help? Concierge Card
+                  </h3>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '0.8rem', color: 'var(--cream)' }}>
+                    <input
+                      type="checkbox"
+                      checked={footerForm.concierge?.is_enabled !== false}
+                      onChange={(e) => setFooterForm({
+                        ...footerForm,
+                        concierge: { ...(footerForm.concierge || DEFAULT_FOOTER_CONFIG.concierge), is_enabled: e.target.checked }
+                      })}
+                    />
+                    <span>Card Enabled</span>
+                  </label>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                  <Input
+                    label="Concierge Heading"
+                    placeholder="Need Help?"
+                    value={footerForm.concierge?.title || ''}
+                    onChange={(e) => setFooterForm({
+                      ...footerForm,
+                      concierge: { ...(footerForm.concierge || DEFAULT_FOOTER_CONFIG.concierge), title: e.target.value }
+                    })}
+                  />
+
+                  <Input
+                    label="Concierge Subtitle"
+                    placeholder="Our chocolate concierge is here for you."
+                    value={footerForm.concierge?.subtitle || ''}
+                    onChange={(e) => setFooterForm({
+                      ...footerForm,
+                      concierge: { ...(footerForm.concierge || DEFAULT_FOOTER_CONFIG.concierge), subtitle: e.target.value }
+                    })}
+                  />
+
+                  <Input
+                    label="Button Call-to-Action Text"
+                    placeholder="CONTACT CONCIERGE"
+                    value={footerForm.concierge?.button_text || ''}
+                    onChange={(e) => setFooterForm({
+                      ...footerForm,
+                      concierge: { ...(footerForm.concierge || DEFAULT_FOOTER_CONFIG.concierge), button_text: e.target.value }
+                    })}
+                  />
+
+                  <Input
+                    label="Button Redirect Target"
+                    placeholder="/contact#send-us-a-message"
+                    value={footerForm.concierge?.button_link || ''}
+                    onChange={(e) => setFooterForm({
+                      ...footerForm,
+                      concierge: { ...(footerForm.concierge || DEFAULT_FOOTER_CONFIG.concierge), button_link: e.target.value }
+                    })}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* SUB-TAB 3: NAVIGATION LINK COLUMNS */}
+          {activeFooterSubTab === 'nav' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', marginBottom: '32px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <p style={{ margin: 0, color: 'var(--beige)', fontSize: '0.85rem' }}>
+                  Manage the columns and direct links displayed across the footer navigation grid.
+                </p>
+                <Button
+                  variant="gold"
+                  size="sm"
+                  onClick={() => {
+                    const newColId = `col-${Date.now()}`;
+                    setFooterForm((prev) => ({
+                      ...prev,
+                      nav_columns: [
+                        ...(prev.nav_columns || []),
+                        { id: newColId, title: 'NEW SECTION', links: [{ id: `link-${Date.now()}`, label: 'New Link', url: '/shop' }] }
+                      ]
+                    }));
+                  }}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                >
+                  <Plus size={14} />
+                  <span>Add Navigation Column</span>
+                </Button>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '20px' }}>
+                {(footerForm.nav_columns || []).map((col, colIdx) => (
+                  <div
+                    key={col.id || colIdx}
+                    style={{
+                      background: 'rgba(26, 16, 10, 0.75)',
+                      border: '1px solid rgba(212, 175, 55, 0.25)',
+                      borderRadius: '12px',
+                      padding: '18px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      justifyContent: 'space-between',
+                    }}
+                  >
+                    <div>
+                      {/* Column Header */}
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', gap: '8px' }}>
+                        <div style={{ flex: 1 }}>
+                          <label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--gold)', fontWeight: 700, textTransform: 'uppercase', marginBottom: '4px' }}>
+                            Column {colIdx + 1} Title
+                          </label>
+                          <input
+                            type="text"
+                            value={col.title}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              setFooterForm((prev) => ({
+                                ...prev,
+                                nav_columns: prev.nav_columns.map((c, i) => i === colIdx ? { ...c, title: val } : c),
+                              }));
+                            }}
+                            style={{
+                              width: '100%',
+                              padding: '8px 10px',
+                              background: 'rgba(0,0,0,0.5)',
+                              border: '1px solid var(--glass-border)',
+                              borderRadius: '6px',
+                              color: 'var(--cream)',
+                              fontWeight: 700,
+                              fontSize: '0.9rem',
+                            }}
+                          />
+                        </div>
+
+                        {footerForm.nav_columns.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (!window.confirm(`Delete entire column "${col.title}"?`)) return;
+                              setFooterForm((prev) => ({
+                                ...prev,
+                                nav_columns: prev.nav_columns.filter((_, i) => i !== colIdx),
+                              }));
+                            }}
+                            style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '6px', marginTop: '16px' }}
+                            title="Delete Column"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        )}
+                      </div>
+
+                      {/* Links in this column */}
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '14px' }}>
+                        {(col.links || []).map((link, linkIdx) => (
+                          <div
+                            key={link.id || linkIdx}
+                            style={{
+                              display: 'grid',
+                              gridTemplateColumns: '1fr 1fr auto auto',
+                              gap: '6px',
+                              alignItems: 'center',
+                              background: 'rgba(0,0,0,0.4)',
+                              padding: '8px',
+                              borderRadius: '6px',
+                              border: '1px solid rgba(255,255,255,0.06)',
+                            }}
+                          >
+                            <input
+                              type="text"
+                              placeholder="Label (e.g. Shop All)"
+                              value={link.label}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                setFooterForm((prev) => ({
+                                  ...prev,
+                                  nav_columns: prev.nav_columns.map((c, cI) => cI === colIdx ? {
+                                    ...c,
+                                    links: c.links.map((l, lI) => lI === linkIdx ? { ...l, label: val } : l)
+                                  } : c)
+                                }));
+                              }}
+                              style={{
+                                padding: '6px 8px',
+                                background: 'rgba(0,0,0,0.6)',
+                                border: '1px solid var(--glass-border)',
+                                borderRadius: '4px',
+                                color: 'var(--cream)',
+                                fontSize: '0.8rem',
+                              }}
+                            />
+
+                            <input
+                              type="text"
+                              placeholder="Route / Anchor (e.g. /shop)"
+                              value={link.url}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                setFooterForm((prev) => ({
+                                  ...prev,
+                                  nav_columns: prev.nav_columns.map((c, cI) => cI === colIdx ? {
+                                    ...c,
+                                    links: c.links.map((l, lI) => lI === linkIdx ? { ...l, url: val } : l)
+                                  } : c)
+                                }));
+                              }}
+                              style={{
+                                padding: '6px 8px',
+                                background: 'rgba(0,0,0,0.6)',
+                                border: '1px solid var(--glass-border)',
+                                borderRadius: '4px',
+                                color: 'var(--cream)',
+                                fontSize: '0.8rem',
+                              }}
+                            />
+
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setFooterForm((prev) => ({
+                                  ...prev,
+                                  nav_columns: prev.nav_columns.map((c, cI) => cI === colIdx ? {
+                                    ...c,
+                                    links: c.links.filter((_, lI) => lI !== linkIdx)
+                                  } : c)
+                                }));
+                              }}
+                              style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '4px' }}
+                              title="Delete link"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const newLink = {
+                          id: `link-${Date.now()}`,
+                          label: 'New Link',
+                          url: '/shop',
+                        };
+                        setFooterForm((prev) => ({
+                          ...prev,
+                          nav_columns: prev.nav_columns.map((c, i) => i === colIdx ? { ...c, links: [...(c.links || []), newLink] } : c)
+                        }));
+                      }}
+                      style={{
+                        padding: '6px 12px',
+                        background: 'rgba(212,175,55,0.1)',
+                        border: '1px dashed rgba(212,175,55,0.4)',
+                        borderRadius: '6px',
+                        color: 'var(--gold)',
+                        fontSize: '0.78rem',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '4px',
+                      }}
+                    >
+                      <Plus size={13} /> Add Link to {col.title}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* SUB-TAB 4: ARTISANAL BENEFITS STRIP */}
+          {activeFooterSubTab === 'benefits' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', marginBottom: '32px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <p style={{ margin: 0, color: 'var(--beige)', fontSize: '0.85rem' }}>
+                  Manage the 4 trust and quality guarantee boxes featured across the middle of the footer.
+                </p>
+                <Button
+                  variant="gold"
+                  size="sm"
+                  onClick={() => {
+                    const newBox = {
+                      id: `ben-${Date.now()}`,
+                      title: 'NEW BENEFIT',
+                      desc: 'Quality assurance statement',
+                      icon: 'sparkles',
+                    };
+                    setFooterForm((prev) => ({
+                      ...prev,
+                      benefits: [...(prev.benefits || []), newBox]
+                    }));
+                  }}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                >
+                  <Plus size={14} />
+                  <span>Add Benefit Box</span>
+                </Button>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px' }}>
+                {(footerForm.benefits || []).map((box, bIdx) => (
+                  <div
+                    key={box.id || bIdx}
+                    style={{
+                      background: 'rgba(26, 16, 10, 0.75)',
+                      border: '1px solid rgba(212, 175, 55, 0.25)',
+                      borderRadius: '12px',
+                      padding: '16px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '10px',
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <div
+                          style={{
+                            width: '34px',
+                            height: '34px',
+                            borderRadius: '50%',
+                            background: 'rgba(212,175,55,0.15)',
+                            border: '1px solid rgba(212,175,55,0.4)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            color: 'var(--gold)',
+                          }}
+                        >
+                          {renderBenefitIcon(box.icon)}
+                        </div>
+                        <span style={{ fontSize: '0.8rem', color: 'var(--gold)', fontWeight: 700 }}>
+                          Box {bIdx + 1}
+                        </span>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (!window.confirm(`Delete benefit box "${box.title}"?`)) return;
+                          setFooterForm((prev) => ({
+                            ...prev,
+                            benefits: prev.benefits.filter((_, i) => i !== bIdx)
+                          }));
+                        }}
+                        style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '4px' }}
+                        title="Delete box"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--cream)', fontWeight: 600, marginBottom: '4px' }}>
+                        Icon Style
+                      </label>
+                      <select
+                        value={box.icon}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setFooterForm((prev) => ({
+                            ...prev,
+                            benefits: prev.benefits.map((b, i) => i === bIdx ? { ...b, icon: val } : b)
+                          }));
+                        }}
+                        style={{
+                          width: '100%',
+                          padding: '6px 8px',
+                          background: 'rgba(0,0,0,0.5)',
+                          border: '1px solid var(--glass-border)',
+                          borderRadius: '6px',
+                          color: 'var(--cream)',
+                          fontSize: '0.8rem',
+                        }}
+                      >
+                        <option value="heart">Heart (Handcrafted)</option>
+                        <option value="sparkles">Sparkles (Premium Ingredients)</option>
+                        <option value="gift">Gift (Beautifully Packed)</option>
+                        <option value="shield">Shield (Secure Payments)</option>
+                        <option value="truck">Truck (Express Delivery)</option>
+                        <option value="award">Award (Certified Quality)</option>
+                        <option value="leaf">Leaf (Organic & Eco)</option>
+                        <option value="clock">Clock (Fresh Micro-Batches)</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--cream)', fontWeight: 600, marginBottom: '4px' }}>
+                        Heading
+                      </label>
+                      <input
+                        type="text"
+                        value={box.title}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setFooterForm((prev) => ({
+                            ...prev,
+                            benefits: prev.benefits.map((b, i) => i === bIdx ? { ...b, title: val } : b)
+                          }));
+                        }}
+                        style={{
+                          width: '100%',
+                          padding: '6px 8px',
+                          background: 'rgba(0,0,0,0.5)',
+                          border: '1px solid var(--glass-border)',
+                          borderRadius: '6px',
+                          color: 'var(--cream)',
+                          fontSize: '0.82rem',
+                          fontWeight: 700,
+                        }}
+                      />
+                    </div>
+
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--cream)', fontWeight: 600, marginBottom: '4px' }}>
+                        Description
+                      </label>
+                      <input
+                        type="text"
+                        value={box.desc}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setFooterForm((prev) => ({
+                            ...prev,
+                            benefits: prev.benefits.map((b, i) => i === bIdx ? { ...b, desc: val } : b)
+                          }));
+                        }}
+                        style={{
+                          width: '100%',
+                          padding: '6px 8px',
+                          background: 'rgba(0,0,0,0.5)',
+                          border: '1px solid var(--glass-border)',
+                          borderRadius: '6px',
+                          color: 'var(--cream)',
+                          fontSize: '0.8rem',
+                        }}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* SUB-TAB 5: LEGAL & PAYMENT BADGES */}
+          {activeFooterSubTab === 'legal' && (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: '20px', marginBottom: '32px' }}>
+              {/* Bottom Copyright & Tagline */}
+              <div
+                style={{
+                  background: 'rgba(26, 16, 10, 0.75)',
+                  border: '1px solid rgba(212, 175, 55, 0.25)',
+                  borderRadius: '12px',
+                  padding: '20px',
+                }}
+              >
+                <h3 style={{ fontFamily: 'var(--font-display)', color: 'var(--gold)', margin: '0 0 14px 0', fontSize: '1.1rem' }}>
+                  Copyright Notice & Tagline
+                </h3>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                  <Input
+                    label="Copyright Line"
+                    placeholder="© 2026 CHOVIQUE. All rights reserved."
+                    value={footerForm.copyright_text || ''}
+                    onChange={(e) => setFooterForm({ ...footerForm, copyright_text: e.target.value })}
+                  />
+
+                  <Input
+                    label="Italic Brand Tagline"
+                    placeholder="The Art of Fine Chocolate"
+                    value={footerForm.tagline || ''}
+                    onChange={(e) => setFooterForm({ ...footerForm, tagline: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              {/* Legal Links List */}
+              <div
+                style={{
+                  background: 'rgba(26, 16, 10, 0.75)',
+                  border: '1px solid rgba(212, 175, 55, 0.25)',
+                  borderRadius: '12px',
+                  padding: '20px',
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+                  <h3 style={{ fontFamily: 'var(--font-display)', color: 'var(--gold)', margin: 0, fontSize: '1.1rem' }}>
+                    Legal & Policy Links
+                  </h3>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const newLeg = {
+                        id: `leg-${Date.now()}`,
+                        label: 'New Policy',
+                        url: '/privacy-policy',
+                      };
+                      setFooterForm((prev) => ({
+                        ...prev,
+                        legal_links: [...(prev.legal_links || []), newLeg]
+                      }));
+                    }}
+                    style={{
+                      background: 'rgba(212,175,55,0.15)',
+                      border: '1px solid rgba(212,175,55,0.3)',
+                      borderRadius: '6px',
+                      color: 'var(--gold)',
+                      fontSize: '0.75rem',
+                      fontWeight: 600,
+                      padding: '4px 10px',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                    }}
+                  >
+                    <Plus size={12} /> Add Link
+                  </button>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {(footerForm.legal_links || []).map((leg, lIdx) => (
+                    <div
+                      key={leg.id || lIdx}
+                      style={{
+                        display: 'grid',
+                        gridTemplateColumns: '1fr 1fr auto',
+                        gap: '8px',
+                        alignItems: 'center',
+                        background: 'rgba(0,0,0,0.4)',
+                        padding: '8px',
+                        borderRadius: '6px',
+                        border: '1px solid rgba(255,255,255,0.06)',
+                      }}
+                    >
+                      <input
+                        type="text"
+                        placeholder="Label"
+                        value={leg.label}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setFooterForm((prev) => ({
+                            ...prev,
+                            legal_links: prev.legal_links.map((l, i) => i === lIdx ? { ...l, label: val } : l)
+                          }));
+                        }}
+                        style={{
+                          padding: '6px 8px',
+                          background: 'rgba(0,0,0,0.6)',
+                          border: '1px solid var(--glass-border)',
+                          borderRadius: '4px',
+                          color: 'var(--cream)',
+                          fontSize: '0.8rem',
+                        }}
+                      />
+
+                      <input
+                        type="text"
+                        placeholder="URL path"
+                        value={leg.url}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setFooterForm((prev) => ({
+                            ...prev,
+                            legal_links: prev.legal_links.map((l, i) => i === lIdx ? { ...l, url: val } : l)
+                          }));
+                        }}
+                        style={{
+                          padding: '6px 8px',
+                          background: 'rgba(0,0,0,0.6)',
+                          border: '1px solid var(--glass-border)',
+                          borderRadius: '4px',
+                          color: 'var(--cream)',
+                          fontSize: '0.8rem',
+                        }}
+                      />
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setFooterForm((prev) => ({
+                            ...prev,
+                            legal_links: prev.legal_links.filter((_, i) => i !== lIdx)
+                          }));
+                        }}
+                        style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '4px' }}
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* =========================================================================
+              LIVE FOOTER PREVIEW (CUSTOMER VIEW)
+              ========================================================================= */}
+          <div
+            style={{
+              background: '#0a0a0a',
+              border: '2px solid var(--gold)',
+              borderRadius: '16px',
+              padding: '24px 20px',
+              boxShadow: '0 12px 40px rgba(0,0,0,0.8), 0 0 30px rgba(212,175,55,0.15)',
+              marginTop: '16px',
+              marginBottom: '32px',
+              position: 'relative',
+              overflow: 'hidden',
+            }}
+          >
+            {/* Top Preview Banner */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '8px', borderBottom: '1px solid rgba(212,175,55,0.2)', paddingBottom: '12px' }}>
+              <span style={{ fontSize: '0.75rem', color: 'var(--gold)', background: 'rgba(212, 175, 55, 0.15)', padding: '4px 12px', borderRadius: '4px', border: '1px solid rgba(var(--gold-rgb), 0.4)', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                <Sparkles size={13} /> LIVE FOOTER PREVIEW (CUSTOMER VIEW)
+              </span>
+              <span style={{ fontSize: '0.75rem', color: 'var(--beige)', opacity: 0.8 }}>
+                Updates instantly as you modify configurations above
+              </span>
+            </div>
+
+            {/* Rendered Live Customer Footer Container */}
+            <div className="chovique-footer" style={{ background: 'transparent', padding: '10px 0' }}>
+              <div className="chovique-footer-container">
+                {/* 1. Main Grid */}
+                <div className="footer-main-grid">
+                  {/* Brand Column */}
+                  <div className="footer-brand-col">
+                    <div className="footer-brand-header" style={{ cursor: 'pointer' }}>
+                      <img 
+                        src={getImageUrl(footerForm.brand_logo_url || '/assets/popular-bg.jpg')} 
+                        alt="Chovique Logo" 
+                        className="footer-main-logo" 
+                      />
+                    </div>
+                    <p className="footer-brand-description">
+                      {footerForm.brand_description || 'Luxury handmade chocolates crafted with the finest cocoa and pure ingredients.'}
+                    </p>
+                    <div className="footer-social-row">
+                      {(footerForm.social_links || []).filter(s => s.is_active !== false).map((social) => (
+                        <div key={social.id} className="footer-social-btn" title={social.name || social.platform}>
+                          {renderSocialIcon(social.platform, 16)}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="footer-col-divider" />
+
+                  {/* Navigation Columns */}
+                  {(footerForm.nav_columns || []).map((col) => (
+                    <div key={col.id} className="footer-nav-col">
+                      <h3 className="footer-col-title">{col.title}</h3>
+                      <ul className="footer-nav-links">
+                        {(col.links || []).map((link) => (
+                          <li key={link.id}>
+                            <span style={{ display: 'inline-flex', alignItems: 'center', color: 'var(--beige)', fontSize: '0.85rem' }}>
+                              {link.label} <ChevronRight size={13} className="nav-chevron" style={{ marginLeft: '4px' }} />
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ))}
+
+                  {/* Concierge Card */}
+                  {footerForm.concierge?.is_enabled !== false && (
+                    <div className="footer-concierge-card">
+                      <div className="concierge-icon-circle">
+                        <Headphones size={22} className="concierge-headphone-icon" />
+                      </div>
+                      <h4 className="concierge-title">{footerForm.concierge?.title || 'Need Help?'}</h4>
+                      <p className="concierge-subtitle">{footerForm.concierge?.subtitle || 'Our chocolate concierge is here for you.'}</p>
+                      <div className="concierge-contact-btn" style={{ cursor: 'pointer' }}>
+                        <span>{footerForm.concierge?.button_text || 'CONTACT CONCIERGE'}</span>
+                        <ArrowRight size={14} />
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* 2. Benefits Strip */}
+                {(footerForm.benefits || []).length > 0 && (
+                  <div className="footer-benefits-strip">
+                    {footerForm.benefits.map((box, idx) => (
+                      <React.Fragment key={box.id || idx}>
+                        {idx > 0 && <div className="benefit-divider" />}
+                        <div className="footer-benefit-box">
+                          <div className="benefit-icon-circle">
+                            {renderBenefitIcon(box.icon)}
+                          </div>
+                          <div className="benefit-text">
+                            <h4 className="benefit-title">{box.title}</h4>
+                            <p className="benefit-desc">{box.desc}</p>
+                          </div>
+                        </div>
+                      </React.Fragment>
+                    ))}
+                  </div>
+                )}
+
+                {/* 3. Bottom Legal & Payment Bar */}
+                <div className="footer-bottom-bar">
+                  <div className="footer-bottom-left">
+                    <p className="copyright-text">{footerForm.copyright_text || '© 2026 CHOVIQUE. All rights reserved.'}</p>
+                    {footerForm.tagline && <span className="footer-italic-tagline">{footerForm.tagline}</span>}
+                  </div>
+
+                  <div className="footer-bottom-center">
+                    {(footerForm.legal_links || []).map((item, index) => (
+                      <React.Fragment key={item.id || index}>
+                        {index > 0 && <span className="legal-pipe">|</span>}
+                        <span style={{ color: 'var(--beige)', fontSize: '0.8rem' }}>{item.label}</span>
+                      </React.Fragment>
+                    ))}
+                  </div>
+
+                  <div className="footer-bottom-right">
+                    <span className="secure-payments-label">{footerForm.payment_badges_label || 'SECURE PAYMENTS'}</span>
+                    <div className="payment-badges-row">
+                      {(footerForm.payment_badges || DEFAULT_FOOTER_CONFIG.payment_badges).filter(b => b.is_active !== false).map((b) => (
+                        <div key={b.id} className="payment-badge-pill" title={b.name}>
+                          <img
+                            src={getImageUrl(b.image_url)}
+                            alt={b.name}
+                            className="payment-badge-logo-img"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Bottom Sticky Action Bar */}
+          <div style={{ marginTop: '24px', display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
+            <Button
+              variant="glass"
+              size="lg"
+              onClick={handleResetFooter}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}
+            >
+              <RotateCcw size={16} />
+              <span>Reset to Defaults</span>
+            </Button>
+
+            <Button
+              variant="gold"
+              glow
+              size="lg"
+              disabled={isSavingFooter}
+              onClick={handleSaveFooter}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}
+            >
+              {footerSaveSuccess ? <Check size={18} /> : <Save size={18} />}
+              <span>{isSavingFooter ? 'Saving Changes...' : footerSaveSuccess ? 'Saved Live!' : 'Save All Footer Changes'}</span>
+            </Button>
+          </div>
         </div>
       )}
     </div>

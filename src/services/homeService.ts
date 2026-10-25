@@ -11,7 +11,7 @@
  */
 
 import { apiGet, apiPost } from '../lib/api';
-import type { Banner, Testimonial, HomeStats, ContactInfo, InstagramReel, HomePageData, StoreConfig } from '../types';
+import type { Banner, Testimonial, HomeStats, ContactInfo, InstagramReel, HomePageData, StoreConfig, FooterConfig } from '../types';
 
 export const homeService = {
   /** Aggregated home page data — banners + featured products + testimonials + stats + contact */
@@ -58,9 +58,14 @@ export const homeService = {
   getContactPageConfig: (): Promise<any> =>
     apiGet<any>('/home/contact-page'),
 
+  /** Customizable Footer CMS config */
+  getFooterConfig: (): Promise<FooterConfig> =>
+    apiGet<FooterConfig>('/home/footer-config'),
+
   /** Submit a customer testimonial (pending admin approval) */
   submitTestimonial: (payload: { author: string; text: string; title?: string; rating?: number }): Promise<Testimonial> =>
     apiPost<Testimonial>('/home/testimonials', payload),
 };
+
 
 

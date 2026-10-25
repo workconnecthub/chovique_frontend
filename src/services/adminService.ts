@@ -779,6 +779,10 @@ export const adminService = {
   getContactPageConfig: (): Promise<any> => apiGet<any>('/admin/config/contact-page'),
   updateContactPageConfig: (payload: any): Promise<any> => apiPatch<any>('/admin/config/contact-page', payload),
 
+  getFooterConfig: (): Promise<any> => apiGet<any>('/admin/config/footer'),
+  updateFooterConfig: (payload: any): Promise<any> => apiPatch<any>('/admin/config/footer', payload),
+
+
 
 
   // ======================================================

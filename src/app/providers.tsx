@@ -13,6 +13,8 @@ import {
   StoreConfig,
   LandingSectionsConfig,
   DEFAULT_LANDING_SECTIONS,
+  FooterConfig,
+  DEFAULT_FOOTER_CONFIG,
 } from '../types';
 import { authService } from '../services/authService';
 import { cartService, BackendCartItem } from '../services/cartService';
@@ -133,6 +135,12 @@ interface AppContextType {
   landingSections: LandingSectionsConfig;
   updateLandingSections: (newSections: Partial<LandingSectionsConfig>) => Promise<any>;
   refreshLandingSections: () => Promise<void>;
+
+  // Footer CMS
+  footerConfig: FooterConfig;
+  refreshFooterConfig: () => Promise<void>;
+  updateFooterConfigState: (newFooter: Partial<FooterConfig>) => void;
+
 
   // Theme
   theme: AppTheme;
@@ -1495,8 +1503,42 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, []);
 
   // ---------------------------------------------------------------------------
+  // Footer CMS State
+  // ---------------------------------------------------------------------------
+  const [footerConfig, setFooterConfig] = useState<FooterConfig>(DEFAULT_FOOTER_CONFIG);
+
+  const refreshFooterConfig = useCallback(async () => {
+    try {
+      const data = await homeService.getFooterConfig();
+      if (data && typeof data === 'object' && Object.keys(data).length > 0) {
+        setFooterConfig((prev) => ({
+          ...prev,
+          ...data,
+          social_links: Array.isArray(data.social_links) ? data.social_links : prev.social_links,
+          nav_columns: Array.isArray(data.nav_columns) ? data.nav_columns : prev.nav_columns,
+          concierge: data.concierge ? { ...prev.concierge, ...data.concierge } : prev.concierge,
+          benefits: Array.isArray(data.benefits) ? data.benefits : prev.benefits,
+          legal_links: Array.isArray(data.legal_links) ? data.legal_links : prev.legal_links,
+          payment_badges: Array.isArray(data.payment_badges) ? data.payment_badges : prev.payment_badges,
+        }));
+      }
+    } catch (err) {
+      console.warn('Could not fetch footer config, using defaults:', err);
+    }
+  }, []);
+
+  useEffect(() => {
+    refreshFooterConfig();
+  }, [refreshFooterConfig]);
+
+  const updateFooterConfigState = useCallback((newFooter: Partial<FooterConfig>) => {
+    setFooterConfig((prev) => ({ ...prev, ...newFooter }));
+  }, []);
+
+  // ---------------------------------------------------------------------------
   // Theme Operations
   // ---------------------------------------------------------------------------
+
 
   const updateThemeColors = useCallback(async (colors: Partial<AppTheme>) => {
     let updatedTheme = defaultTheme;
@@ -1789,6 +1831,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         landingSections,
         updateLandingSections,
         refreshLandingSections,
+        footerConfig,
+        refreshFooterConfig,
+        updateFooterConfigState,
         updateThemeColors,
         tickets,
         addSupportTicket,
