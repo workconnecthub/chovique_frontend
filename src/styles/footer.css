@@ -681,7 +681,7 @@
   justify-content: space-between;
   align-items: center;
   gap: 16px;
-  margin-bottom: 20px;
+  margin-bottom: 0;
 }
 
 .cms-section-desc {
@@ -705,7 +705,7 @@
     flex-direction: column;
     align-items: stretch;
     gap: 12px;
-    margin-bottom: 16px;
+    margin-bottom: 0;
   }
 
   .cms-section-add-btn {
@@ -833,16 +833,25 @@
    ──────────────────────────────────────────────────────────── */
 .nav-link-cms-card {
   display: grid;
-  grid-template-columns: minmax(110px, 1fr) minmax(160px, 1.4fr) 38px;
-  grid-template-areas: "label url delete";
+  grid-template-columns: 1fr 38px;
+  grid-template-areas:
+    "label  delete"
+    "url    url";
   gap: 8px;
-  align-items: start;
-  background: rgba(0, 0, 0, 0.4);
-  padding: 8px 10px;
-  border-radius: 6px;
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  align-items: center;
+  background: rgba(0, 0, 0, 0.45);
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
   box-sizing: border-box;
   width: 100%;
+  max-width: 100%;
+  transition: all 0.2s ease;
+}
+
+.nav-link-cms-card:hover {
+  border-color: rgba(212, 175, 55, 0.25);
+  background: rgba(0, 0, 0, 0.6);
 }
 
 .nav-link-area-label {
@@ -853,16 +862,24 @@
   border: 1px solid var(--glass-border);
   border-radius: 6px;
   color: var(--cream);
-  font-size: 0.82rem;
+  font-size: 0.85rem;
+  font-weight: 500;
   box-sizing: border-box;
   width: 100%;
   min-width: 0;
+  transition: border-color 0.2s ease;
+}
+
+.nav-link-area-label:focus {
+  border-color: var(--gold);
+  outline: none;
 }
 
 .nav-link-area-url {
   grid-area: url;
   width: 100%;
   min-width: 0;
+  max-width: 100%;
 }
 
 .nav-link-area-delete {
@@ -882,15 +899,11 @@
   box-sizing: border-box;
 }
 
-@media (max-width: 768px) {
-  .nav-link-cms-card {
-    grid-template-columns: 1fr 38px;
-    grid-template-areas:
-      "label  delete"
-      "url    url";
-    gap: 8px;
-    padding: 10px;
-  }
+.nav-link-area-delete:hover {
+  background: rgba(239, 68, 68, 0.25);
+  border-color: rgba(239, 68, 68, 0.5);
+  color: #ff6b6b;
+  transform: scale(1.04);
 }
 
 /* ────────────────────────────────────────────────────────────
@@ -898,16 +911,25 @@
    ──────────────────────────────────────────────────────────── */
 .legal-link-cms-card {
   display: grid;
-  grid-template-columns: minmax(130px, 1fr) minmax(180px, 1.8fr) 38px;
-  grid-template-areas: "label url delete";
-  gap: 10px;
-  align-items: start;
-  background: rgba(0, 0, 0, 0.4);
-  padding: 10px 12px;
-  border-radius: 6px;
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  grid-template-columns: 1fr 38px;
+  grid-template-areas:
+    "label  delete"
+    "url    url";
+  gap: 8px;
+  align-items: center;
+  background: rgba(0, 0, 0, 0.45);
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
   box-sizing: border-box;
   width: 100%;
+  max-width: 100%;
+  transition: all 0.2s ease;
+}
+
+.legal-link-cms-card:hover {
+  border-color: rgba(212, 175, 55, 0.25);
+  background: rgba(0, 0, 0, 0.6);
 }
 
 .legal-link-area-label {
@@ -918,16 +940,24 @@
   border: 1px solid var(--glass-border);
   border-radius: 6px;
   color: var(--cream);
-  font-size: 0.82rem;
+  font-size: 0.85rem;
+  font-weight: 500;
   box-sizing: border-box;
   width: 100%;
   min-width: 0;
+  transition: border-color 0.2s ease;
+}
+
+.legal-link-area-label:focus {
+  border-color: var(--gold);
+  outline: none;
 }
 
 .legal-link-area-url {
   grid-area: url;
   width: 100%;
   min-width: 0;
+  max-width: 100%;
 }
 
 .legal-link-area-delete {
@@ -947,13 +977,9 @@
   box-sizing: border-box;
 }
 
-@media (max-width: 768px) {
-  .legal-link-cms-card {
-    grid-template-columns: 1fr 38px;
-    grid-template-areas:
-      "label  delete"
-      "url    url";
-    gap: 10px 8px;
-    padding: 10px;
-  }
+.legal-link-area-delete:hover {
+  background: rgba(239, 68, 68, 0.25);
+  border-color: rgba(239, 68, 68, 0.5);
+  color: #ff6b6b;
+  transform: scale(1.04);
 }

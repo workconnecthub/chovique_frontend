@@ -142,7 +142,7 @@ export const FooterUrlPicker: React.FC<{
   const selectedDropdownValue = showCustomInput ? 'custom' : (isPreset ? value : 'custom');
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', width: '100%', ...style }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', width: '100%', minWidth: 0, ...style }}>
       <select
         value={selectedDropdownValue}
         onChange={(e) => {
@@ -159,6 +159,8 @@ export const FooterUrlPicker: React.FC<{
         }}
         style={{
           width: '100%',
+          minWidth: 0,
+          maxWidth: '100%',
           height: '38px',
           padding: '0 10px',
           background: 'rgba(0,0,0,0.6)',
@@ -169,6 +171,9 @@ export const FooterUrlPicker: React.FC<{
           outline: 'none',
           boxSizing: 'border-box',
           cursor: 'pointer',
+          textOverflow: 'ellipsis',
+          whiteSpace: 'nowrap',
+          overflow: 'hidden',
         }}
       >
         <optgroup label="Popular Site Routes">
@@ -191,6 +196,8 @@ export const FooterUrlPicker: React.FC<{
           onChange={(e) => onChange(e.target.value)}
           style={{
             width: '100%',
+            minWidth: 0,
+            maxWidth: '100%',
             height: '36px',
             padding: '0 10px',
             background: 'rgba(0,0,0,0.7)',
@@ -5612,10 +5619,10 @@ export const HomepageCmsView: React.FC<HomepageCmsViewProps> = ({ addToast, addL
           <div
             style={{
               display: 'flex',
+              flexWrap: 'wrap',
               gap: '8px',
               marginBottom: '24px',
-              overflowX: 'auto',
-              paddingBottom: '4px',
+              alignItems: 'center',
             }}
           >
             {[
@@ -6005,7 +6012,7 @@ export const HomepageCmsView: React.FC<HomepageCmsViewProps> = ({ addToast, addL
           {/* SUB-TAB 3: NAVIGATION LINK COLUMNS */}
           {activeFooterSubTab === 'nav' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', marginBottom: '32px' }}>
-              <div className="cms-section-header-bar">
+              <div className="cms-section-header-bar" style={{ marginBottom: 0 }}>
                 <p className="cms-section-desc">
                   Manage the columns and direct links displayed across the footer navigation grid.
                 </p>
@@ -6029,7 +6036,7 @@ export const HomepageCmsView: React.FC<HomepageCmsViewProps> = ({ addToast, addL
                 </Button>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px', alignItems: 'start' }}>
                 {(footerForm.nav_columns || []).map((col, colIdx) => (
                   <div
                     key={col.id || colIdx}
@@ -6041,12 +6048,14 @@ export const HomepageCmsView: React.FC<HomepageCmsViewProps> = ({ addToast, addL
                       display: 'flex',
                       flexDirection: 'column',
                       justifyContent: 'space-between',
+                      minWidth: 0,
+                      boxSizing: 'border-box',
                     }}
                   >
                     <div>
                       {/* Column Header */}
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '14px', gap: '8px' }}>
-                        <div style={{ flex: 1 }}>
+                        <div style={{ flex: 1, minWidth: 0 }}>
                           <label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--gold)', fontWeight: 700, textTransform: 'uppercase', marginBottom: '4px' }}>
                             Column {colIdx + 1} Title
                           </label>
@@ -6107,7 +6116,7 @@ export const HomepageCmsView: React.FC<HomepageCmsViewProps> = ({ addToast, addL
                       </div>
 
                       {/* Links in this column */}
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '14px' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '14px' }}>
                         {(col.links || []).map((link, linkIdx) => (
                           <div
                             key={link.id || linkIdx}
@@ -6130,22 +6139,6 @@ export const HomepageCmsView: React.FC<HomepageCmsViewProps> = ({ addToast, addL
                               }}
                             />
 
-                            <div className="nav-link-area-url">
-                              <FooterUrlPicker
-                                value={link.url}
-                                onChange={(newUrl) => {
-                                  setFooterForm((prev) => ({
-                                    ...prev,
-                                    nav_columns: prev.nav_columns.map((c, cI) => cI === colIdx ? {
-                                      ...c,
-                                      links: c.links.map((l, lI) => lI === linkIdx ? { ...l, url: newUrl } : l)
-                                    } : c)
-                                  }));
-                                }}
-                                placeholder="Destination route or link"
-                              />
-                            </div>
-
                             <button
                               type="button"
                               className="nav-link-area-delete"
@@ -6162,6 +6155,22 @@ export const HomepageCmsView: React.FC<HomepageCmsViewProps> = ({ addToast, addL
                             >
                               <Trash2 size={15} />
                             </button>
+
+                            <div className="nav-link-area-url">
+                              <FooterUrlPicker
+                                value={link.url}
+                                onChange={(newUrl) => {
+                                  setFooterForm((prev) => ({
+                                    ...prev,
+                                    nav_columns: prev.nav_columns.map((c, cI) => cI === colIdx ? {
+                                      ...c,
+                                      links: c.links.map((l, lI) => lI === linkIdx ? { ...l, url: newUrl } : l)
+                                    } : c)
+                                  }));
+                                }}
+                                placeholder="Destination route or link"
+                              />
+                            </div>
                           </div>
                         ))}
                       </div>
@@ -6197,6 +6206,9 @@ export const HomepageCmsView: React.FC<HomepageCmsViewProps> = ({ addToast, addL
                         gap: '6px',
                         boxSizing: 'border-box',
                         transition: 'all 0.2s ease',
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
                       }}
                     >
                       <Plus size={14} /> Add Link to {col.title}
@@ -6503,19 +6515,6 @@ export const HomepageCmsView: React.FC<HomepageCmsViewProps> = ({ addToast, addL
                           }}
                         />
 
-                        <div className="legal-link-area-url">
-                          <FooterUrlPicker
-                            value={leg.url}
-                            onChange={(newUrl) => {
-                              setFooterForm((prev) => ({
-                                ...prev,
-                                legal_links: prev.legal_links.map((l, i) => i === lIdx ? { ...l, url: newUrl } : l)
-                              }));
-                            }}
-                            placeholder="/privacy-policy or custom path"
-                          />
-                        </div>
-
                         <button
                           type="button"
                           className="legal-link-area-delete"
@@ -6529,6 +6528,19 @@ export const HomepageCmsView: React.FC<HomepageCmsViewProps> = ({ addToast, addL
                         >
                           <Trash2 size={15} />
                         </button>
+
+                        <div className="legal-link-area-url">
+                          <FooterUrlPicker
+                            value={leg.url}
+                            onChange={(newUrl) => {
+                              setFooterForm((prev) => ({
+                                ...prev,
+                                legal_links: prev.legal_links.map((l, i) => i === lIdx ? { ...l, url: newUrl } : l)
+                              }));
+                            }}
+                            placeholder="/privacy-policy or custom path"
+                          />
+                        </div>
                       </div>
                     ))}
                   </div>
