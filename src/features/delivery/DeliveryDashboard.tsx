@@ -45,7 +45,7 @@ import {
 } from 'lucide-react';
 import { useApp } from '../../app/providers';
 import { deliveryService, DeliveryBoyProfile } from '../../services/deliveryService';
-import type { Order } from '../../types';
+import { type Order, isSuperAdminRole } from '../../types';
 import '../../styles/delivery.css';
 import { getImageUrl } from '../../utils/imageUrl';
 
@@ -55,7 +55,8 @@ export const DeliveryDashboard: React.FC = () => {
   const { user, logout } = useApp();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const isSupervisor = user?.role === 'admin' || user?.role === 'superadmin';
+  const isSuperAdmin = isSuperAdminRole(user?.role);
+  const isSupervisor = user?.role === 'admin' || isSuperAdmin;
 
   // Responsive state
   const [isMobile, setIsMobile] = useState<boolean>(() => typeof window !== 'undefined' && window.innerWidth <= 768);
@@ -1066,7 +1067,7 @@ export const DeliveryDashboard: React.FC = () => {
                   {profile?.full_name || user?.name || 'Executive'}
                 </div>
                 <div style={{ fontSize: '0.7rem', color: 'var(--gold)', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  <span>{isSupervisor ? (user?.role === 'superadmin' ? 'Superadmin Supervisor' : 'Admin Supervisor') : 'Delivery Partner'}</span>
+                  <span>{isSupervisor ? (isSuperAdmin ? 'Superadmin Supervisor' : 'Admin Supervisor') : 'Delivery Partner'}</span>
                   <span style={{ color: 'rgba(255,255,255,0.3)' }}>•</span>
                   <span style={{ color: isOnDuty ? '#2ecc71' : '#e74c3c' }}>{isOnDuty ? 'Active' : 'Standby'}</span>
                 </div>
@@ -1166,11 +1167,11 @@ export const DeliveryDashboard: React.FC = () => {
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
 
-            {/* If Supervisor, Return to Admin */}
+            {/* If Supervisor, Return to Admin/Superadmin */}
             {isSupervisor && (
               <button
-                onClick={() => navigate(user?.role === 'superadmin' ? '/superadmin' : '/admin')}
-                title="Return to Admin Dashboard"
+                onClick={() => navigate(isSuperAdmin ? '/superadmin' : '/admin')}
+                title={`Return to ${isSuperAdmin ? 'Superadmin' : 'Admin'} Dashboard`}
                 style={{
                   background: 'rgba(46, 204, 113, 0.12)',
                   border: '1px solid rgba(46, 204, 113, 0.3)',
@@ -1383,7 +1384,7 @@ export const DeliveryDashboard: React.FC = () => {
                 {isSupervisor && (
                   <button
                     onClick={() => {
-                      navigate(user?.role === 'superadmin' ? '/superadmin' : '/admin');
+                      navigate(isSuperAdmin ? '/superadmin' : '/admin');
                       setIsMobileDrawerOpen(false);
                     }}
                     style={{
@@ -1402,7 +1403,7 @@ export const DeliveryDashboard: React.FC = () => {
                     }}
                   >
                     <ShieldCheck size={16} color="#2ecc71" />
-                    <span>Return to {user?.role === 'superadmin' ? 'Superadmin' : 'Admin'} Dashboard</span>
+                    <span>Return to {isSuperAdmin ? 'Superadmin' : 'Admin'} Dashboard</span>
                   </button>
                 )}
 
@@ -2091,7 +2092,7 @@ export const DeliveryDashboard: React.FC = () => {
               <ShieldCheck size={20} color="var(--gold)" />
               <div>
                 <div style={{ fontSize: '0.86rem', fontWeight: 700, color: 'var(--cream)' }}>
-                  Supervisor Mode Active — {user?.role === 'superadmin' ? 'Superadmin' : 'Admin'} Privilege
+                  Supervisor Mode Active — {isSuperAdmin ? 'Superadmin' : 'Admin'} Privilege
                 </div>
                 <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.65)' }}>
                   You have full supervisory access to monitor, test, and manage all delivery routes and assigned orders.
@@ -2100,7 +2101,7 @@ export const DeliveryDashboard: React.FC = () => {
             </div>
             <button
               type="button"
-              onClick={() => navigate(user?.role === 'superadmin' ? '/superadmin' : '/admin')}
+              onClick={() => navigate(isSuperAdmin ? '/superadmin' : '/admin')}
               style={{
                 padding: '6px 14px',
                 background: 'rgba(var(--gold-rgb),  0.2)',
@@ -2115,7 +2116,7 @@ export const DeliveryDashboard: React.FC = () => {
                 gap: '6px',
               }}
             >
-              <span>Return to {user?.role === 'superadmin' ? 'Superadmin' : 'Admin'} Dashboard</span>
+              <span>Return to {isSuperAdmin ? 'Superadmin' : 'Admin'} Dashboard</span>
               <ArrowRight size={13} />
             </button>
           </div>
@@ -3782,7 +3783,7 @@ export const DeliveryDashboard: React.FC = () => {
                             fontWeight: 800,
                           }}
                         >
-                          {isSupervisor ? (user?.role === 'superadmin' ? 'SUPERADMIN SUPERVISOR' : 'ADMIN SUPERVISOR') : 'DELIVERY PARTNER'}
+                          {isSupervisor ? (isSuperAdmin ? 'SUPERADMIN SUPERVISOR' : 'ADMIN SUPERVISOR') : 'DELIVERY PARTNER'}
                         </span>
                       </div>
                       <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', marginTop: '8px', color: 'rgba(255,255,255,0.7)', fontSize: '0.84rem' }}>

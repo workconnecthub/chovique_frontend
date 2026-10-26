@@ -15,6 +15,7 @@ import {
 import { useApp } from '../app/providers';
 import { adminService, AdminNotification } from '../services/adminService';
 import { notificationService } from '../services/notificationService';
+import { isSuperAdminRole } from '../types';
 
 interface NotificationHeaderDropdownProps {
   onNavigateTab: (tab: string, entityId?: string) => void;
@@ -28,7 +29,7 @@ export const NotificationHeaderDropdown: React.FC<NotificationHeaderDropdownProp
   isCustomer: isCustomerProp,
 }) => {
   const { role } = useApp();
-  const isSuperadmin = isSuperadminProp ?? (role === 'superadmin');
+  const isSuperadmin = isSuperadminProp ?? isSuperAdminRole(role);
   const isCustomer = isCustomerProp ?? (role === 'customer');
 
   const [isOpen, setIsOpen] = useState(false);

@@ -26,6 +26,7 @@ import {
   LayoutDashboard,
 } from 'lucide-react';
 import { getImageUrl } from '../utils/imageUrl';
+import { isSuperAdminRole, isAdminRole } from '../types';
 
 // Pages
 import { LandingPage, OurStoryPage, ContactPage } from '../features/landing';
@@ -35,8 +36,6 @@ import { CartPage } from '../features/cart/CartPage';
 import { CheckoutPage } from '../features/checkout/CheckoutPage';
 import { WishlistPage } from '../features/wishlist/WishlistPage';
 import { LoginPage } from '../features/auth/LoginPage';
-import { RegisterPage } from '../features/auth/RegisterPage';
-import { SetPasswordPage } from '../features/auth/SetPasswordPage';
 import { ForgotPasswordPage } from '../features/auth/ForgotPasswordPage';
 import { CustomerDashboard } from '../features/dashboard/CustomerDashboard';
 import { AdminDashboard } from '../features/admin/AdminDashboard';
@@ -71,8 +70,19 @@ const ScrollToTop: React.FC = () => {
  */
 const SuperadminRedirect: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { role } = useApp();
-  if (role === 'superadmin') {
+  if (isSuperAdminRole(role)) {
     return <Navigate to="/superadmin" replace />;
+  }
+  return <>{children}</>;
+};
+
+/**
+ * AdminRedirect - If a regular admin lands on /superadmin, redirect them to /admin.
+ */
+const AdminRedirect: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { role } = useApp();
+  if (isAdminRole(role)) {
+    return <Navigate to="/admin" replace />;
   }
   return <>{children}</>;
 };
@@ -114,7 +124,7 @@ const CustomerMobileNav: React.FC = () => {
     }
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [isMobileMenuOpen]);  // Render on mobile for all non-admin routes (customer landing page, shop, dashboard, etc.)
-  const isAuthRoute = ['/login', '/register', '/set-password', '/forgot-password'].includes(location.pathname);
+  const isAuthRoute = ['/login', '/forgot-password'].includes(location.pathname);
   const isAdminRoute = ['/admin', '/superadmin'].includes(location.pathname);
 
   if (!isMobile || isAuthRoute || isAdminRoute) {
@@ -175,16 +185,16 @@ const CustomerMobileNav: React.FC = () => {
                 overflow: 'hidden'
               }}
             >
-              {(role === 'admin' || role === 'superadmin') && (
+              {(isAdminRole(role) || isSuperAdminRole(role)) && (
                 <button
                   onClick={() => {
                     setMobileMenuOpen(false);
-                    navigate(role === 'superadmin' ? '/superadmin' : '/admin');
+                    navigate(isSuperAdminRole(role) ? '/superadmin' : '/admin');
                   }}
                   style={{ padding: '12px 16px', background: 'rgba(201, 168, 76, 0.15)', border: 'none', borderBottom: '1px solid rgba(201, 168, 76, 0.25)', color: '#e5c875', textAlign: 'left', display: 'flex', alignItems: 'center', gap: '10px', fontWeight: 700, fontSize: '0.85rem' }}
                 >
                   <ShieldCheck size={18} color="#c9a84c" />
-                  <span>Return to {role === 'superadmin' ? 'Superadmin' : 'Admin'}</span>
+                  <span>Return to {isSuperAdminRole(role) ? 'Superadmin' : 'Admin'}</span>
                 </button>
               )}
               {role === 'customer' ? (
@@ -391,20 +401,20 @@ const CustomerMobileNav: React.FC = () => {
         <button
           className={`cust-mobile-bottom-btn ${isAccount ? 'active' : ''}`}
           onClick={() => {
-            if (role === 'admin' || role === 'superadmin') {
-              navigate(role === 'superadmin' ? '/superadmin' : '/admin');
+            if (isAdminRole(role) || isSuperAdminRole(role)) {
+              navigate(isSuperAdminRole(role) ? '/superadmin' : '/admin');
             } else if (role === 'customer') {
               navigate('/dashboard?section=account');
             } else {
               navigate('/login', { state: { from: '/dashboard?section=account' } });
             }
           }}
-          aria-label={role === 'admin' || role === 'superadmin' ? 'Admin Panel' : 'My Account'}
+          aria-label={isAdminRole(role) || isSuperAdminRole(role) ? (isSuperAdminRole(role) ? 'Superadmin Panel' : 'Admin Panel') : 'My Account'}
         >
-          {role === 'admin' || role === 'superadmin' ? (
+          {isAdminRole(role) || isSuperAdminRole(role) ? (
             <>
               <ShieldCheck size={21} color="#c9a84c" />
-              <span style={{ color: '#c9a84c' }}>Admin</span>
+              <span style={{ color: '#c9a84c' }}>{isSuperAdminRole(role) ? 'Super Admin' : 'Admin'}</span>
             </>
           ) : role === 'customer' && user?.profile?.avatarUrl ? (
             <div style={{ width: 22, height: 22, borderRadius: '50%', overflow: 'hidden', border: isAccount ? '2px solid #c9a84c' : '1px solid rgba(255,255,255,0.4)', marginBottom: 2 }}>
@@ -413,7 +423,7 @@ const CustomerMobileNav: React.FC = () => {
           ) : (
             <User size={21} />
           )}
-          {!(role === 'admin' || role === 'superadmin') && <span>{role === 'customer' ? 'My Account' : 'Account'}</span>}
+          {!(isAdminRole(role) || isSuperAdminRole(role)) && <span>{role === 'customer' ? 'My Account' : 'Account'}</span>}
         </button>
       </nav>
     </>
@@ -433,7 +443,7 @@ const AppContent: React.FC = () => {
   }, []);
 
   // Route conditionals
-  const isAuthRoute = ['/login', '/register', '/set-password', '/forgot-password'].includes(location.pathname);
+  const isAuthRoute = ['/login', '/forgot-password'].includes(location.pathname);
   const isAdminDashboard = ['/admin', '/superadmin'].includes(location.pathname);
   const isDeliveryRoute = location.pathname.startsWith('/delivery');
   const isCustomerDashboard = location.pathname === '/dashboard';
@@ -475,7 +485,7 @@ const AppContent: React.FC = () => {
           <Route path="/contact" element={<ContactPage />} />
           <Route path="/product/:id" element={<ProductDetails />} />
           <Route path="/login" element={<LoginPage />} />
-          <Route path="/register" element={<RegisterPage />} />
+          <Route path="/register" element={<Navigate to="/login" replace />} />
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
 
           {/* Legal and Compliance Routes */}
@@ -507,20 +517,13 @@ const AppContent: React.FC = () => {
               </ProtectedRoute>
             }
           />
-          <Route
-            path="/set-password"
-            element={
-              <ProtectedRoute allowedRoles={['customer', 'admin', 'superadmin']}>
-                <SetPasswordPage />
-              </ProtectedRoute>
-            }
-          />
+          <Route path="/set-password" element={<Navigate to="/login" replace />} />
 
           {/* Protected: Admin only (superadmin redirected to /superadmin) */}
           <Route
             path="/admin"
             element={
-              <ProtectedRoute allowedRoles={['admin', 'superadmin']}>
+              <ProtectedRoute allowedRoles={['admin', 'superadmin', 'super_admin']}>
                 <ErrorBoundary>
                   {/* If superadmin visits /admin, redirect them to /superadmin */}
                   <SuperadminRedirect>
@@ -531,13 +534,15 @@ const AppContent: React.FC = () => {
             }
           />
 
-          {/* Protected: Superadmin only */}
+          {/* Protected: Superadmin only (admin redirected to /admin) */}
           <Route
             path="/superadmin"
             element={
-              <ProtectedRoute allowedRoles={['superadmin']}>
+              <ProtectedRoute allowedRoles={['superadmin', 'super_admin', 'admin']}>
                 <ErrorBoundary>
-                  <SuperadminDashboard />
+                  <AdminRedirect>
+                    <SuperadminDashboard />
+                  </AdminRedirect>
                 </ErrorBoundary>
               </ProtectedRoute>
             }
@@ -547,7 +552,7 @@ const AppContent: React.FC = () => {
           <Route
             path="/delivery"
             element={
-              <ProtectedRoute allowedRoles={['delivery_boy', 'admin', 'superadmin']}>
+              <ProtectedRoute allowedRoles={['delivery_boy', 'delivery_person', 'admin', 'superadmin', 'super_admin']}>
                 <ErrorBoundary>
                   <DeliveryDashboard />
                 </ErrorBoundary>

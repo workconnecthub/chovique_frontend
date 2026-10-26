@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { adminService, AdminProfile } from '../../services/adminService';
 import { useApp } from '../../app/providers';
+import { isSuperAdminRole } from '../../types';
 
 interface AdminProfileViewProps {
   initialSection?: 'profile' | 'security';
@@ -692,7 +693,7 @@ export const AdminProfileView: React.FC<AdminProfileViewProps> = ({ initialSecti
                     }}
                   >
                     <ShieldCheck size={16} />
-                    <span>{profile?.role === 'superadmin' ? 'Super Admin' : 'Administrator'}</span>
+                    <span>{isSuperAdminRole(profile?.role) ? 'Super Admin' : 'Administrator'}</span>
                     <Lock size={12} style={{ marginLeft: 'auto', opacity: 0.6 }} />
                   </div>
                   <span style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.4)', marginTop: '4px', display: 'block' }}>

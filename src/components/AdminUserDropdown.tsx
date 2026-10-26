@@ -10,6 +10,7 @@ import {
 
 import { useApp } from '../app/providers';
 import { getImageUrl } from '../utils/imageUrl';
+import { isSuperAdminRole } from '../types';
 
 interface AdminUserDropdownProps {
   onNavigateTab: (tab: string) => void;
@@ -36,10 +37,11 @@ export const AdminUserDropdown: React.FC<AdminUserDropdownProps> = ({ onNavigate
     action();
   };
 
+  const isSuperAdmin = isSuperAdminRole(role);
   const rawAvatar = user?.profile?.avatarUrl || (user?.profile as any)?.avatar_url || (user as any)?.avatar_url;
   const avatarUrl = rawAvatar ? getImageUrl(rawAvatar) : '';
-  const initial = user?.name ? user.name.charAt(0).toUpperCase() : 'A';
-  const roleLabel = role === 'superadmin' ? 'Super Admin' : 'Admin';
+  const initial = user?.name ? user.name.charAt(0).toUpperCase() : (isSuperAdmin ? 'S' : 'A');
+  const roleLabel = isSuperAdmin ? 'Super Admin' : 'Admin';
 
   return (
     <div ref={dropdownRef} style={{ position: 'relative', display: 'inline-block' }}>
@@ -138,7 +140,7 @@ export const AdminUserDropdown: React.FC<AdminUserDropdownProps> = ({ onNavigate
           </button>
 
           {/* Activity Log — Admin only (Super Admin uses dedicated Audit Logs sidebar page) */}
-          {role !== 'superadmin' && (
+          {!isSuperAdmin && (
             <button
               onClick={() => handleSelect(() => onNavigateTab('activity-logs'))}
               style={{

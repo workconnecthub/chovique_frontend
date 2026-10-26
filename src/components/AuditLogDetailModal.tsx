@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Activity, Loader2, AlertTriangle, Trash2 } from 'lucide-react';
 import { SuperadminAuditLogRecord, adminService } from '../services/adminService';
+import { isSuperAdminRole } from '../types';
 
 interface AuditLogDetailModalProps {
   logId: string | null;
@@ -324,7 +325,7 @@ export const AuditLogDetailModal: React.FC<AuditLogDetailModalProps> = ({
                       Role
                     </span>
                     <strong style={{ fontSize: '0.95rem', color: '#c9a84c' }}>
-                      {log.user_role === 'superadmin' ? 'Super Admin' : log.user_role === 'admin' ? 'Admin' : 'Super Admin'}
+                      {isSuperAdminRole(log.user_role) ? 'Super Admin' : (log.user_role === 'admin' ? 'Admin' : 'Super Admin')}
                     </strong>
                   </div>
                 </div>

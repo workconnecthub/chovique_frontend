@@ -51,6 +51,10 @@ import {
   ShieldCheck,
   Lock,
   Sparkles,
+  Filter,
+  RotateCcw,
+  Info,
+  Maximize2,
 } from 'lucide-react';
 import { exportToCSV } from '../../utils/exportCsv';
 import { useApp } from '../../app/providers';
@@ -80,7 +84,7 @@ import { OfflineSalesView } from './OfflineSalesView';
 import { DeliveryBoysView } from './DeliveryBoysView';
 import { CreateCouponView } from './CreateCouponView';
 import { HomepageCmsView } from './HomepageCmsView';
-import { Product, OfflineSale, SystemUser, Banner } from '../../types';
+import { Product, OfflineSale, SystemUser, Banner, SupportTicket } from '../../types';
 import { BASE_URL, apiGet } from '../../lib/api';
 import {
   trimValue,
@@ -110,6 +114,7 @@ export const AdminDashboard: React.FC = () => {
     tickets,
     resolveSupportTicket,
     updateSupportTicketStatus,
+    refreshTickets,
     banners,
     updateBanner,
     addBanner,
@@ -222,6 +227,43 @@ export const AdminDashboard: React.FC = () => {
   const [testimonialsPage, setTestimonialsPage] = useState<number>(1);
   const [complaintsPage, setComplaintsPage] = useState<number>(1);
   const [contactMessagesPage, setContactMessagesPage] = useState<number>(1);
+
+  // --- Support Complaints & Return Requests Filtering & Modal States ---
+  const [complaintSearch, setComplaintSearch] = useState<string>('');
+  const [complaintCategoryFilter, setComplaintCategoryFilter] = useState<string>('ALL');
+  const [complaintStatusFilter, setComplaintStatusFilter] = useState<string>('ALL');
+  const [complaintReasonFilter, setComplaintReasonFilter] = useState<string>('ALL');
+  const [selectedDetailTicket, setSelectedDetailTicket] = useState<SupportTicket | null>(null);
+  const [modalTicketStatus, setModalTicketStatus] = useState<string>('Pending');
+  const [modalTicketNotes, setModalTicketNotes] = useState<string>('');
+  const [isUpdatingModalTicket, setIsUpdatingModalTicket] = useState<boolean>(false);
+  const [isRefreshingComplaints, setIsRefreshingComplaints] = useState<boolean>(false);
+  const [previewingEvidencePhoto, setPreviewingEvidencePhoto] = useState<string | null>(null);
+
+  // Auto-refresh complaints ledger periodically when activeTab === 'complaints'
+  useEffect(() => {
+    if (activeTab !== 'complaints') return;
+    const interval = setInterval(() => {
+      refreshTickets();
+    }, 15000); // 15 seconds polling
+    return () => clearInterval(interval);
+  }, [activeTab, refreshTickets]);
+
+  useEffect(() => {
+    if (selectedDetailTicket) {
+      setModalTicketStatus(selectedDetailTicket.status || 'Pending');
+      setModalTicketNotes(selectedDetailTicket.adminNotes || '');
+    }
+  }, [selectedDetailTicket]);
+
+  useEffect(() => {
+    if (selectedDetailTicket) {
+      const fresh = tickets.find((t) => t.id === selectedDetailTicket.id);
+      if (fresh) {
+        setSelectedDetailTicket(fresh);
+      }
+    }
+  }, [tickets]);
 
   // --- Toast Notifications State ---
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
@@ -6615,306 +6657,1424 @@ export const AdminDashboard: React.FC = () => {
         )}
 
         {/* HELP & COMPLAINTS PANEL */}
-        {activeTab === 'complaints' && (
-          <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px', marginBottom: '20px' }}>
-              <div>
-                <span className="section-label">Support Helpdesk</span>
-                <h1 style={{ fontFamily: 'var(--font-display)', fontSize: isMobileGrid ? '1.6rem' : '2.2rem', color: 'var(--cream)', margin: '4px 0 0 0', lineHeight: 1.2 }}>
-                  Customer Support Ledger
-                </h1>
-              </div>
-              <Button
-                variant="glass"
-                onClick={() => exportToCSV('Customer_Complaints_Ledger', tickets)}
-                disabled={tickets.length === 0}
-                style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.82rem', padding: '8px 14px', border: '1px solid rgba(var(--gold-rgb), 0.35)', color: 'var(--gold)' }}
-              >
-                <FileSpreadsheet size={15} /> Export CSV
-              </Button>
-            </div>
+        {activeTab === 'complaints' && (() => {
+          const formatAddress = (ad: any) => {
+            if (!ad) return 'Not available';
+            if (typeof ad === 'string') return ad;
+            const parts = [
+              ad.name,
+              ad.house_number || ad.houseNumber,
+              ad.street,
+              ad.area,
+              ad.landmark ? `Near ${ad.landmark}` : null,
+              ad.city,
+              ad.district,
+              ad.state,
+              ad.zip || ad.pincode ? `PIN: ${ad.zip || ad.pincode}` : null,
+            ].filter(Boolean);
+            return parts.length > 0 ? parts.join(', ') : 'Not available';
+          };
 
-            {/* Support Ticket Summary Counters */}
-            <div style={{ display: 'grid', gridTemplateColumns: isMobileGrid ? '1fr 1fr' : 'repeat(3, 1fr)', gap: '12px', marginBottom: '18px' }}>
-              <div className="glass-panel" style={{ padding: '12px 14px' }}>
-                <span style={{ fontSize: '0.72rem', color: 'var(--gold)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Total Complaints</span>
-                <h3 style={{ fontSize: '1.4rem', fontWeight: 800, margin: '2px 0 0 0' }}>{tickets.length}</h3>
-              </div>
-              <div className="glass-panel" style={{ padding: '12px 14px' }}>
-                <span style={{ fontSize: '0.72rem', color: 'var(--gold)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Pending Resolution</span>
-                <h3 style={{ fontSize: '1.4rem', fontWeight: 800, margin: '2px 0 0 0', color: 'var(--rose-gold)' }}>
-                  {tickets.filter(t => t.status === 'Pending').length}
-                </h3>
-              </div>
-              <div className="glass-panel" style={{ padding: '12px 14px' }}>
-                <span style={{ fontSize: '0.72rem', color: 'var(--gold)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Resolved Issues</span>
-                <h3 style={{ fontSize: '1.4rem', fontWeight: 800, margin: '2px 0 0 0', color: '#2ecc71' }}>
-                  {tickets.filter(t => t.status === 'Resolved').length}
-                </h3>
-              </div>
-            </div>
+          const isReturnTicket = (t: SupportTicket) =>
+            t.category === 'Return Request' || Boolean(t.return_request_id || t.returnRequestId);
 
-            {/* Support Ticket Directory List (2 Cards per line, 6 per page) */}
-            <div className="glass-panel" style={{ padding: '14px 18px', border: '1px solid var(--glass-border)' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', flexWrap: 'wrap', gap: '10px' }}>
-                <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1.2rem', color: 'var(--cream)', margin: 0 }}>
-                  Support Complaints Log ({tickets.length})
-                </h3>
-                <span style={{ fontSize: '0.78rem', color: 'var(--beige)' }}>
-                  Displaying 2 complaints per line (6 per page)
-                </span>
-              </div>
+          const filteredComplaints = tickets.filter((t) => {
+            const isRet = isReturnTicket(t);
 
-              <div>
-                {tickets.length === 0 ? (
-                  <p style={{ color: 'var(--grey-light)', fontStyle: 'italic', padding: '16px', textAlign: 'center' }}>
-                    No customer complaints registered.
+            // Category filter
+            if (complaintCategoryFilter === 'Return Request' && !isRet) {
+              return false;
+            }
+            if (complaintCategoryFilter !== 'ALL' && complaintCategoryFilter !== 'Return Request' && t.category !== complaintCategoryFilter) {
+              return false;
+            }
+
+            // Status filter
+            if (complaintStatusFilter !== 'ALL' && t.status !== complaintStatusFilter) {
+              return false;
+            }
+
+            // Return reason filter
+            const reason = t.return_reason || t.returnReason;
+            if (complaintReasonFilter !== 'ALL') {
+              if (!reason || reason.toLowerCase().trim() !== complaintReasonFilter.toLowerCase().trim()) {
+                return false;
+              }
+            }
+
+            // Search query filter
+            if (complaintSearch.trim()) {
+              const q = complaintSearch.toLowerCase().trim();
+              const tid = (t.id || '').toLowerCase();
+              const oid = (t.orderId || t.order_id || '').toLowerCase();
+              const rid = (t.return_request_id || t.returnRequestId || '').toLowerCase();
+              const cname = (t.customerName || '').toLowerCase();
+              const cemail = (t.customerEmail || t.customer_email || '').toLowerCase();
+              const cphone = (t.customerPhone || t.customer_phone || '').toLowerCase();
+              const desc = (t.description || '').toLowerCase();
+              const rReason = (reason || '').toLowerCase();
+
+              const matches =
+                tid.includes(q) ||
+                oid.includes(q) ||
+                rid.includes(q) ||
+                cname.includes(q) ||
+                cemail.includes(q) ||
+                cphone.includes(q) ||
+                desc.includes(q) ||
+                rReason.includes(q);
+
+              if (!matches) return false;
+            }
+
+            return true;
+          });
+
+          const totalComplaintsCount = tickets.length;
+          const returnRequestsCount = tickets.filter(isReturnTicket).length;
+          const pendingReviewCount = tickets.filter(t => t.status === 'Pending' || t.status === 'Under Review').length;
+          const resolvedApprovedCount = tickets.filter(t => t.status === 'Resolved' || t.status === 'Approved').length;
+
+          const totalPages = Math.max(1, Math.ceil(filteredComplaints.length / 6));
+          const currentPageValid = Math.min(complaintsPage, totalPages);
+          const paginatedComplaints = filteredComplaints.slice((currentPageValid - 1) * 6, currentPageValid * 6);
+
+          const hasActiveFilters = Boolean(
+            complaintSearch.trim() ||
+            complaintCategoryFilter !== 'ALL' ||
+            complaintStatusFilter !== 'ALL' ||
+            complaintReasonFilter !== 'ALL'
+          );
+
+          return (
+            <div>
+              {/* Header with Title and Actions */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px', marginBottom: '20px' }}>
+                <div>
+                  <span className="section-label">Support Helpdesk &amp; Returns</span>
+                  <h1 style={{ fontFamily: 'var(--font-display)', fontSize: isMobileGrid ? '1.6rem' : '2.2rem', color: 'var(--cream)', margin: '4px 0 0 0', lineHeight: 1.2 }}>
+                    Customer Complaints &amp; Return Tickets
+                  </h1>
+                  <p style={{ color: 'var(--beige)', fontSize: '0.82rem', margin: '4px 0 0 0' }}>
+                    Unified ledger for product returns, delivery complaints, and customer resolutions.
                   </p>
-                ) : (
-                  <div
-                    style={{
-                      display: 'grid',
-                      gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))',
-                      gap: '16px',
-                      marginBottom: '20px',
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                  <Button
+                    variant="glass"
+                    onClick={async () => {
+                      setIsRefreshingComplaints(true);
+                      try {
+                        await refreshTickets();
+                        addToast('success', 'Tickets ledger refreshed with latest PostgreSQL records.', 'Refreshed');
+                      } catch {
+                        addToast('error', 'Failed to refresh tickets.', 'Refresh Error');
+                      } finally {
+                        setIsRefreshingComplaints(false);
+                      }
                     }}
+                    disabled={isRefreshingComplaints}
+                    style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.82rem', padding: '8px 14px', border: '1px solid rgba(var(--gold-rgb), 0.35)', color: 'var(--gold)' }}
                   >
-                    {tickets.slice((complaintsPage - 1) * 6, complaintsPage * 6).map((t) => {
-                      const isClosedOrResolved = t.status === 'Resolved' || t.status === 'Closed';
-                      const currentSelectedStatus = ticketStatusMap[t.id] ?? t.status;
-                      return (
-                        <div
-                          key={t.id}
+                    <RefreshCw size={14} className={isRefreshingComplaints ? 'animate-spin' : ''} />
+                    {isRefreshingComplaints ? 'Refreshing...' : 'Refresh'}
+                  </Button>
+                  <Button
+                    variant="glass"
+                    onClick={() => exportToCSV('Customer_Complaints_and_Returns_Ledger', filteredComplaints.length > 0 ? filteredComplaints : tickets)}
+                    disabled={tickets.length === 0}
+                    style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.82rem', padding: '8px 14px', border: '1px solid rgba(var(--gold-rgb), 0.35)', color: 'var(--gold)' }}
+                  >
+                    <FileSpreadsheet size={15} /> Export CSV
+                  </Button>
+                </div>
+              </div>
+
+              {/* Support Ticket Summary Counters */}
+              <div style={{ display: 'grid', gridTemplateColumns: isMobileGrid ? '1fr 1fr' : 'repeat(4, 1fr)', gap: '12px', marginBottom: '18px' }}>
+                <div className="glass-panel" style={{ padding: '12px 14px', cursor: 'pointer', border: complaintCategoryFilter === 'ALL' ? '1px solid var(--gold)' : '1px solid var(--glass-border)' }} onClick={() => { setComplaintCategoryFilter('ALL'); setComplaintsPage(1); }}>
+                  <span style={{ fontSize: '0.72rem', color: 'var(--gold)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Total Tickets</span>
+                  <h3 style={{ fontSize: '1.4rem', fontWeight: 800, margin: '2px 0 0 0' }}>{totalComplaintsCount}</h3>
+                </div>
+                <div className="glass-panel" style={{ padding: '12px 14px', cursor: 'pointer', border: complaintCategoryFilter === 'Return Request' ? '1px solid #E8D48B' : '1px solid var(--glass-border)' }} onClick={() => { setComplaintCategoryFilter('Return Request'); setComplaintsPage(1); }}>
+                  <span style={{ fontSize: '0.72rem', color: '#E8D48B', textTransform: 'uppercase', letterSpacing: '0.5px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <Sparkles size={12} /> Return Requests
+                  </span>
+                  <h3 style={{ fontSize: '1.4rem', fontWeight: 800, margin: '2px 0 0 0', color: '#E8D48B' }}>
+                    {returnRequestsCount}
+                  </h3>
+                </div>
+                <div className="glass-panel" style={{ padding: '12px 14px', cursor: 'pointer', border: complaintStatusFilter === 'Pending' ? '1px solid var(--rose-gold)' : '1px solid var(--glass-border)' }} onClick={() => { setComplaintStatusFilter('Pending'); setComplaintsPage(1); }}>
+                  <span style={{ fontSize: '0.72rem', color: 'var(--gold)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Pending / Review</span>
+                  <h3 style={{ fontSize: '1.4rem', fontWeight: 800, margin: '2px 0 0 0', color: 'var(--rose-gold)' }}>
+                    {pendingReviewCount}
+                  </h3>
+                </div>
+                <div className="glass-panel" style={{ padding: '12px 14px', cursor: 'pointer', border: complaintStatusFilter === 'Resolved' ? '1px solid #2ecc71' : '1px solid var(--glass-border)' }} onClick={() => { setComplaintStatusFilter('Resolved'); setComplaintsPage(1); }}>
+                  <span style={{ fontSize: '0.72rem', color: 'var(--gold)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Resolved / Approved</span>
+                  <h3 style={{ fontSize: '1.4rem', fontWeight: 800, margin: '2px 0 0 0', color: '#2ecc71' }}>
+                    {resolvedApprovedCount}
+                  </h3>
+                </div>
+              </div>
+
+              {/* Advanced Filter, Search, and Category Bar */}
+              <div className="glass-panel" style={{ padding: '14px 18px', border: '1px solid var(--glass-border)', marginBottom: '16px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: isMobileGrid ? '1fr' : '2fr 1fr 1fr 1fr auto', gap: '10px', alignItems: 'center' }}>
+                  {/* Search box */}
+                  <div style={{ position: 'relative' }}>
+                    <Search size={15} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--gold)' }} />
+                    <input
+                      type="text"
+                      placeholder="Search Ticket, Order, Customer, Email, Phone..."
+                      value={complaintSearch}
+                      onChange={(e) => {
+                        setComplaintSearch(e.target.value);
+                        setComplaintsPage(1);
+                      }}
+                      style={{
+                        width: '100%',
+                        padding: '8px 12px 8px 34px',
+                        background: 'rgba(0,0,0,0.35)',
+                        border: '1px solid var(--glass-border)',
+                        borderRadius: '6px',
+                        color: 'var(--cream)',
+                        fontSize: '0.82rem',
+                        outline: 'none',
+                        boxSizing: 'border-box',
+                      }}
+                    />
+                  </div>
+
+                  {/* Category Filter */}
+                  <div>
+                    <select
+                      value={complaintCategoryFilter}
+                      onChange={(e) => {
+                        setComplaintCategoryFilter(e.target.value);
+                        setComplaintsPage(1);
+                      }}
+                      style={{
+                        width: '100%',
+                        padding: '8px 10px',
+                        background: 'rgba(0,0,0,0.35)',
+                        border: '1px solid var(--glass-border)',
+                        borderRadius: '6px',
+                        color: 'var(--cream)',
+                        fontSize: '0.82rem',
+                        outline: 'none',
+                        boxSizing: 'border-box',
+                      }}
+                    >
+                      <option value="ALL">All Categories</option>
+                      <option value="Return Request">✨ Return Requests</option>
+                      <option value="Product Quality">Product Quality</option>
+                      <option value="Chocolate melted">Chocolate melted</option>
+                      <option value="Slow delivery">Slow delivery</option>
+                      <option value="Other">Other Issues</option>
+                    </select>
+                  </div>
+
+                  {/* Status Filter */}
+                  <div>
+                    <select
+                      value={complaintStatusFilter}
+                      onChange={(e) => {
+                        setComplaintStatusFilter(e.target.value);
+                        setComplaintsPage(1);
+                      }}
+                      style={{
+                        width: '100%',
+                        padding: '8px 10px',
+                        background: 'rgba(0,0,0,0.35)',
+                        border: '1px solid var(--glass-border)',
+                        borderRadius: '6px',
+                        color: 'var(--cream)',
+                        fontSize: '0.82rem',
+                        outline: 'none',
+                        boxSizing: 'border-box',
+                      }}
+                    >
+                      <option value="ALL">All Statuses</option>
+                      <option value="Pending">Pending</option>
+                      <option value="Under Review">Under Review</option>
+                      <option value="Approved">Approved</option>
+                      <option value="Rejected">Rejected</option>
+                      <option value="Resolved">Resolved</option>
+                      <option value="Closed">Closed</option>
+                    </select>
+                  </div>
+
+                  {/* Return Reason Filter (Supports all 6 standard reasons) */}
+                  <div>
+                    <select
+                      value={complaintReasonFilter}
+                      onChange={(e) => {
+                        setComplaintReasonFilter(e.target.value);
+                        setComplaintsPage(1);
+                      }}
+                      style={{
+                        width: '100%',
+                        padding: '8px 10px',
+                        background: 'rgba(0,0,0,0.35)',
+                        border: '1px solid var(--glass-border)',
+                        borderRadius: '6px',
+                        color: 'var(--cream)',
+                        fontSize: '0.82rem',
+                        outline: 'none',
+                        boxSizing: 'border-box',
+                      }}
+                    >
+                      <option value="ALL">All Return Reasons</option>
+                      <option value="Damaged product">Damaged product</option>
+                      <option value="Melted chocolate">Melted chocolate</option>
+                      <option value="Wrong product delivered">Wrong product delivered</option>
+                      <option value="Missing item">Missing item</option>
+                      <option value="Packaging issue">Packaging issue</option>
+                      <option value="Other issue">Other issue</option>
+                    </select>
+                  </div>
+
+                  {/* Reset Filters button */}
+                  {hasActiveFilters && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setComplaintSearch('');
+                        setComplaintCategoryFilter('ALL');
+                        setComplaintStatusFilter('ALL');
+                        setComplaintReasonFilter('ALL');
+                        setComplaintsPage(1);
+                      }}
+                      style={{
+                        padding: '8px 12px',
+                        background: 'rgba(231,76,60,0.15)',
+                        border: '1px solid rgba(231,76,60,0.35)',
+                        borderRadius: '6px',
+                        color: 'var(--rose-gold)',
+                        fontSize: '0.8rem',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      <RotateCcw size={13} /> Reset
+                    </button>
+                  )}
+                </div>
+
+                {/* Filter Results Summary */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '10px', fontSize: '0.76rem', color: 'var(--beige)' }}>
+                  <span>
+                    Showing <strong>{filteredComplaints.length}</strong> of <strong>{tickets.length}</strong> total tickets
+                    {hasActiveFilters && ' (filtered)'}
+                  </span>
+                  <span style={{ color: 'var(--grey-light)', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                    <Clock size={12} /> Auto-refresh active (15s)
+                  </span>
+                </div>
+              </div>
+
+              {/* Support Ticket Directory List (2 Cards per line, 6 per page) */}
+              <div className="glass-panel" style={{ padding: '14px 18px', border: '1px solid var(--glass-border)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', flexWrap: 'wrap', gap: '10px' }}>
+                  <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1.2rem', color: 'var(--cream)', margin: 0 }}>
+                    Support Complaints &amp; Return Tickets Log ({filteredComplaints.length})
+                  </h3>
+                  <span style={{ fontSize: '0.78rem', color: 'var(--beige)' }}>
+                    Displaying 2 tickets per line (6 per page)
+                  </span>
+                </div>
+
+                <div>
+                  {filteredComplaints.length === 0 ? (
+                    <div style={{ textAlign: 'center', padding: '32px 16px' }}>
+                      <AlertIcon size={32} style={{ color: 'var(--gold)', margin: '0 auto 8px auto', opacity: 0.6 }} />
+                      <p style={{ color: 'var(--grey-light)', fontStyle: 'italic', margin: 0 }}>
+                        {hasActiveFilters ? 'No customer complaints match your selected filters.' : 'No customer complaints registered.'}
+                      </p>
+                      {hasActiveFilters && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setComplaintSearch('');
+                            setComplaintCategoryFilter('ALL');
+                            setComplaintStatusFilter('ALL');
+                            setComplaintReasonFilter('ALL');
+                            setComplaintsPage(1);
+                          }}
                           style={{
-                            padding: '14px 16px',
-                            background: 'rgba(12, 10, 8, 0.75)',
-                            borderRadius: '10px',
-                            borderLeft: isClosedOrResolved ? '4px solid #2ecc71' : '4px solid var(--gold)',
-                            borderTop: '1px solid var(--glass-border)',
-                            borderRight: '1px solid var(--glass-border)',
-                            borderBottom: '1px solid var(--glass-border)',
+                            marginTop: '10px',
+                            background: 'transparent',
+                            border: '1px solid var(--gold)',
+                            borderRadius: '4px',
+                            color: 'var(--gold)',
+                            padding: '4px 12px',
+                            fontSize: '0.78rem',
+                            cursor: 'pointer',
+                          }}
+                        >
+                          Clear All Filters
+                        </button>
+                      )}
+                    </div>
+                  ) : (
+                    <div
+                      style={{
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))',
+                        gap: '16px',
+                        marginBottom: '20px',
+                      }}
+                    >
+                      {paginatedComplaints.map((t) => {
+                        const isClosedOrResolved = t.status === 'Resolved' || t.status === 'Closed';
+                        const isApproved = t.status === 'Approved';
+                        const isRejected = t.status === 'Rejected';
+                        const isUnderReview = t.status === 'Under Review';
+                        const isReturn = isReturnTicket(t);
+                        const currentSelectedStatus = ticketStatusMap[t.id] ?? t.status;
+
+                        const relatedOrderId = t.orderId || t.order_id;
+                        const photoUrl = t.photo_url || t.photoUrl;
+                        const amt = t.order_amount ?? t.orderAmount;
+                        const payMethod = t.payment_method || t.paymentMethod;
+                        const retReason = t.return_reason || t.returnReason;
+                        const delivAddr = t.delivery_address || t.deliveryAddress;
+                        const delivAt = t.delivered_at || t.deliveredAt;
+                        const customerEmail = t.customerEmail || t.customer_email;
+                        const customerPhone = t.customerPhone || t.customer_phone;
+                        const returnReqId = t.return_request_id || t.returnRequestId;
+                        const assignedAdmin = t.assignedAdmin || t.assigned_admin;
+                        const updatedAt = t.updatedAt || t.updated_at;
+
+                        // Status pill color
+                        let statusBg = 'rgba(var(--gold-rgb), 0.15)';
+                        let statusColor = 'var(--gold)';
+                        let statusBorder = 'rgba(var(--gold-rgb), 0.4)';
+                        if (isClosedOrResolved || isApproved) {
+                          statusBg = 'rgba(46, 204, 113, 0.15)';
+                          statusColor = '#2ecc71';
+                          statusBorder = '#2ecc71';
+                        } else if (isRejected) {
+                          statusBg = 'rgba(231, 76, 60, 0.15)';
+                          statusColor = '#e74c3c';
+                          statusBorder = '#e74c3c';
+                        } else if (isUnderReview) {
+                          statusBg = 'rgba(155, 89, 182, 0.15)';
+                          statusColor = '#a569bd';
+                          statusBorder = '#a569bd';
+                        }
+
+                        return (
+                          <div
+                            key={t.id}
+                            style={{
+                              padding: '16px',
+                              background: 'rgba(12, 10, 8, 0.85)',
+                              borderRadius: '10px',
+                              borderLeft: isReturn
+                                ? '4px solid var(--gold)'
+                                : isClosedOrResolved
+                                ? '4px solid #2ecc71'
+                                : '4px solid rgba(var(--gold-rgb), 0.5)',
+                              borderTop: '1px solid var(--glass-border)',
+                              borderRight: '1px solid var(--glass-border)',
+                              borderBottom: '1px solid var(--glass-border)',
+                              display: 'flex',
+                              flexDirection: 'column',
+                              justifyContent: 'space-between',
+                              gap: '12px',
+                              boxShadow: '0 4px 16px rgba(0,0,0,0.4)',
+                              position: 'relative',
+                            }}
+                          >
+                            <div>
+                              {/* Card Header: Ticket ID, Type Badge, and Status */}
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px', marginBottom: '8px' }}>
+                                <div style={{ minWidth: 0, flex: 1 }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', marginBottom: '4px' }}>
+                                    <span style={{ fontSize: '0.8rem', color: 'var(--gold)', fontFamily: 'monospace', fontWeight: 700 }}>
+                                      #{t.id}
+                                    </span>
+                                    {isReturn ? (
+                                      <span
+                                        style={{
+                                          fontSize: '0.68rem',
+                                          background: 'linear-gradient(135deg, rgba(212, 175, 55, 0.25), rgba(183, 110, 121, 0.25))',
+                                          border: '1px solid var(--gold)',
+                                          color: 'var(--gold)',
+                                          padding: '2px 8px',
+                                          borderRadius: '4px',
+                                          fontWeight: 700,
+                                          display: 'inline-flex',
+                                          alignItems: 'center',
+                                          gap: '4px',
+                                          letterSpacing: '0.5px',
+                                          textTransform: 'uppercase',
+                                        }}
+                                      >
+                                        <Sparkles size={11} /> Return Request
+                                      </span>
+                                    ) : (
+                                      <span
+                                        style={{
+                                          fontSize: '0.68rem',
+                                          background: 'rgba(255, 255, 255, 0.08)',
+                                          border: '1px solid var(--glass-border)',
+                                          color: 'var(--cream)',
+                                          padding: '2px 8px',
+                                          borderRadius: '4px',
+                                          fontWeight: 600,
+                                        }}
+                                      >
+                                        {t.category}
+                                      </span>
+                                    )}
+                                  </div>
+
+                                  <h4 style={{ margin: '2px 0 0 0', color: 'var(--cream)', fontSize: '1rem', fontWeight: 700 }}>
+                                    {t.customerName}
+                                  </h4>
+                                </div>
+
+                                <span
+                                  style={{
+                                    fontSize: '0.72rem',
+                                    padding: '3px 10px',
+                                    borderRadius: '20px',
+                                    fontWeight: 700,
+                                    flexShrink: 0,
+                                    background: statusBg,
+                                    color: statusColor,
+                                    border: `1px solid ${statusBorder}`,
+                                  }}
+                                >
+                                  {t.status}
+                                </span>
+                              </div>
+
+                              {/* Customer Contact Quick Bar */}
+                              {(customerEmail || customerPhone) && (
+                                <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', fontSize: '0.74rem', color: 'var(--beige)', marginBottom: '8px' }}>
+                                  {customerEmail && (
+                                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                                      <Mail size={12} style={{ color: 'var(--gold)' }} /> {customerEmail}
+                                    </span>
+                                  )}
+                                  {customerPhone && (
+                                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                                      <Phone size={12} style={{ color: 'var(--gold)' }} /> {customerPhone}
+                                    </span>
+                                  )}
+                                </div>
+                              )}
+
+                              {/* Order & Return Metadata Box */}
+                              <div
+                                style={{
+                                  background: 'rgba(0,0,0,0.35)',
+                                  border: '1px solid rgba(201, 168, 76, 0.25)',
+                                  borderRadius: '6px',
+                                  padding: '8px 10px',
+                                  marginBottom: '10px',
+                                  fontSize: '0.78rem',
+                                  display: 'flex',
+                                  flexDirection: 'column',
+                                  gap: '4px',
+                                }}
+                              >
+                                {relatedOrderId ? (
+                                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '6px' }}>
+                                    <span>
+                                      Order: <strong style={{ color: 'var(--gold)', fontFamily: 'monospace' }}>#{relatedOrderId}</strong>
+                                    </span>
+                                    <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+                                      {returnReqId && (
+                                        <span style={{ fontSize: '0.7rem', color: '#E8D48B', background: 'rgba(201, 168, 76, 0.15)', padding: '2px 6px', borderRadius: '4px', border: '1px solid rgba(201, 168, 76, 0.35)' }}>
+                                          #{returnReqId}
+                                        </span>
+                                      )}
+                                      <button
+                                        type="button"
+                                        onClick={async () => {
+                                          try {
+                                            const ord = await orderService.getOrder(relatedOrderId);
+                                            setViewingComplaintOrder(ord);
+                                          } catch (err: any) {
+                                            addToast('error', err?.detail || err?.message || 'Failed to load related order details.', 'Order Error');
+                                          }
+                                        }}
+                                        style={{
+                                          padding: '2px 8px',
+                                          fontSize: '0.7rem',
+                                          background: 'rgba(var(--gold-rgb), 0.15)',
+                                          color: 'var(--gold)',
+                                          border: '1px solid rgba(var(--gold-rgb), 0.35)',
+                                          borderRadius: '4px',
+                                          cursor: 'pointer',
+                                          fontWeight: 600,
+                                          display: 'inline-flex',
+                                          alignItems: 'center',
+                                          gap: '4px',
+                                        }}
+                                      >
+                                        <ExternalLink size={11} /> View Order
+                                      </button>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <span style={{ color: 'var(--grey-light)', fontStyle: 'italic' }}>General support inquiry (no order attached)</span>
+                                )}
+
+                                {retReason && (
+                                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <span style={{ color: 'var(--beige)' }}>Return Reason:</span>
+                                    <span style={{ color: '#E8D48B', fontWeight: 700, background: 'rgba(201, 168, 76, 0.12)', padding: '1px 6px', borderRadius: '3px' }}>
+                                      {retReason}
+                                    </span>
+                                  </div>
+                                )}
+
+                                {amt !== undefined && amt !== null && (
+                                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <span style={{ color: 'var(--beige)' }}>Order Amount:</span>
+                                    <strong style={{ color: 'var(--gold)' }}>₹{Number(amt).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</strong>
+                                  </div>
+                                )}
+
+                                {payMethod && (
+                                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <span style={{ color: 'var(--beige)' }}>Payment Method:</span>
+                                    <span style={{ color: 'var(--cream)', fontWeight: 600 }}>{payMethod}</span>
+                                  </div>
+                                )}
+
+                                {delivAt && (
+                                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <span style={{ color: 'var(--beige)' }}>Delivered At:</span>
+                                    <span style={{ color: 'var(--cream)' }}>{new Date(delivAt).toLocaleString('en-IN', { dateStyle: 'short', timeStyle: 'short' })}</span>
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* Customer Description Quote */}
+                              <div style={{ marginBottom: '10px' }}>
+                                <span style={{ fontSize: '0.72rem', color: 'var(--gold)', textTransform: 'uppercase', fontWeight: 600, display: 'block', marginBottom: '2px' }}>
+                                  Issue Description:
+                                </span>
+                                <p style={{ fontSize: '0.85rem', color: 'var(--beige)', lineHeight: '1.4', margin: 0, background: 'rgba(255,255,255,0.02)', padding: '6px 8px', borderRadius: '4px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                                  {t.description}
+                                </p>
+                              </div>
+
+                              {/* Uploaded Evidence Photo Thumbnail with Zoom */}
+                              {photoUrl && (
+                                <div style={{ marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                  <div
+                                    onClick={() => setPreviewingEvidencePhoto(photoUrl)}
+                                    style={{
+                                      position: 'relative',
+                                      cursor: 'pointer',
+                                      width: '56px',
+                                      height: '56px',
+                                      borderRadius: '6px',
+                                      overflow: 'hidden',
+                                      border: '1px solid rgba(201, 168, 76, 0.4)',
+                                      flexShrink: 0,
+                                    }}
+                                    title="Click to view full photo evidence"
+                                  >
+                                    <img
+                                      src={photoUrl}
+                                      alt="Issue evidence"
+                                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                    />
+                                    <div
+                                      style={{
+                                        position: 'absolute',
+                                        inset: 0,
+                                        background: 'rgba(0,0,0,0.3)',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        color: '#fff',
+                                        opacity: 0.8,
+                                      }}
+                                    >
+                                      <Maximize2 size={14} />
+                                    </div>
+                                  </div>
+                                  <div>
+                                    <span style={{ color: 'var(--gold)', fontSize: '0.72rem', textTransform: 'uppercase', fontWeight: 600, display: 'block' }}>
+                                      Evidence Photo Attached
+                                    </span>
+                                    <button
+                                      type="button"
+                                      onClick={() => setPreviewingEvidencePhoto(photoUrl)}
+                                      style={{
+                                        background: 'transparent',
+                                        border: 'none',
+                                        color: 'var(--cream)',
+                                        fontSize: '0.74rem',
+                                        textDecoration: 'underline',
+                                        cursor: 'pointer',
+                                        padding: 0,
+                                        marginTop: '2px',
+                                      }}
+                                    >
+                                      Inspect Evidence Preview
+                                    </button>
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* Admin Notes & Assigned Admin info */}
+                              {t.adminNotes && (
+                                <div
+                                  style={{
+                                    padding: '8px 10px',
+                                    background: 'rgba(212, 175, 55, 0.05)',
+                                    border: '1px solid rgba(212, 175, 55, 0.2)',
+                                    borderRadius: '4px',
+                                    fontSize: '0.78rem',
+                                    color: 'var(--cream)',
+                                    marginBottom: '8px',
+                                  }}
+                                >
+                                  <span style={{ color: 'var(--gold)', fontWeight: 600, display: 'block', marginBottom: '2px' }}>
+                                    Admin Resolution Notes:
+                                  </span>
+                                  {t.adminNotes}
+                                </div>
+                              )}
+
+                              {/* Admin Tracking Footer */}
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.7rem', color: 'var(--grey-light)', marginTop: '4px' }}>
+                                <span>Created: {t.date || (t.created_at ? new Date(t.created_at).toLocaleDateString() : 'N/A')}</span>
+                                {assignedAdmin && (
+                                  <span style={{ color: 'var(--gold)' }}>
+                                    Assigned: <strong>{assignedAdmin}</strong>
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Action Buttons: Inspect Details Modal + Quick Status Update */}
+                            <div style={{ marginTop: '6px', borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '10px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                              <Button
+                                variant="glass"
+                                size="sm"
+                                type="button"
+                                onClick={() => setSelectedDetailTicket(t)}
+                                style={{
+                                  width: '100%',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  gap: '6px',
+                                  fontSize: '0.8rem',
+                                  padding: '7px 12px',
+                                  border: '1px solid rgba(var(--gold-rgb), 0.4)',
+                                  color: 'var(--gold)',
+                                  background: 'rgba(212, 175, 55, 0.08)',
+                                }}
+                              >
+                                <Eye size={14} /> Inspect Full Ticket Details
+                              </Button>
+
+                              {!isClosedOrResolved && (
+                                <form
+                                  onSubmit={async (e) => {
+                                    e.preventDefault();
+                                    const form = e.currentTarget;
+                                    const notes = (form.elements.namedItem('notes') as HTMLTextAreaElement).value;
+                                    const status = currentSelectedStatus;
+                                    try {
+                                      await updateSupportTicketStatus(t.id, status, notes);
+                                      addToast('success', `Ticket #${t.id} status updated to ${status}.`, 'Status Updated');
+                                      await refreshTickets();
+                                    } catch (err: any) {
+                                      addToast('error', err?.detail || err?.message || 'Failed to update ticket status.', 'Update Error');
+                                    }
+                                  }}
+                                  style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}
+                                >
+                                  <div style={{ display: 'flex', gap: '6px' }}>
+                                    <select
+                                      name="status"
+                                      value={currentSelectedStatus}
+                                      onChange={(e) => setTicketStatusMap((prev) => ({ ...prev, [t.id]: e.target.value }))}
+                                      style={{
+                                        flex: 1,
+                                        padding: '6px 8px',
+                                        background: 'rgba(0,0,0,0.35)',
+                                        border: '1px solid var(--glass-border)',
+                                        borderRadius: '4px',
+                                        color: 'var(--cream)',
+                                        fontSize: '0.78rem',
+                                        outline: 'none',
+                                      }}
+                                    >
+                                      <option value="Pending">Pending</option>
+                                      <option value="Under Review">Under Review</option>
+                                      <option value="Approved">Approved</option>
+                                      <option value="Rejected">Rejected</option>
+                                      <option value="Resolved">Resolved</option>
+                                    </select>
+                                    <Button variant="secondary" size="sm" type="submit" style={{ fontSize: '0.74rem', padding: '4px 10px' }}>
+                                      Update
+                                    </Button>
+                                  </div>
+                                </form>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+
+                {/* Pagination Controls */}
+                {filteredComplaints.length > 6 && (
+                  <div style={{ marginTop: '16px' }}>
+                    <Pagination
+                      currentPage={currentPageValid}
+                      totalPages={totalPages}
+                      totalItems={filteredComplaints.length}
+                      itemsPerPage={6}
+                      onPageChange={(p) => setComplaintsPage(p)}
+                    />
+                  </div>
+                )}
+              </div>
+
+              {/* TICKET DETAILS MODAL (FULL INSPECTION VIEW) */}
+              <AnimatePresence>
+                {selectedDetailTicket && (() => {
+                  const t = selectedDetailTicket;
+                  const isRet = isReturnTicket(t);
+                  const relatedOrderId = t.orderId || t.order_id;
+                  const photoUrl = t.photo_url || t.photoUrl;
+                  const amt = t.order_amount ?? t.orderAmount;
+                  const payMethod = t.payment_method || t.paymentMethod;
+                  const retReason = t.return_reason || t.returnReason;
+                  const delivAddr = t.delivery_address || t.deliveryAddress;
+                  const delivAt = t.delivered_at || t.deliveredAt;
+                  const customerEmail = t.customerEmail || t.customer_email;
+                  const customerPhone = t.customerPhone || t.customer_phone;
+                  const returnReqId = t.return_request_id || t.returnRequestId;
+                  const assignedAdmin = t.assignedAdmin || t.assigned_admin;
+                  const updatedAt = t.updatedAt || t.updated_at;
+
+                  return (
+                    <motion.div
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      style={{
+                        position: 'fixed',
+                        inset: 0,
+                        zIndex: 9999,
+                        background: 'rgba(0, 0, 0, 0.85)',
+                        backdropFilter: 'blur(8px)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        padding: '16px',
+                        overflowY: 'auto',
+                      }}
+                      onClick={() => setSelectedDetailTicket(null)}
+                    >
+                      <motion.div
+                        initial={{ scale: 0.95, opacity: 0, y: 10 }}
+                        animate={{ scale: 1, opacity: 1, y: 0 }}
+                        exit={{ scale: 0.95, opacity: 0, y: 10 }}
+                        onClick={(e) => e.stopPropagation()}
+                        style={{
+                          background: 'linear-gradient(145deg, #1A120B 0%, #0D090A 100%)',
+                          border: '1px solid rgba(var(--gold-rgb), 0.5)',
+                          borderRadius: '12px',
+                          boxShadow: '0 20px 50px rgba(0,0,0,0.8), 0 0 25px rgba(212, 175, 55, 0.15)',
+                          width: '100%',
+                          maxWidth: '780px',
+                          maxHeight: '90vh',
+                          overflowY: 'auto',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          boxSizing: 'border-box',
+                        }}
+                      >
+                        {/* Modal Header */}
+                        <div
+                          style={{
+                            padding: '16px 22px',
+                            borderBottom: '1px solid rgba(var(--gold-rgb), 0.25)',
                             display: 'flex',
-                            flexDirection: 'column',
                             justifyContent: 'space-between',
-                            gap: '10px',
-                            boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+                            alignItems: 'center',
+                            background: 'rgba(0,0,0,0.3)',
                           }}
                         >
                           <div>
-                            <div style={{ display: 'flex', flexDirection: isMobileGrid ? 'column' : 'row', justifyContent: 'space-between', alignItems: isMobileGrid ? 'flex-start' : 'flex-start', gap: '8px', marginBottom: '10px' }}>
-                              <div style={{ minWidth: 0, flex: 1 }}>
-                                <span style={{ fontSize: '0.75rem', color: 'var(--gold)', textTransform: 'uppercase', fontWeight: 700, wordBreak: 'break-all' }}>
-                                  {t.id} · {t.category}
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                              <span style={{ color: 'var(--gold)', fontWeight: 700, fontSize: '0.85rem', fontFamily: 'monospace' }}>
+                                #{t.id}
+                              </span>
+                              {isRet && (
+                                <span
+                                  style={{
+                                    fontSize: '0.7rem',
+                                    background: 'linear-gradient(135deg, rgba(212, 175, 55, 0.25), rgba(183, 110, 121, 0.25))',
+                                    border: '1px solid var(--gold)',
+                                    color: 'var(--gold)',
+                                    padding: '2px 8px',
+                                    borderRadius: '4px',
+                                    fontWeight: 700,
+                                    textTransform: 'uppercase',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '4px',
+                                  }}
+                                >
+                                  <Sparkles size={11} /> Return Ticket
                                 </span>
-                                <h4 style={{ margin: '4px 0 0 0', color: 'var(--cream)', fontSize: isMobileGrid ? '0.95rem' : '1.05rem', wordBreak: 'break-word' }}>
-                                  {t.customerName} ({t.customerId})
-                                </h4>
-                              </div>
+                              )}
                               <span
                                 style={{
                                   fontSize: '0.72rem',
-                                  padding: '3px 10px',
-                                  borderRadius: '20px',
+                                  padding: '2px 8px',
+                                  borderRadius: '12px',
                                   fontWeight: 700,
-                                  flexShrink: 0,
-                                  alignSelf: isMobileGrid ? 'flex-start' : 'flex-start',
-                                  background: isClosedOrResolved ? 'rgba(46, 204, 113, 0.15)' : 'rgba(var(--gold-rgb),  0.15)',
-                                  color: isClosedOrResolved ? '#2ecc71' : 'var(--gold)',
-                                  border: `1px solid ${isClosedOrResolved ? '#2ecc71' : 'var(--gold)'}`,
+                                  background:
+                                    t.status === 'Approved' || t.status === 'Resolved'
+                                      ? 'rgba(46, 204, 113, 0.15)'
+                                      : t.status === 'Rejected'
+                                      ? 'rgba(231, 76, 60, 0.15)'
+                                      : 'rgba(var(--gold-rgb), 0.15)',
+                                  color:
+                                    t.status === 'Approved' || t.status === 'Resolved'
+                                      ? '#2ecc71'
+                                      : t.status === 'Rejected'
+                                      ? '#e74c3c'
+                                      : 'var(--gold)',
+                                  border: `1px solid ${
+                                    t.status === 'Approved' || t.status === 'Resolved'
+                                      ? '#2ecc71'
+                                      : t.status === 'Rejected'
+                                      ? '#e74c3c'
+                                      : 'var(--gold)'
+                                  }`,
                                 }}
                               >
                                 {t.status}
                               </span>
                             </div>
-
-                            {/* Stored Order Relationship Display */}
-                            {(() => {
-                              const relatedOrderId = t.orderId || t.order_id;
-                              return relatedOrderId ? (
-                                <div style={{ margin: '4px 0 10px 0', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                                  <span style={{ color: 'var(--beige)' }}>
-                                    Order: <strong style={{ color: 'var(--gold)', fontFamily: 'monospace' }}>#{relatedOrderId}</strong>
-                                  </span>
-                                  <button
-                                    type="button"
-                                    onClick={async () => {
-                                      try {
-                                        const ord = await orderService.getOrder(relatedOrderId);
-                                        setViewingComplaintOrder(ord);
-                                      } catch (err: any) {
-                                        addToast('error', err?.detail || err?.message || 'Failed to load related order details.', 'Order Error');
-                                      }
-                                    }}
-                                    style={{
-                                      padding: '2px 8px',
-                                      fontSize: '0.72rem',
-                                      background: 'rgba(var(--gold-rgb),  0.15)',
-                                      color: 'var(--gold)',
-                                      border: '1px solid rgba(var(--gold-rgb),  0.35)',
-                                      borderRadius: '4px',
-                                      cursor: 'pointer',
-                                      fontWeight: 600,
-                                      display: 'inline-flex',
-                                      alignItems: 'center',
-                                      gap: '4px',
-                                    }}
-                                  >
-                                    <ExternalLink size={12} /> View Order
-                                  </button>
-                                </div>
-                              ) : (
-                                <div style={{ margin: '4px 0 10px 0', fontSize: '0.78rem', color: 'var(--grey-light)', fontStyle: 'italic' }}>
-                                  No related order
-                                </div>
-                              );
-                            })()}
-
-                            <p style={{ fontSize: '0.88rem', color: 'var(--beige)', lineHeight: '1.45', margin: '0 0 10px 0' }}>
-                              {t.description}
-                            </p>
-
-                            {t.adminNotes && (
-                              <div
-                                style={{
-                                  padding: '10px',
-                                  background: 'rgba(255,255,255,0.03)',
-                                  border: '1px solid var(--glass-border)',
-                                  borderRadius: '4px',
-                                  fontSize: '0.82rem',
-                                  color: 'var(--cream)',
-                                  marginBottom: '10px',
-                                }}
-                              >
-                                <span style={{ color: 'var(--gold)', fontWeight: 600, display: 'block', marginBottom: '4px' }}>
-                                  Admin Resolution Notes:
-                                </span>
-                                {t.adminNotes}
-                              </div>
-                            )}
-
-                            {t.customerResolutionFeedback && (
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.82rem', color: t.customerResolutionFeedback === 'Resolved' ? '#2ecc71' : 'var(--rose-gold)', marginTop: '6px', marginBottom: '10px' }}>
-                                <span style={{ fontWeight: 600 }}>Customer Feedback:</span>
-                                <span>{t.customerResolutionFeedback === 'Resolved' ? 'Confirmed Resolved ✓' : 'Reported Unresolved ✗'}</span>
-                              </div>
-                            )}
+                            <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.25rem', color: 'var(--cream)', margin: '4px 0 0 0' }}>
+                              Ticket Details &amp; Resolution
+                            </h2>
                           </div>
 
-                          {!isClosedOrResolved && (
-                            <form
-                              onSubmit={async (e) => {
-                                e.preventDefault();
-                                const form = e.currentTarget;
-                                const notes = (form.elements.namedItem('notes') as HTMLTextAreaElement).value;
-                                const action = (e.nativeEvent as any).submitter.name;
-                                
-                                if (action === 'update_status') {
-                                  const status = currentSelectedStatus;
-                                  try {
-                                    await updateSupportTicketStatus(t.id, status, notes);
-                                    addToast('success', `Ticket ${t.id} status updated to ${status}. Customer notified.`, 'Status Updated');
-                                  } catch (err: any) {
-                                    addToast('error', err?.detail || err?.message || 'Failed to update ticket status.', 'Update Error');
-                                    setTicketStatusMap((prev) => ({ ...prev, [t.id]: t.status }));
-                                  }
-                                } else if (action === 'resolve') {
-                                  try {
-                                    await resolveSupportTicket(t.id, notes);
-                                    addToast('success', `Ticket ${t.id} resolved and customer notified.`, 'Ticket Resolved');
-                                  } catch (err: any) {
-                                    addToast('error', err?.detail || err?.message || 'Failed to resolve ticket. Ensure you have updated the status at least twice.', 'Resolve Error');
-                                  }
-                                }
+                          <button
+                            type="button"
+                            onClick={() => setSelectedDetailTicket(null)}
+                            style={{
+                              background: 'transparent',
+                              border: 'none',
+                              color: 'var(--beige)',
+                              cursor: 'pointer',
+                              padding: '6px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              borderRadius: '6px',
+                            }}
+                            title="Close modal"
+                          >
+                            <X size={20} />
+                          </button>
+                        </div>
+
+                        {/* Modal Body */}
+                        <div style={{ padding: '20px 22px', display: 'flex', flexDirection: 'column', gap: '18px' }}>
+                          {/* 2-Column Grid for Customer & Order breakdown */}
+                          <div style={{ display: 'grid', gridTemplateColumns: isMobileGrid ? '1fr' : '1fr 1fr', gap: '16px' }}>
+                            {/* Customer Information Card */}
+                            <div
+                              style={{
+                                background: 'rgba(0,0,0,0.3)',
+                                border: '1px solid rgba(var(--gold-rgb), 0.2)',
+                                borderRadius: '8px',
+                                padding: '14px',
                               }}
-                              style={{ marginTop: '10px', borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '12px' }}
                             >
-                              {/* Status dropdown */}
-                              <div style={{ marginBottom: '10px' }}>
-                                <label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--beige)', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                                  Update Status
-                                </label>
-                                <select
-                                  name="status"
-                                  value={currentSelectedStatus}
-                                  onChange={(e) => setTicketStatusMap((prev) => ({ ...prev, [t.id]: e.target.value }))}
+                              <span style={{ fontSize: '0.72rem', color: 'var(--gold)', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 700, display: 'block', marginBottom: '8px' }}>
+                                Customer Information
+                              </span>
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '0.82rem' }}>
+                                <div>
+                                  <span style={{ color: 'var(--beige)', display: 'block', fontSize: '0.72rem' }}>Customer Name:</span>
+                                  <strong style={{ color: 'var(--cream)', fontSize: '0.92rem' }}>{t.customerName}</strong>
+                                </div>
+                                {customerEmail && (
+                                  <div>
+                                    <span style={{ color: 'var(--beige)', display: 'block', fontSize: '0.72rem' }}>Email Address:</span>
+                                    <span style={{ color: 'var(--cream)', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                                      <Mail size={12} style={{ color: 'var(--gold)' }} /> {customerEmail}
+                                    </span>
+                                  </div>
+                                )}
+                                {customerPhone && (
+                                  <div>
+                                    <span style={{ color: 'var(--beige)', display: 'block', fontSize: '0.72rem' }}>Phone Number:</span>
+                                    <span style={{ color: 'var(--cream)', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                                      <Phone size={12} style={{ color: 'var(--gold)' }} /> {customerPhone}
+                                    </span>
+                                  </div>
+                                )}
+                                <div>
+                                  <span style={{ color: 'var(--beige)', display: 'block', fontSize: '0.72rem' }}>Ticket Created:</span>
+                                  <span style={{ color: 'var(--cream)' }}>
+                                    {t.created_at ? new Date(t.created_at).toLocaleString('en-IN') : t.date}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Order & Delivery Card */}
+                            <div
+                              style={{
+                                background: 'rgba(0,0,0,0.3)',
+                                border: '1px solid rgba(var(--gold-rgb), 0.2)',
+                                borderRadius: '8px',
+                                padding: '14px',
+                              }}
+                            >
+                              <span style={{ fontSize: '0.72rem', color: 'var(--gold)', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 700, display: 'block', marginBottom: '8px' }}>
+                                Order &amp; Delivery Details
+                              </span>
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '0.82rem' }}>
+                                {relatedOrderId ? (
+                                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <span style={{ color: 'var(--beige)' }}>Order ID:</span>
+                                    <button
+                                      type="button"
+                                      onClick={async () => {
+                                        try {
+                                          const ord = await orderService.getOrder(relatedOrderId);
+                                          setViewingComplaintOrder(ord);
+                                        } catch (err: any) {
+                                          addToast('error', err?.detail || err?.message || 'Failed to load order.', 'Order Error');
+                                        }
+                                      }}
+                                      style={{
+                                        padding: '2px 8px',
+                                        fontSize: '0.75rem',
+                                        background: 'rgba(var(--gold-rgb), 0.15)',
+                                        color: 'var(--gold)',
+                                        border: '1px solid rgba(var(--gold-rgb), 0.35)',
+                                        borderRadius: '4px',
+                                        cursor: 'pointer',
+                                        fontWeight: 600,
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        gap: '4px',
+                                      }}
+                                    >
+                                      #{relatedOrderId} <ExternalLink size={11} />
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <span style={{ color: 'var(--grey-light)', fontStyle: 'italic' }}>No order associated</span>
+                                )}
+
+                                {returnReqId && (
+                                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <span style={{ color: 'var(--beige)' }}>Return Request ID:</span>
+                                    <strong style={{ color: '#E8D48B', fontFamily: 'monospace' }}>#{returnReqId}</strong>
+                                  </div>
+                                )}
+
+                                {amt !== undefined && amt !== null && (
+                                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <span style={{ color: 'var(--beige)' }}>Order Amount:</span>
+                                    <strong style={{ color: 'var(--gold)' }}>₹{Number(amt).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</strong>
+                                  </div>
+                                )}
+
+                                {payMethod && (
+                                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <span style={{ color: 'var(--beige)' }}>Payment Method:</span>
+                                    <span style={{ color: 'var(--cream)', fontWeight: 600 }}>{payMethod}</span>
+                                  </div>
+                                )}
+
+                                {delivAt && (
+                                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <span style={{ color: 'var(--beige)' }}>Delivered Timestamp:</span>
+                                    <span style={{ color: 'var(--cream)' }}>{new Date(delivAt).toLocaleString('en-IN')}</span>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Authoritative Delivery Address */}
+                          {delivAddr && (
+                            <div
+                              style={{
+                                background: 'rgba(0,0,0,0.25)',
+                                border: '1px solid rgba(255,255,255,0.08)',
+                                borderRadius: '8px',
+                                padding: '12px 14px',
+                              }}
+                            >
+                              <span style={{ fontSize: '0.72rem', color: 'var(--gold)', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '4px', marginBottom: '4px' }}>
+                                <MapPin size={12} /> Delivery Destination Address
+                              </span>
+                              <p style={{ color: 'var(--cream)', fontSize: '0.82rem', margin: 0, lineHeight: 1.4 }}>
+                                {formatAddress(delivAddr)}
+                              </p>
+                            </div>
+                          )}
+
+                          {/* Return Reason & Issue Description */}
+                          <div
+                            style={{
+                              background: 'rgba(0,0,0,0.3)',
+                              border: '1px solid rgba(var(--gold-rgb), 0.25)',
+                              borderRadius: '8px',
+                              padding: '14px',
+                            }}
+                          >
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', flexWrap: 'wrap', gap: '6px' }}>
+                              <span style={{ fontSize: '0.72rem', color: 'var(--gold)', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 700 }}>
+                                Customer Issue &amp; Return Reason
+                              </span>
+                              {retReason && (
+                                <span
                                   style={{
-                                    width: '100%',
-                                    padding: '8px 10px',
-                                    background: 'rgba(0,0,0,0.35)',
-                                    border: '1px solid var(--glass-border)',
-                                    borderRadius: '6px',
-                                    color: 'var(--cream)',
-                                    fontSize: '0.82rem',
-                                    outline: 'none',
-                                    boxSizing: 'border-box',
+                                    fontSize: '0.74rem',
+                                    color: '#E8D48B',
+                                    background: 'rgba(212, 175, 55, 0.15)',
+                                    border: '1px solid rgba(212, 175, 55, 0.35)',
+                                    padding: '2px 8px',
+                                    borderRadius: '4px',
+                                    fontWeight: 700,
                                   }}
                                 >
-                                  <option value="Pending">Pending</option>
-                                  <option value="Under Review">Under Review</option>
-                                  <option value="In Progress">In Progress</option>
-                                  <option value="Awaiting Customer Response">Awaiting Response</option>
-                                  <option value="Investigating">Investigating</option>
-                                  <option value="Resolved">Resolved</option>
-                                  <option value="Closed">Closed</option>
-                                </select>
-                              </div>
-                              {/* Notes */}
-                              <div style={{ marginBottom: '10px' }}>
-                                <label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--beige)', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                                  Admin Notes (Optional)
-                                </label>
-                                <textarea
-                                  key={t.adminNotes || 'notes'}
-                                  name="notes"
-                                  defaultValue={t.adminNotes || ''}
-                                  placeholder="How is this issue being handled..."
-                                  rows={2}
+                                  {retReason}
+                                </span>
+                              )}
+                            </div>
+                            <p style={{ color: 'var(--cream)', fontSize: '0.88rem', lineHeight: 1.5, margin: 0, background: 'rgba(255,255,255,0.02)', padding: '10px 12px', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.06)' }}>
+                              {t.description}
+                            </p>
+                          </div>
+
+                          {/* Uploaded Evidence Photo Viewer */}
+                          {photoUrl ? (
+                            <div
+                              style={{
+                                background: 'rgba(0,0,0,0.3)',
+                                border: '1px solid rgba(var(--gold-rgb), 0.25)',
+                                borderRadius: '8px',
+                                padding: '14px',
+                              }}
+                            >
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                                <span style={{ fontSize: '0.72rem', color: 'var(--gold)', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                                  <Camera size={13} /> Customer Uploaded Photographic Evidence
+                                </span>
+                                <a
+                                  href={photoUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
                                   style={{
-                                    width: '100%',
-                                    padding: '8px 10px',
-                                    background: 'rgba(0,0,0,0.35)',
-                                    border: '1px solid var(--glass-border)',
-                                    borderRadius: '6px',
-                                    color: 'var(--cream)',
-                                    fontSize: '0.82rem',
-                                    outline: 'none',
-                                    resize: 'none',
-                                    boxSizing: 'border-box',
+                                    fontSize: '0.74rem',
+                                    color: 'var(--gold)',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '4px',
+                                    textDecoration: 'none',
+                                    border: '1px solid rgba(var(--gold-rgb), 0.3)',
+                                    padding: '3px 8px',
+                                    borderRadius: '4px',
+                                    background: 'rgba(var(--gold-rgb), 0.08)',
                                   }}
+                                >
+                                  <ExternalLink size={12} /> Open Full Size
+                                </a>
+                              </div>
+                              <div
+                                onClick={() => setPreviewingEvidencePhoto(photoUrl)}
+                                style={{
+                                  position: 'relative',
+                                  cursor: 'pointer',
+                                  maxHeight: '260px',
+                                  overflow: 'hidden',
+                                  borderRadius: '6px',
+                                  border: '1px solid rgba(255,255,255,0.1)',
+                                  display: 'flex',
+                                  justifyContent: 'center',
+                                  background: '#000',
+                                }}
+                                title="Click to view zoomed image"
+                              >
+                                <img
+                                  src={photoUrl}
+                                  alt="Return evidence"
+                                  style={{ maxHeight: '260px', maxWidth: '100%', objectFit: 'contain' }}
                                 />
                               </div>
-                              {/* Action buttons */}
-                              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                                <Button variant="secondary" size="sm" type="submit" name="update_status" style={{ flex: '1 1 100px', fontSize: '0.78rem' }}>
-                                  Update Status
-                                </Button>
-                                <Button variant="gold" size="sm" type="submit" name="resolve" glow style={{ flex: '1 1 120px', display: 'flex', justifyContent: 'center', fontSize: '0.78rem' }}>
-                                  Resolve Issue
-                                </Button>
-                              </div>
-                            </form>
+                            </div>
+                          ) : (
+                            <div
+                              style={{
+                                padding: '10px 14px',
+                                background: 'rgba(255,255,255,0.02)',
+                                border: '1px solid rgba(255,255,255,0.06)',
+                                borderRadius: '6px',
+                                fontSize: '0.78rem',
+                                color: 'var(--grey-light)',
+                                fontStyle: 'italic',
+                              }}
+                            >
+                              No photographic evidence was uploaded for this ticket.
+                            </div>
                           )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
 
-              {tickets.length > 6 && (
-                <div style={{ marginTop: '16px' }}>
-                  <Pagination
-                    currentPage={complaintsPage}
-                    totalPages={Math.ceil(tickets.length / 6)}
-                    totalItems={tickets.length}
-                    itemsPerPage={6}
-                    onPageChange={(p) => setComplaintsPage(p)}
-                  />
-                </div>
-              )}
+                          {/* Admin Review & Resolution Controls */}
+                          <div
+                            style={{
+                              background: 'rgba(20, 15, 10, 0.7)',
+                              border: '1px solid rgba(var(--gold-rgb), 0.4)',
+                              borderRadius: '8px',
+                              padding: '16px',
+                            }}
+                          >
+                            <span style={{ fontSize: '0.76rem', color: 'var(--gold)', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 700, display: 'block', marginBottom: '12px' }}>
+                              Admin Review &amp; Status Management
+                            </span>
+
+                            {/* Tracking info row */}
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.76rem', color: 'var(--beige)', marginBottom: '12px', flexWrap: 'wrap', gap: '6px' }}>
+                              <span>
+                                Assigned Staff: <strong style={{ color: 'var(--cream)' }}>{assignedAdmin || 'Unassigned'}</strong>
+                              </span>
+                              {updatedAt && (
+                                <span>
+                                  Last Status Update: <strong style={{ color: 'var(--cream)' }}>{new Date(updatedAt).toLocaleString('en-IN')}</strong>
+                                </span>
+                              )}
+                            </div>
+
+                            {/* Status Selector */}
+                            <div style={{ marginBottom: '12px' }}>
+                              <label style={{ display: 'block', fontSize: '0.74rem', color: 'var(--beige)', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 600 }}>
+                                Update Ticket Status
+                              </label>
+                              <select
+                                value={modalTicketStatus}
+                                onChange={(e) => setModalTicketStatus(e.target.value)}
+                                style={{
+                                  width: '100%',
+                                  padding: '8px 10px',
+                                  background: 'rgba(0,0,0,0.5)',
+                                  border: '1px solid var(--glass-border)',
+                                  borderRadius: '6px',
+                                  color: 'var(--cream)',
+                                  fontSize: '0.84rem',
+                                  outline: 'none',
+                                }}
+                              >
+                                <option value="Pending">Pending</option>
+                                <option value="Under Review">Under Review</option>
+                                <option value="Approved">Approved (Mark Returned for Inspection)</option>
+                                <option value="Rejected">Rejected</option>
+                                <option value="Resolved">Resolved</option>
+                              </select>
+                            </div>
+
+                            {/* Internal Admin Resolution Notes */}
+                            <div style={{ marginBottom: '14px' }}>
+                              <label style={{ display: 'block', fontSize: '0.74rem', color: 'var(--beige)', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 600 }}>
+                                Internal Admin Notes / Resolution Comment
+                              </label>
+                              <textarea
+                                value={modalTicketNotes}
+                                onChange={(e) => setModalTicketNotes(e.target.value)}
+                                placeholder="Explain findings, customer communication, or resolution steps..."
+                                rows={3}
+                                style={{
+                                  width: '100%',
+                                  padding: '8px 10px',
+                                  background: 'rgba(0,0,0,0.5)',
+                                  border: '1px solid var(--glass-border)',
+                                  borderRadius: '6px',
+                                  color: 'var(--cream)',
+                                  fontSize: '0.84rem',
+                                  outline: 'none',
+                                  resize: 'vertical',
+                                  boxSizing: 'border-box',
+                                }}
+                              />
+                            </div>
+
+                            {/* Safety Notice Regarding Separate Refund Action */}
+                            <div
+                              style={{
+                                padding: '8px 10px',
+                                background: 'rgba(212, 175, 55, 0.08)',
+                                border: '1px solid rgba(212, 175, 55, 0.25)',
+                                borderRadius: '4px',
+                                fontSize: '0.74rem',
+                                color: 'var(--beige)',
+                                marginBottom: '14px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '6px',
+                              }}
+                            >
+                              <Info size={14} style={{ color: 'var(--gold)', flexShrink: 0 }} />
+                              <span>
+                                <strong>Safety Notice:</strong> Approving this return request marks the order status as Returned for pickup/inspection. Payment refunds or replacements remain strictly separate and must be processed through the dedicated finance workflow.
+                              </span>
+                            </div>
+
+                            {/* Submit & Close Buttons */}
+                            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+                              <Button
+                                variant="secondary"
+                                type="button"
+                                onClick={() => setSelectedDetailTicket(null)}
+                                style={{ fontSize: '0.8rem' }}
+                              >
+                                Close
+                              </Button>
+                              <Button
+                                variant="gold"
+                                type="button"
+                                glow
+                                disabled={isUpdatingModalTicket}
+                                onClick={async () => {
+                                  setIsUpdatingModalTicket(true);
+                                  try {
+                                    await updateSupportTicketStatus(t.id, modalTicketStatus, modalTicketNotes);
+                                    addToast('success', `Ticket #${t.id} status updated to ${modalTicketStatus}.`, 'Resolution Saved');
+                                    await refreshTickets();
+                                    setSelectedDetailTicket((prev: SupportTicket | null) =>
+                                      prev ? { ...prev, status: modalTicketStatus, adminNotes: modalTicketNotes } : null
+                                    );
+                                  } catch (err: any) {
+                                    addToast('error', err?.detail || err?.message || 'Failed to update ticket status.', 'Update Error');
+                                  } finally {
+                                    setIsUpdatingModalTicket(false);
+                                  }
+                                }}
+                                style={{ fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '6px' }}
+                              >
+                                {isUpdatingModalTicket ? (
+                                  <>
+                                    <Loader2 size={14} className="animate-spin" /> Saving...
+                                  </>
+                                ) : (
+                                  <>
+                                    <Save size={14} /> Save Resolution &amp; Status
+                                  </>
+                                )}
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      </motion.div>
+                    </motion.div>
+                  );
+                })()}
+              </AnimatePresence>
+
+              {/* LIGHTBOX EVIDENCE PHOTO PREVIEW MODAL */}
+              <AnimatePresence>
+                {previewingEvidencePhoto && (
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    style={{
+                      position: 'fixed',
+                      inset: 0,
+                      zIndex: 10000,
+                      background: 'rgba(0,0,0,0.92)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      padding: '20px',
+                    }}
+                    onClick={() => setPreviewingEvidencePhoto(null)}
+                  >
+                    <div style={{ position: 'absolute', top: '16px', right: '16px', display: 'flex', gap: '10px' }}>
+                      <a
+                        href={previewingEvidencePhoto}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={(e) => e.stopPropagation()}
+                        style={{
+                          background: 'rgba(255,255,255,0.1)',
+                          border: '1px solid rgba(255,255,255,0.2)',
+                          color: '#fff',
+                          padding: '6px 12px',
+                          borderRadius: '6px',
+                          fontSize: '0.8rem',
+                          textDecoration: 'none',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                        }}
+                      >
+                        <ExternalLink size={14} /> Open in New Tab
+                      </a>
+                      <button
+                        type="button"
+                        onClick={() => setPreviewingEvidencePhoto(null)}
+                        style={{
+                          background: 'rgba(255,255,255,0.1)',
+                          border: 'none',
+                          color: '#fff',
+                          borderRadius: '6px',
+                          width: '32px',
+                          height: '32px',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }}
+                      >
+                        <X size={18} />
+                      </button>
+                    </div>
+                    <img
+                      src={previewingEvidencePhoto}
+                      alt="Enlarged evidence photo"
+                      onClick={(e) => e.stopPropagation()}
+                      style={{
+                        maxWidth: '90vw',
+                        maxHeight: '85vh',
+                        objectFit: 'contain',
+                        borderRadius: '8px',
+                        border: '1px solid rgba(var(--gold-rgb), 0.4)',
+                        boxShadow: '0 0 30px rgba(0,0,0,0.8)',
+                      }}
+                    />
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
-          </div>
-        )}
+          );
+        })()}
 
         {/* REVIEWS & SOCIAL PROOF TAB */}
         {activeTab === 'testimonials' && (

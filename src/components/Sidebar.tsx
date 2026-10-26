@@ -42,6 +42,7 @@ import {
 import { NotificationHeaderDropdown } from './NotificationHeaderDropdown';
 import { getImageUrl } from '../utils/imageUrl';
 import { useApp } from '../app/providers';
+import { isSuperAdminRole } from '../types';
 
 interface SidebarProps {
   activeTab: string;
@@ -169,9 +170,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, onReq
     { id: 'home-mgmt', label: 'Website CMS', icon: Image },
   ];
 
-  const desktopItems = role === 'superadmin' ? superadminDesktopItems : adminDesktopItems;
-  const bottomItems = role === 'superadmin' ? superadminBottomItems : adminBottomItems;
-  const remainingItems = role === 'superadmin' ? superadminRemainingItems : adminRemainingItems;
+  const isSuperAdmin = isSuperAdminRole(role);
+  const desktopItems = isSuperAdmin ? superadminDesktopItems : adminDesktopItems;
+  const bottomItems = isSuperAdmin ? superadminBottomItems : adminBottomItems;
+  const remainingItems = isSuperAdmin ? superadminRemainingItems : adminRemainingItems;
 
   const handleTabSelect = (tabId: string) => {
     setActiveTab(tabId);
@@ -190,8 +192,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, onReq
 
   const rawAvatarUrl = user?.profile?.avatarUrl || (user?.profile as any)?.avatar_url || (user as any)?.avatar_url;
   const avatarUrl = rawAvatarUrl ? getImageUrl(rawAvatarUrl) : '';
-  const initial = user?.name ? user.name.charAt(0).toUpperCase() : (role === 'superadmin' ? 'S' : 'A');
-  const roleLabel = role === 'superadmin' ? 'Super Admin' : 'Admin';
+  const initial = user?.name ? user.name.charAt(0).toUpperCase() : (isSuperAdmin ? 'S' : 'A');
+  const roleLabel = isSuperAdmin ? 'Super Admin' : 'Admin';
 
   return (
     <>
@@ -213,7 +215,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, onReq
           {/* Center: Brand logo + "CHOVIQUE" + Role Badge stacked down of branding */}
           <div
             className="admin-mobile-topnav-logo"
-            onClick={() => handleTabSelect(role === 'superadmin' ? 'enterprise' : 'dashboard')}
+            onClick={() => handleTabSelect(isSuperAdmin ? 'enterprise' : 'dashboard')}
             style={{ cursor: 'pointer' }}
           >
             <img
@@ -226,7 +228,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, onReq
             />
             <div className="admin-mobile-brand-stack">
               <span className="admin-mobile-logo-text">CHOVIQUE</span>
-              <span className="admin-mobile-brand-role">{role === 'superadmin' ? 'SUPERADMIN' : 'ADMIN'}</span>
+              <span className="admin-mobile-brand-role">{isSuperAdmin ? 'SUPERADMIN' : 'ADMIN'}</span>
             </div>
           </div>
 
@@ -245,7 +247,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, onReq
 
             <NotificationHeaderDropdown
               onNavigateTab={handleTabSelect}
-              isSuperadmin={role === 'superadmin'}
+              isSuperadmin={isSuperAdmin}
             />
             <button
               onClick={() => handleTabSelect('profile')}
@@ -482,7 +484,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, onReq
                 marginBottom: '6px',
               }}
             >
-              {role} Workspace
+              {isSuperAdmin ? 'Super Admin' : 'Admin'} Workspace
             </span>
             <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '4px', paddingRight: '4px' }}>
               {desktopItems.map((item) => {

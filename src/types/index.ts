@@ -2,7 +2,24 @@
 // CORE DOMAIN TYPES
 // =============================================================================
 
-export type UserRole = 'guest' | 'customer' | 'admin' | 'superadmin' | 'delivery_boy';
+export type UserRole = 'guest' | 'customer' | 'admin' | 'superadmin' | 'super_admin' | 'delivery_boy' | 'delivery_person';
+
+export const isSuperAdminRole = (role?: string | null): boolean => {
+  if (!role) return false;
+  const r = role.toLowerCase().trim();
+  return r === 'superadmin' || r === 'super_admin';
+};
+
+export const isAdminRole = (role?: string | null): boolean => {
+  if (!role) return false;
+  return role.toLowerCase().trim() === 'admin';
+};
+
+export const isStaffRole = (role?: string | null): boolean => {
+  if (!role) return false;
+  const r = role.toLowerCase().trim();
+  return r === 'superadmin' || r === 'super_admin' || r === 'admin' || r === 'delivery_boy' || r === 'delivery_person';
+};
 
 export interface UserProfile {
   name: string;
@@ -212,6 +229,15 @@ export interface Order {
   shipping_location_verified?: boolean;
   shipping_delivery_charge?: number | null;
   shipping_confirmed_at?: string | null;
+
+  // Return request fields
+  return_deadline?: string;
+  return_window_expired?: boolean;
+  return_request?: ReturnRequest;
+  return_requests_enabled?: boolean;
+  return_photo_required?: boolean;
+  return_window_value?: number;
+  return_window_unit?: string;
 }
 
 export interface DeliveryBoy {
@@ -562,6 +588,27 @@ export interface OfflineSale {
   receiptUrl?: string;
 }
 
+export interface ReturnRequest {
+  id: string;
+  order_id: string;
+  ticket_id?: string | null;
+  customer_id: string;
+  customer_name: string;
+  customer_email?: string | null;
+  customer_phone?: string | null;
+  order_amount: number;
+  payment_method: string;
+  delivery_address: any;
+  delivered_at: string;
+  reason: string;
+  description: string;
+  photo_url?: string | null;
+  status: 'Pending' | 'Under Review' | 'Approved' | 'Rejected' | 'Resolved' | string;
+  admin_notes?: string | null;
+  created_at: string;
+  updated_at?: string | null;
+}
+
 export interface SupportTicket {
   id: string;
   ticket_number?: string;
@@ -586,6 +633,31 @@ export interface SupportTicket {
   customerResolutionFeedback?: 'Resolved' | 'Not Resolved';
   date: string;
   notified: boolean;
+  photo_url?: string;
+  photoUrl?: string;
+  return_request_id?: string;
+  returnRequestId?: string;
+  order_amount?: number;
+  orderAmount?: number;
+  payment_method?: string;
+  paymentMethod?: string;
+  delivery_address?: any;
+  deliveryAddress?: any;
+  delivered_at?: string;
+  deliveredAt?: string;
+  return_reason?: string;
+  returnReason?: string;
+  customerEmail?: string;
+  customer_email?: string;
+  customerPhone?: string;
+  customer_phone?: string;
+  currency?: string;
+  assignedAdmin?: string;
+  assigned_admin?: string;
+  createdAt?: string;
+  created_at?: string;
+  updatedAt?: string;
+  updated_at?: string;
 }
 
 export interface CustomerAddress {
@@ -1039,7 +1111,8 @@ export interface SystemUser {
 // =============================================================================
 
 export interface ForgotPasswordPayload {
-  email: string;
+  email?: string;
+  phone?: string;
 }
 
 export interface ForgotPasswordResponse {
@@ -1048,46 +1121,73 @@ export interface ForgotPasswordResponse {
 }
 
 export interface ResetPasswordPayload {
-  email: string;
+  email?: string;
+  phone?: string;
   otp: string;
   password: string;
-  confirmPassword: string;
+  confirmPassword?: string;
+  confirm_password?: string;
 }
 
 // =============================================================================
 // API REQUEST PAYLOAD TYPES
 // =============================================================================
 
-export interface LoginPayload {
-  email: string;
-  password: string;
-}
 
-export interface RegisterPayload {
-  name: string;
-  email: string;
-  password: string;
-  confirmPassword: string;
-}
-
-export interface SendOtpPayload {
-  name: string;
-  email: string;
-  password: string;
-  confirmPassword: string;
-}
-
-export interface VerifyOtpPayload {
-  email: string;
-  otp: string;
-  fullName: string;
-  password: string;
-}
 
 export interface SendOtpResponse {
   message: string;
-  email: string;
-  expires_in: number;
+  email?: string;
+  phone?: string;
+  expires_in?: number;
+}
+
+export interface CustomerSendOtpPayload {
+  phone: string;
+}
+
+export interface CustomerResendOtpPayload {
+  phone: string;
+}
+
+export interface CustomerVerifyOtpPayload {
+  phone: string;
+  otp: string;
+}
+
+export interface StaffCheckMobilePayload {
+  phone: string;
+  role: 'super_admin' | 'admin' | 'delivery_person' | 'superadmin' | 'delivery_boy';
+}
+
+export interface StaffCheckMobileResponse {
+  status: string;
+  message: string;
+  role: string;
+}
+
+export interface StaffLoginPayload {
+  phone: string;
+  mobile_number?: string;
+  password: string;
+  role?: 'super_admin' | 'admin' | 'delivery_person' | 'superadmin' | 'delivery_boy' | string;
+}
+
+export interface IdentifyPayload {
+  country_code?: string;
+  mobile_number: string;
+  phone?: string;
+}
+
+export interface IdentifyResponse {
+  next_step: 'otp' | 'password';
+  message: string;
+  phone?: string;
+  country_code?: string;
+  mobile_number?: string;
+  expires_in?: number;
+  resend_cooldown?: number;
+  remaining_daily_requests?: number;
 }
 
 export interface OrderPayload {
@@ -1174,15 +1274,7 @@ export interface AuthResponse {
   refresh_token?: string;
 }
 
-export interface GoogleAuthResponse {
-  message: string;
-  user: User;
-  access_token?: string;
-  refresh_token?: string;
-  require_otp?: boolean;
-  email?: string;
-  expires_in?: number;
-}
+
 
 /** Paginated list response */
 export interface PaginatedResponse<T> {

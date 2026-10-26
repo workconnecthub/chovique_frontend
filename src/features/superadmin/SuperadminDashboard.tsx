@@ -84,6 +84,7 @@ import { CustomerDirectory } from '../admin/CustomerDirectory';
 import { DeliveryBoysView } from '../admin/DeliveryBoysView';
 import { LogisticsManagementView } from './LogisticsManagementView';
 import type { OnlineLedgerItem } from '../../services/adminService';
+import { isSuperAdminRole, isAdminRole } from '../../types';
 
 const formatActionLabel = (action?: string | null): string => {
   if (!action) return 'Activity Event';
@@ -274,6 +275,8 @@ export const SuperadminDashboard: React.FC = () => {
         'banners': 'home-mgmt',
         'carousel': 'home-mgmt',
         'cms': 'home-mgmt',
+        'theme-builder': 'theme-builder',
+        'theme': 'theme-builder',
       };
       if (mapping[tabParam]) {
         setActiveTab(mapping[tabParam]);
@@ -1971,7 +1974,7 @@ export const SuperadminDashboard: React.FC = () => {
 
 
   // ─── Platform Settings State & Handlers ────────────────────────────────────
-  type PsSettingsTab = 'payment' | 'customer-order' | 'system';
+  type PsSettingsTab = 'payment' | 'customer-order' | 'returns' | 'system';
 
   const [psActiveTab, setPsActiveTab] = useState<PsSettingsTab>('payment');
   const [psLoading, setPsLoading] = useState(false);
@@ -2004,6 +2007,10 @@ export const SuperadminDashboard: React.FC = () => {
     order_cancellation_enabled: true,
     cancellation_time_limit: 24,
     return_refund_enabled: true,
+    return_requests_enabled: true,
+    return_window_value: 30,
+    return_window_unit: 'minutes',
+    return_photo_required: false,
     maintenance_mode: false,
     admin_session_timeout: 60,
     max_login_attempts: 5,
@@ -2045,6 +2052,10 @@ export const SuperadminDashboard: React.FC = () => {
             order_cancellation_enabled: data.order_cancellation_enabled ?? prev.order_cancellation_enabled,
             cancellation_time_limit: data.cancellation_time_limit ?? prev.cancellation_time_limit,
             return_refund_enabled: data.return_refund_enabled ?? prev.return_refund_enabled,
+            return_requests_enabled: data.return_requests_enabled ?? prev.return_requests_enabled,
+            return_window_value: data.return_window_value ?? prev.return_window_value,
+            return_window_unit: data.return_window_unit ?? prev.return_window_unit,
+            return_photo_required: data.return_photo_required ?? prev.return_photo_required,
             maintenance_mode: data.maintenance_mode ?? prev.maintenance_mode,
             admin_session_timeout: data.admin_session_timeout ?? prev.admin_session_timeout,
             max_login_attempts: data.max_login_attempts ?? prev.max_login_attempts,
@@ -2079,6 +2090,19 @@ export const SuperadminDashboard: React.FC = () => {
     if (psForm.admin_session_timeout < 5) errs.admin_session_timeout = 'Session timeout must be at least 5 minutes.';
     if (psForm.max_login_attempts < 1) errs.max_login_attempts = 'Must allow at least 1 login attempt.';
     if (psForm.account_lockout_duration < 1) errs.account_lockout_duration = 'Lockout duration must be at least 1 minute.';
+
+    // Return policy validations
+    if (psForm.return_window_value < 1) {
+      errs.return_window_value = 'Return reporting window must be a positive integer (at least 1).';
+    }
+    const unit = (psForm.return_window_unit || 'minutes').toLowerCase();
+    if (unit === 'minutes' && psForm.return_window_value > 10080) {
+      errs.return_window_value = 'Return window in minutes cannot exceed 10,080 (7 days).';
+    } else if (unit === 'hours' && psForm.return_window_value > 720) {
+      errs.return_window_value = 'Return window in hours cannot exceed 720 (30 days).';
+    } else if (unit === 'days' && psForm.return_window_value > 30) {
+      errs.return_window_value = 'Return window in days cannot exceed 30 days.';
+    }
     setPsErrors(errs);
     return Object.keys(errs).length === 0;
   };
@@ -6325,12 +6349,12 @@ export const SuperadminDashboard: React.FC = () => {
                                   borderRadius: '6px',
                                   fontSize: '0.78rem',
                                   fontWeight: 700,
-                                  background: adm.role === 'superadmin' ? 'rgba(201, 168, 76, 0.15)' : 'rgba(255, 255, 255, 0.06)',
-                                  color: adm.role === 'superadmin' ? '#c9a84c' : 'rgba(255, 255, 255, 0.8)',
-                                  border: adm.role === 'superadmin' ? '1px solid rgba(201, 168, 76, 0.4)' : '1px solid rgba(255, 255, 255, 0.15)',
+                                  background: isSuperAdminRole(adm.role) ? 'rgba(201, 168, 76, 0.15)' : 'rgba(255, 255, 255, 0.06)',
+                                  color: isSuperAdminRole(adm.role) ? '#c9a84c' : 'rgba(255, 255, 255, 0.8)',
+                                  border: isSuperAdminRole(adm.role) ? '1px solid rgba(201, 168, 76, 0.4)' : '1px solid rgba(255, 255, 255, 0.15)',
                                 }}
                               >
-                                {adm.role === 'superadmin' ? 'Super Admin' : 'Admin'}
+                                {isSuperAdminRole(adm.role) ? 'Super Admin' : 'Admin'}
                               </span>
                             </td>
                             <td style={{ padding: '12px' }}>
@@ -6708,12 +6732,12 @@ export const SuperadminDashboard: React.FC = () => {
                                     borderRadius: '4px',
                                     fontSize: '0.75rem',
                                     fontWeight: 700,
-                                    background: log.user_role === 'superadmin' ? 'rgba(var(--gold-rgb), 0.15)' : 'rgba(255, 255, 255, 0.06)',
-                                    color: log.user_role === 'superadmin' ? 'var(--gold)' : 'rgba(255, 255, 255, 0.8)',
-                                    border: log.user_role === 'superadmin' ? '1px solid rgba(var(--gold-rgb), 0.3)' : '1px solid rgba(255, 255, 255, 0.1)',
+                                    background: isSuperAdminRole(log.user_role) ? 'rgba(var(--gold-rgb), 0.15)' : 'rgba(255, 255, 255, 0.06)',
+                                    color: isSuperAdminRole(log.user_role) ? 'var(--gold)' : 'rgba(255, 255, 255, 0.8)',
+                                    border: isSuperAdminRole(log.user_role) ? '1px solid rgba(var(--gold-rgb), 0.3)' : '1px solid rgba(255, 255, 255, 0.1)',
                                   }}
                                 >
-                                  {log.user_role === 'superadmin' ? 'Super Admin' : log.user_role === 'admin' ? 'Admin' : 'Super Admin'}
+                                  {isSuperAdminRole(log.user_role) ? 'Super Admin' : (isAdminRole(log.user_role) ? 'Admin' : 'Super Admin')}
                                 </span>
                               </td>
                               <td style={{ padding: '14px 16px', fontWeight: 600, color: 'var(--cream)' }}>
@@ -8308,7 +8332,8 @@ export const SuperadminDashboard: React.FC = () => {
             }}>
               {[
                 { id: 'payment', label: 'Payment & Shipping' },
-                { id: 'customer-order', label: 'Customer & Order Settings' },
+                { id: 'customer-order', label: 'Customer & Order' },
+                { id: 'returns', label: 'Return & Refund Policy' },
                 { id: 'system', label: 'System & Security' },
               ].map((t) => (
                 <button
@@ -8443,6 +8468,224 @@ export const SuperadminDashboard: React.FC = () => {
                             <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.75rem' }}>Allow return and refund requests</span>
                           </div>
                           <input type="checkbox" checked={psForm.return_refund_enabled} onChange={(e) => updatePsField('return_refund_enabled', e.target.checked)} style={{ accentColor: '#c9a84c', width: '18px', height: '18px', cursor: 'pointer' }} />
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', background: 'rgba(201, 168, 76, 0.08)', borderRadius: '8px', border: '1px solid rgba(201, 168, 76, 0.25)', marginTop: '8px' }}>
+                          <div>
+                            <span style={{ color: '#E8D48B', fontWeight: 700, fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              <RotateCcw size={16} /> Return Reporting Window Policy
+                            </span>
+                            <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.78rem', display: 'block', marginTop: '2px' }}>
+                              Current: {psForm.return_requests_enabled ? `${psForm.return_window_value} ${psForm.return_window_unit} (Active)` : 'Disabled'} · Photo: {psForm.return_photo_required ? 'Required' : 'Optional'}
+                            </span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => setPsActiveTab('returns')}
+                            style={{
+                              padding: '6px 14px',
+                              borderRadius: '6px',
+                              background: 'rgba(201, 168, 76, 0.2)',
+                              border: '1px solid rgba(201, 168, 76, 0.5)',
+                              color: '#c9a84c',
+                              fontSize: '0.8rem',
+                              fontWeight: 700,
+                              cursor: 'pointer',
+                            }}
+                          >
+                            Configure
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* ── TAB 3: Return & Refund Policy ── */}
+                {psActiveTab === 'returns' && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                    <div className="glass-panel" style={{ padding: '28px', border: '1px solid rgba(var(--gold-rgb), 0.35)', borderRadius: '14px', background: 'var(--surface-color)', boxShadow: '0 8px 32px rgba(0,0,0,0.3)' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px', marginBottom: '20px' }}>
+                        <div>
+                          <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1.15rem', color: '#c9a84c', margin: '0 0 6px 0', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <RotateCcw size={20} color="#c9a84c" /> Return & Refund Configuration
+                          </h3>
+                          <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.82rem', margin: 0 }}>
+                            Configure the customer return reporting window, time unit, and evidence requirements for delivered orders.
+                          </p>
+                        </div>
+
+                        {/* Live Status Badge */}
+                        <div style={{
+                          padding: '8px 14px',
+                          borderRadius: '20px',
+                          fontSize: '0.8rem',
+                          fontWeight: 700,
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          background: psForm.return_requests_enabled ? 'rgba(46, 204, 113, 0.12)' : 'rgba(231, 76, 60, 0.12)',
+                          border: `1px solid ${psForm.return_requests_enabled ? 'rgba(46, 204, 113, 0.4)' : 'rgba(231, 76, 60, 0.4)'}`,
+                          color: psForm.return_requests_enabled ? '#2ecc71' : '#e74c3c',
+                        }}>
+                          <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: psForm.return_requests_enabled ? '#2ecc71' : '#e74c3c' }} />
+                          {psForm.return_requests_enabled
+                            ? `Returns Active (${psForm.return_window_value} ${psForm.return_window_unit})`
+                            : 'Returns Disabled'}
+                        </div>
+                      </div>
+
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                        {/* Toggle 1: Enable Return Requests */}
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px', borderRadius: '10px', background: 'rgba(0,0,0,0.25)', border: '1px solid rgba(255,255,255,0.06)' }}>
+                          <div>
+                            <span style={{ color: '#f5efe6', fontWeight: 700, fontSize: '0.92rem', display: 'block' }}>
+                              Enable Return Requests
+                            </span>
+                            <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.78rem', display: 'block', marginTop: '2px' }}>
+                              Allow customers to submit return requests for eligible delivered orders within the reporting window.
+                            </span>
+                          </div>
+                          <label style={{ position: 'relative', display: 'inline-block', width: '48px', height: '26px', cursor: 'pointer' }}>
+                            <input
+                              type="checkbox"
+                              checked={psForm.return_requests_enabled}
+                              onChange={(e) => updatePsField('return_requests_enabled', e.target.checked)}
+                              style={{ opacity: 0, width: 0, height: 0 }}
+                            />
+                            <span style={{
+                              position: 'absolute', cursor: 'pointer', inset: 0,
+                              background: psForm.return_requests_enabled ? '#c9a84c' : 'rgba(255,255,255,0.15)',
+                              borderRadius: '34px',
+                              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                            }}>
+                              <span style={{
+                                position: 'absolute', content: '""', height: '20px', width: '20px', left: psForm.return_requests_enabled ? '25px' : '3px', bottom: '3px',
+                                background: '#ffffff',
+                                borderRadius: '50%',
+                                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                                boxShadow: '0 2px 4px rgba(0,0,0,0.3)',
+                              }} />
+                            </span>
+                          </label>
+                        </div>
+
+                        {/* Window Configuration: Value + Unit */}
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px' }}>
+                          <div>
+                            <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#f5efe6', marginBottom: '6px' }}>
+                              Return Reporting Window <span style={{ color: '#c9a84c' }}>*</span>
+                            </label>
+                            <input
+                              type="number"
+                              min="1"
+                              max={psForm.return_window_unit === 'days' ? 30 : psForm.return_window_unit === 'hours' ? 720 : 10080}
+                              value={psForm.return_window_value}
+                              onChange={(e) => updatePsField('return_window_value', parseInt(e.target.value) || 1)}
+                              disabled={!psForm.return_requests_enabled}
+                              style={{
+                                width: '100%',
+                                padding: '11px 14px',
+                                borderRadius: '8px',
+                                background: 'rgba(0,0,0,0.35)',
+                                border: psErrors.return_window_value ? '1px solid #e74c3c' : '1px solid rgba(201, 168, 76, 0.35)',
+                                color: '#f5efe6',
+                                fontSize: '0.92rem',
+                                outline: 'none',
+                                opacity: psForm.return_requests_enabled ? 1 : 0.5,
+                              }}
+                            />
+                            {psErrors.return_window_value && (
+                              <span style={{ color: '#e74c3c', fontSize: '0.75rem', marginTop: '4px', display: 'block' }}>
+                                {psErrors.return_window_value}
+                              </span>
+                            )}
+                            <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: '0.75rem', margin: '4px 0 0 0' }}>
+                              Positive integer duration (Default: 30 minutes).
+                            </p>
+                          </div>
+
+                          <div>
+                            <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#f5efe6', marginBottom: '6px' }}>
+                              Time Unit <span style={{ color: '#c9a84c' }}>*</span>
+                            </label>
+                            <select
+                              value={psForm.return_window_unit}
+                              onChange={(e) => updatePsField('return_window_unit', e.target.value)}
+                              disabled={!psForm.return_requests_enabled}
+                              style={{
+                                width: '100%',
+                                padding: '11px 14px',
+                                borderRadius: '8px',
+                                background: '#120d0e',
+                                border: '1px solid rgba(201, 168, 76, 0.35)',
+                                color: '#f5efe6',
+                                fontSize: '0.92rem',
+                                outline: 'none',
+                                cursor: psForm.return_requests_enabled ? 'pointer' : 'not-allowed',
+                                opacity: psForm.return_requests_enabled ? 1 : 0.5,
+                              }}
+                            >
+                              <option value="minutes" style={{ background: '#1a1012', color: '#f5efe6' }}>Minutes</option>
+                              <option value="hours" style={{ background: '#1a1012', color: '#f5efe6' }}>Hours</option>
+                              <option value="days" style={{ background: '#1a1012', color: '#f5efe6' }}>Days</option>
+                            </select>
+                            <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: '0.75rem', margin: '4px 0 0 0' }}>
+                              Select reporting duration unit.
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Live duration calculation helper card */}
+                        <div style={{ padding: '12px 16px', borderRadius: '8px', background: 'rgba(201, 168, 76, 0.08)', border: '1px solid rgba(201, 168, 76, 0.25)', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          <Info size={16} color="#c9a84c" />
+                          <span style={{ fontSize: '0.82rem', color: '#f5efe6' }}>
+                            <strong>Calculated Deadline Rule:</strong> Delivered orders will remain returnable for exactly{' '}
+                            <span style={{ color: '#c9a84c', fontWeight: 700 }}>
+                              {psForm.return_window_value} {psForm.return_window_unit}
+                            </span>{' '}
+                            from the actual delivery timestamp recorded by the courier.
+                          </span>
+                        </div>
+
+                        {/* Toggle 2: Require Photo Evidence */}
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px', borderRadius: '10px', background: 'rgba(0,0,0,0.25)', border: '1px solid rgba(255,255,255,0.06)' }}>
+                          <div>
+                            <span style={{ color: '#f5efe6', fontWeight: 700, fontSize: '0.92rem', display: 'block' }}>
+                              Require Photo Evidence
+                            </span>
+                            <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.78rem', display: 'block', marginTop: '2px' }}>
+                              When active, customers must attach an image of damaged, melted, or incorrect items before submitting.
+                            </span>
+                          </div>
+                          <label style={{ position: 'relative', display: 'inline-block', width: '48px', height: '26px', cursor: 'pointer' }}>
+                            <input
+                              type="checkbox"
+                              checked={psForm.return_photo_required}
+                              onChange={(e) => updatePsField('return_photo_required', e.target.checked)}
+                              style={{ opacity: 0, width: 0, height: 0 }}
+                            />
+                            <span style={{
+                              position: 'absolute', cursor: 'pointer', inset: 0,
+                              background: psForm.return_photo_required ? '#c9a84c' : 'rgba(255,255,255,0.15)',
+                              borderRadius: '34px',
+                              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                            }}>
+                              <span style={{
+                                position: 'absolute', content: '""', height: '20px', width: '20px', left: psForm.return_photo_required ? '25px' : '3px', bottom: '3px',
+                                background: '#ffffff',
+                                borderRadius: '50%',
+                                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                                boxShadow: '0 2px 4px rgba(0,0,0,0.3)',
+                              }} />
+                            </span>
+                          </label>
+                        </div>
+
+                        {/* Impact Explanation Notice */}
+                        <div style={{ padding: '12px 16px', borderRadius: '8px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                          <p style={{ margin: 0, fontSize: '0.78rem', color: 'rgba(255,255,255,0.6)', lineHeight: 1.5 }}>
+                            🛡️ <strong>Policy Persistence & Enforcement:</strong> Setting updates are stored securely in PostgreSQL and apply instantly to all subsequent return checks without requiring a server reboot. The backend remains authoritative for every submission.
+                          </p>
                         </div>
                       </div>
                     </div>

@@ -42,9 +42,11 @@ import {
   Calendar,
   CreditCard,
   Ship,
+  RotateCcw,
 } from 'lucide-react';
 import { useApp } from '../../app/providers';
 import { ConfirmationModal } from '../../components/ui/ConfirmationModal';
+import { ReturnRequestModal } from '../../components/ReturnRequestModal';
 import { ToastContainer, type ToastMessage } from '../../components/ui/Toast';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
@@ -55,7 +57,7 @@ import { userService } from '../../services/userService';
 import { getImageUrl } from '../../utils/imageUrl';
 import { orderService } from '../../services/orderService';
 import { walletService, type CoinTransaction } from '../../services/walletService';
-import type { UserCoupon, CustomerAddress, SupportNotification } from '../../types';
+import type { UserCoupon, CustomerAddress, SupportNotification, Order } from '../../types';
 import { WishlistPage } from '../wishlist/WishlistPage';
 import { isNotificationSupported, getNotificationPermission, requestNotificationPermission, sendBrowserNotification } from '../../utils/browserNotifications';
 
@@ -294,9 +296,7 @@ export const CustomerDashboard: React.FC = () => {
   const [isPdfDownloading, setIsPdfDownloading] = useState<boolean>(false);
   const [cancellingOrderId, setCancellingOrderId] = useState<string | null>(null);
   const [cancelModalOrderId, setCancelModalOrderId] = useState<string | null>(null);
-  const [returningOrderId, setReturningOrderId] = useState<string | null>(null);
-  const [returnModalOrderId, setReturnModalOrderId] = useState<string | null>(null);
-  const [returnReason, setReturnReason] = useState<string>('');
+  const [returnModalOrder, setReturnModalOrder] = useState<Order | null>(null);
 
   const handleCancelOrder = (orderId: string) => {
     setCancelModalOrderId(orderId);
@@ -322,35 +322,28 @@ export const CustomerDashboard: React.FC = () => {
   };
 
   const handleReturnOrder = (orderId: string) => {
-    setReturnModalOrderId(orderId);
-    setReturnReason('');
+    const ord = orders.find(o => o.id === orderId) || (selectedOrder?.id === orderId ? selectedOrder : null);
+    if (ord) {
+      setReturnModalOrder(ord);
+    }
   };
 
-  const confirmReturnOrder = async () => {
-    if (!returnModalOrderId) return;
-    const orderId = returnModalOrderId;
-    setReturningOrderId(orderId);
-    try {
-      const updatedOrder = await orderService.returnOrder(orderId, returnReason || undefined);
-      setOrders(prev => prev.map(o => o.id === orderId ? updatedOrder : o));
-      if (selectedOrder?.id === orderId) {
-        setSelectedOrder(updatedOrder);
-      }
-      setReturnModalOrderId(null);
-      setReturnReason('');
-      alert('Return request submitted successfully.');
-    } catch (error: any) {
-      console.error('Failed to request return:', error);
-      alert(error?.response?.data?.detail || error?.message || 'Failed to request order return. Please try again.');
-    } finally {
-      setReturningOrderId(null);
+  const handleReturnSuccess = (updatedOrder: Order) => {
+    setOrders(prev => prev.map(o => o.id === updatedOrder.id ? updatedOrder : o));
+    if (selectedOrder?.id === updatedOrder.id) {
+      setSelectedOrder(updatedOrder);
     }
+    addToast(
+      'success',
+      `Return request for Order #${updatedOrder.id} has been submitted successfully. Our support team will review it.`,
+      'Return Submitted'
+    );
   };
 
   const isOrderCancellable = (ord: any): boolean => {
     if (!ord) return false;
     if (ord.is_cancellable !== undefined) return Boolean(ord.is_cancellable);
-    if (['Shipped', 'Out for Delivery', 'Out_For_Delivery', 'Delivered', 'Cancelled', 'Returned', 'Refunded'].includes(ord.status)) {
+    if (['Shipped', 'Out for Delivery', 'Out_For_Delivery', 'Delivered', 'Cancelled', 'Returned', 'Refunded', 'Return Requested'].includes(ord.status)) {
       return false;
     }
     if (!['Pending', 'Confirmed', 'Processing'].includes(ord.status)) {
@@ -365,15 +358,101 @@ export const CustomerDashboard: React.FC = () => {
     return true;
   };
 
+  const getReturnWindowStatus = (ord: any): {
+    canReturn: boolean;
+    isDelivered: boolean;
+    isExpired: boolean;
+    isDisabled: boolean;
+    hasRequested: boolean;
+    returnRequest?: any;
+    remainingMinutes: number;
+    remainingTimeText: string;
+  } => {
+    if (!ord) return { canReturn: false, isDelivered: false, isExpired: false, isDisabled: false, hasRequested: false, remainingMinutes: 0, remainingTimeText: '' };
+
+    const status = ord.status;
+    const hasRequested = Boolean(
+      ord.return_request ||
+      status === 'Return Requested' ||
+      status === 'Returned'
+    );
+    if (hasRequested) {
+      return {
+        canReturn: false,
+        isDelivered: true,
+        isExpired: false,
+        isDisabled: false,
+        hasRequested: true,
+        returnRequest: ord.return_request,
+        remainingMinutes: 0,
+        remainingTimeText: '',
+      };
+    }
+
+    if (status !== 'Delivered') {
+      return { canReturn: false, isDelivered: false, isExpired: false, isDisabled: false, hasRequested: false, remainingMinutes: 0, remainingTimeText: '' };
+    }
+
+    // Check if return requests are globally disabled by Super Admin
+    if (ord.return_requests_enabled === false) {
+      return { canReturn: false, isDelivered: true, isExpired: false, isDisabled: true, hasRequested: false, remainingMinutes: 0, remainingTimeText: '' };
+    }
+
+    if (ord.return_window_expired === true || ord.is_returnable === false) {
+      return { canReturn: false, isDelivered: true, isExpired: true, isDisabled: false, hasRequested: false, remainingMinutes: 0, remainingTimeText: '' };
+    }
+
+    // Compute deadline dynamically from backend or delivery timestamp
+    let deadlineMs = 0;
+    if (ord.return_deadline) {
+      deadlineMs = new Date(ord.return_deadline).getTime();
+    } else if (ord.delivered_at) {
+      const deliveredMs = new Date(ord.delivered_at).getTime();
+      let windowSeconds = 1800;
+      if (ord.return_window_value && ord.return_window_unit) {
+        const u = String(ord.return_window_unit).toLowerCase();
+        const v = Number(ord.return_window_value) || 30;
+        if (u === 'hours') windowSeconds = v * 3600;
+        else if (u === 'days') windowSeconds = v * 86400;
+        else windowSeconds = v * 60;
+      }
+      deadlineMs = deliveredMs + (windowSeconds * 1000);
+    }
+
+    if (!deadlineMs || isNaN(deadlineMs)) {
+      return { canReturn: false, isDelivered: true, isExpired: true, isDisabled: false, hasRequested: false, remainingMinutes: 0, remainingTimeText: '' };
+    }
+
+    const diffSeconds = Math.floor((deadlineMs - Date.now()) / 1000);
+    if (diffSeconds <= 0) {
+      return { canReturn: false, isDelivered: true, isExpired: true, isDisabled: false, hasRequested: false, remainingMinutes: 0, remainingTimeText: '' };
+    }
+
+    const totalMinutes = Math.ceil(diffSeconds / 60);
+    let timeText = `${totalMinutes}m remaining`;
+    if (totalMinutes > 1440) {
+      const days = Math.floor(totalMinutes / 1440);
+      const remHours = Math.floor((totalMinutes % 1440) / 60);
+      timeText = remHours > 0 ? `${days}d ${remHours}h remaining` : `${days}d remaining`;
+    } else if (totalMinutes > 60) {
+      const hours = Math.floor(totalMinutes / 60);
+      const remMins = totalMinutes % 60;
+      timeText = remMins > 0 ? `${hours}h ${remMins}m remaining` : `${hours}h remaining`;
+    }
+
+    return {
+      canReturn: true,
+      isDelivered: true,
+      isExpired: false,
+      isDisabled: false,
+      hasRequested: false,
+      remainingMinutes: totalMinutes,
+      remainingTimeText: timeText,
+    };
+  };
+
   const isOrderReturnable = (ord: any): boolean => {
-    if (!ord) return false;
-    if (ord.is_returnable !== undefined) return Boolean(ord.is_returnable);
-    if (ord.status !== 'Delivered') return false;
-    const deliveryDate = ord.delivered_at;
-    if (!deliveryDate) return false;
-    const delivered = new Date(deliveryDate).getTime();
-    if (isNaN(delivered)) return false;
-    return (new Date().getTime() - delivered) < 345600000;
+    return getReturnWindowStatus(ord).canReturn;
   };
 
   const handleDownloadInvoice = async (orderId: string, e?: React.MouseEvent) => {
@@ -3195,6 +3274,138 @@ export const CustomerDashboard: React.FC = () => {
                       </div>
                     </div>
 
+                    {/* Return Request Status Card for Delivered Orders */}
+                    {(() => {
+                      const retReq = selectedOrder.return_request;
+                      const isReturnFlow = Boolean(retReq || selectedOrder.status === 'Return Requested' || selectedOrder.status === 'Returned');
+                      if (!isReturnFlow) return null;
+                      const retStatus = retReq?.status || (selectedOrder.status === 'Returned' ? 'Approved' : 'Pending');
+                      const getStatusColor = (s: string) => {
+                        switch (s) {
+                          case 'Approved': return '#2ecc71';
+                          case 'Rejected': return '#e74c3c';
+                          case 'Resolved': return '#3498db';
+                          case 'Under Review': return '#f39c12';
+                          default: return '#E8D48B';
+                        }
+                      };
+                      return (
+                        <div
+                          style={{
+                            margin: '18px 0',
+                            padding: '18px 20px',
+                            borderRadius: '12px',
+                            background: 'linear-gradient(135deg, rgba(26, 13, 0, 0.75) 0%, rgba(10, 10, 10, 0.85) 100%)',
+                            border: '1px solid rgba(201, 168, 76, 0.35)',
+                            boxShadow: '0 6px 20px rgba(0,0,0,0.4)',
+                          }}
+                        >
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '10px', marginBottom: '12px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                              <div
+                                style={{
+                                  width: '36px',
+                                  height: '36px',
+                                  borderRadius: '8px',
+                                  background: 'rgba(201, 168, 76, 0.15)',
+                                  border: '1px solid rgba(201, 168, 76, 0.4)',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  color: '#E8D48B',
+                                }}
+                              >
+                                <RotateCcw size={18} />
+                              </div>
+                              <div>
+                                <h4 style={{ margin: 0, fontSize: '1rem', color: '#E8D48B', fontWeight: 700 }}>
+                                  Return Request {retReq?.id ? `#${retReq.id}` : ''}
+                                </h4>
+                                <span style={{ fontSize: '0.78rem', color: '#DBC8A9', opacity: 0.85 }}>
+                                  Submitted for Order #{selectedOrder.id}
+                                </span>
+                              </div>
+                            </div>
+
+                            <span
+                              style={{
+                                padding: '4px 12px',
+                                borderRadius: '20px',
+                                fontSize: '0.8rem',
+                                fontWeight: 700,
+                                background: `${getStatusColor(retStatus)}18`,
+                                color: getStatusColor(retStatus),
+                                border: `1px solid ${getStatusColor(retStatus)}40`,
+                              }}
+                            >
+                              {retStatus}
+                            </span>
+                          </div>
+
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px', fontSize: '0.84rem', marginTop: '12px' }}>
+                            <div>
+                              <span style={{ color: '#DBC8A9', fontSize: '0.74rem', textTransform: 'uppercase' }}>Reason</span>
+                              <p style={{ margin: '2px 0 0', color: '#FFFFFF', fontWeight: 600 }}>
+                                {retReq?.reason || selectedOrder.return_reason || 'Return Requested'}
+                              </p>
+                            </div>
+                            <div>
+                              <span style={{ color: '#DBC8A9', fontSize: '0.74rem', textTransform: 'uppercase' }}>Payment Method</span>
+                              <p style={{ margin: '2px 0 0', color: '#FFFFFF', fontWeight: 600 }}>
+                                {retReq?.payment_method || selectedOrder.payment_method || selectedOrder.paymentMethod || 'Cash on Delivery'}
+                              </p>
+                            </div>
+                            <div>
+                              <span style={{ color: '#DBC8A9', fontSize: '0.74rem', textTransform: 'uppercase' }}>Order Amount</span>
+                              <p style={{ margin: '2px 0 0', color: '#C9A84C', fontWeight: 700 }}>
+                                ₹{(selectedOrder.total || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                              </p>
+                            </div>
+                          </div>
+
+                          {retReq?.description && (
+                            <div style={{ marginTop: '12px', padding: '10px 14px', borderRadius: '8px', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.06)' }}>
+                              <span style={{ color: '#DBC8A9', fontSize: '0.74rem', textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>Customer Explanation</span>
+                              <p style={{ margin: 0, fontSize: '0.86rem', color: '#F5E6D3', lineHeight: 1.4 }}>
+                                {retReq.description}
+                              </p>
+                            </div>
+                          )}
+
+                          {retReq?.photo_url && (
+                            <div style={{ marginTop: '12px' }}>
+                              <span style={{ color: '#DBC8A9', fontSize: '0.74rem', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>Supporting Photo</span>
+                              <a href={retReq.photo_url} target="_blank" rel="noopener noreferrer">
+                                <img
+                                  src={retReq.photo_url}
+                                  alt="Return evidence"
+                                  style={{
+                                    width: '70px',
+                                    height: '70px',
+                                    objectFit: 'cover',
+                                    borderRadius: '8px',
+                                    border: '1px solid rgba(201, 168, 76, 0.4)',
+                                    cursor: 'pointer',
+                                  }}
+                                />
+                              </a>
+                            </div>
+                          )}
+
+                          {retReq?.admin_notes && (
+                            <div style={{ marginTop: '12px', padding: '10px 14px', borderRadius: '8px', background: 'rgba(201, 168, 76, 0.08)', border: '1px solid rgba(201, 168, 76, 0.25)' }}>
+                              <span style={{ color: '#E8D48B', fontSize: '0.74rem', textTransform: 'uppercase', fontWeight: 700, display: 'block', marginBottom: '4px' }}>
+                                Support Team Note
+                              </span>
+                              <p style={{ margin: 0, fontSize: '0.86rem', color: '#FFFFFF', lineHeight: 1.4 }}>
+                                {retReq.admin_notes}
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })()}
+
                     {/* Bottom Action Row */}
                     <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '14px', flexWrap: 'wrap' }}>
                       {isOrderCancellable(selectedOrder) && (
@@ -3219,28 +3430,74 @@ export const CustomerDashboard: React.FC = () => {
                           <X size={16} /> {cancellingOrderId === selectedOrder.id ? 'Cancelling...' : 'Cancel Order'}
                         </button>
                       )}
-                      {isOrderReturnable(selectedOrder) && (
-                        <button
-                          type="button"
-                          disabled={returningOrderId === selectedOrder.id}
-                          onClick={() => handleReturnOrder(selectedOrder.id)}
-                          style={{
-                            padding: '11px 22px',
-                            borderRadius: '8px',
-                            background: 'rgba(155, 89, 182, 0.1)',
-                            border: '1px solid rgba(155, 89, 182, 0.5)',
-                            color: '#9b59b6',
-                            fontSize: '0.9rem',
-                            fontWeight: 700,
-                            cursor: returningOrderId === selectedOrder.id ? 'not-allowed' : 'pointer',
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '8px',
-                          }}
-                        >
-                          <RefreshCw size={16} /> {returningOrderId === selectedOrder.id ? 'Submitting...' : 'Return Order'}
-                        </button>
-                      )}
+                      {/* Return Action or Expiration / Disabled Notice */}
+                      {(() => {
+                        const winStatus = getReturnWindowStatus(selectedOrder);
+                        if (winStatus.canReturn) {
+                          return (
+                            <button
+                              type="button"
+                              onClick={() => setReturnModalOrder(selectedOrder)}
+                              style={{
+                                padding: '11px 22px',
+                                borderRadius: '8px',
+                                background: 'rgba(201, 168, 76, 0.15)',
+                                border: '1px solid rgba(201, 168, 76, 0.55)',
+                                color: '#E8D48B',
+                                fontSize: '0.9rem',
+                                fontWeight: 700,
+                                cursor: 'pointer',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '8px',
+                              }}
+                            >
+                              <RotateCcw size={16} /> Return ({winStatus.remainingTimeText})
+                            </button>
+                          );
+                        }
+                        if (winStatus.isDelivered && winStatus.isDisabled && !winStatus.hasRequested) {
+                          return (
+                            <div
+                              style={{
+                                padding: '10px 18px',
+                                borderRadius: '8px',
+                                background: 'rgba(241, 196, 15, 0.12)',
+                                border: '1px solid rgba(241, 196, 15, 0.4)',
+                                color: '#f1c40f',
+                                fontSize: '0.86rem',
+                                fontWeight: 600,
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '8px',
+                              }}
+                            >
+                              <AlertTriangle size={16} /> Return requests are currently unavailable.
+                            </div>
+                          );
+                        }
+                        if (winStatus.isDelivered && winStatus.isExpired && !winStatus.hasRequested) {
+                          return (
+                            <div
+                              style={{
+                                padding: '10px 18px',
+                                borderRadius: '8px',
+                                background: 'rgba(231, 76, 60, 0.12)',
+                                border: '1px solid rgba(231, 76, 60, 0.4)',
+                                color: '#ff6b6b',
+                                fontSize: '0.86rem',
+                                fontWeight: 600,
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '8px',
+                              }}
+                            >
+                              <AlertTriangle size={16} /> The return request window has expired.
+                            </div>
+                          );
+                        }
+                        return null;
+                      })()}
                       <button
                         type="button"
                         onClick={() => {
@@ -4309,29 +4566,95 @@ export const CustomerDashboard: React.FC = () => {
                                             {cancellingOrderId === ord.id ? 'Cancelling...' : 'Cancel Order'}
                                           </button>
                                         )}
-                                        {isOrderReturnable(ord) && (
-                                          <button
-                                            type="button"
-                                            disabled={returningOrderId === ord.id}
-                                            onClick={() => handleReturnOrder(ord.id)}
-                                            style={{
-                                              padding: '7px 12px',
-                                              borderRadius: '6px',
-                                              background: 'rgba(155, 89, 182, 0.1)',
-                                              border: '1px solid rgba(155, 89, 182, 0.5)',
-                                              color: '#9b59b6',
-                                              fontSize: '0.78rem',
-                                              fontWeight: 700,
-                                              cursor: returningOrderId === ord.id ? 'not-allowed' : 'pointer',
-                                              transition: 'all 0.2s ease',
-                                              display: 'inline-flex',
-                                              alignItems: 'center',
-                                              gap: '6px',
-                                            }}
-                                          >
-                                            {returningOrderId === ord.id ? 'Submitting...' : 'Return Order'}
-                                          </button>
-                                        )}
+                                        {/* Order Card Return Action */}
+                                        {(() => {
+                                          const winStatus = getReturnWindowStatus(ord);
+                                          if (winStatus.canReturn) {
+                                            return (
+                                              <button
+                                                type="button"
+                                                onClick={() => handleReturnOrder(ord.id)}
+                                                style={{
+                                                  padding: '7px 12px',
+                                                  borderRadius: '6px',
+                                                  background: 'rgba(201, 168, 76, 0.15)',
+                                                  border: '1px solid rgba(201, 168, 76, 0.55)',
+                                                  color: '#E8D48B',
+                                                  fontSize: '0.78rem',
+                                                  fontWeight: 700,
+                                                  cursor: 'pointer',
+                                                  transition: 'all 0.2s ease',
+                                                  display: 'inline-flex',
+                                                  alignItems: 'center',
+                                                  gap: '6px',
+                                                }}
+                                              >
+                                                <RotateCcw size={14} /> Return ({winStatus.remainingTimeText})
+                                              </button>
+                                            );
+                                          }
+                                          if (winStatus.isDelivered && winStatus.isDisabled && !winStatus.hasRequested) {
+                                            return (
+                                              <span
+                                                style={{
+                                                  fontSize: '0.74rem',
+                                                  color: '#f1c40f',
+                                                  fontWeight: 600,
+                                                  display: 'inline-flex',
+                                                  alignItems: 'center',
+                                                  gap: '4px',
+                                                  padding: '4px 8px',
+                                                  borderRadius: '4px',
+                                                  background: 'rgba(241, 196, 15, 0.1)',
+                                                  border: '1px solid rgba(241, 196, 15, 0.25)',
+                                                }}
+                                              >
+                                                <AlertTriangle size={12} /> Returns unavailable
+                                              </span>
+                                            );
+                                          }
+                                          if (winStatus.isDelivered && winStatus.isExpired && !winStatus.hasRequested) {
+                                            return (
+                                              <span
+                                                style={{
+                                                  fontSize: '0.74rem',
+                                                  color: '#ff6b6b',
+                                                  fontWeight: 600,
+                                                  display: 'inline-flex',
+                                                  alignItems: 'center',
+                                                  gap: '4px',
+                                                  padding: '4px 8px',
+                                                  borderRadius: '4px',
+                                                  background: 'rgba(231, 76, 60, 0.1)',
+                                                  border: '1px solid rgba(231, 76, 60, 0.25)',
+                                                }}
+                                              >
+                                                <AlertTriangle size={12} /> Return window expired
+                                              </span>
+                                            );
+                                          }
+                                          if (winStatus.hasRequested) {
+                                            return (
+                                              <span
+                                                style={{
+                                                  fontSize: '0.74rem',
+                                                  color: '#E8D48B',
+                                                  fontWeight: 700,
+                                                  display: 'inline-flex',
+                                                  alignItems: 'center',
+                                                  gap: '4px',
+                                                  padding: '4px 8px',
+                                                  borderRadius: '4px',
+                                                  background: 'rgba(201, 168, 76, 0.12)',
+                                                  border: '1px solid rgba(201, 168, 76, 0.35)',
+                                                }}
+                                              >
+                                                <CheckCircle size={12} /> Return Requested
+                                              </span>
+                                            );
+                                          }
+                                          return null;
+                                        })()}
                                         <button
                                           type="button"
                                           onClick={() => { setSelectedOrder(ord); setOrderSubView('details'); }}
@@ -6963,48 +7286,14 @@ export const CustomerDashboard: React.FC = () => {
           }}
         />
 
-        {/* Return Order Confirmation Modal */}
-        <ConfirmationModal
-          isOpen={returnModalOrderId !== null}
-          title="Return Order?"
-          message="Are you sure you want to request a return for this order?"
-          confirmText={returningOrderId ? 'Submitting...' : 'Confirm Return'}
-          cancelText="Keep Order"
-          isConfirming={returningOrderId !== null}
-          variant="warning"
-          onConfirm={confirmReturnOrder}
-          onCancel={() => {
-            if (!returningOrderId) {
-              setReturnModalOrderId(null);
-              setReturnReason('');
-            }
-          }}
-        >
-          <div style={{ marginTop: '10px' }}>
-            <label style={{ display: 'block', fontSize: '0.85rem', color: 'var(--beige)', marginBottom: '6px' }}>
-              Reason for Return (optional):
-            </label>
-            <textarea
-              value={returnReason}
-              onChange={(e) => setReturnReason(e.target.value)}
-              placeholder="Enter a reason for your return request..."
-              rows={3}
-              disabled={returningOrderId !== null}
-              style={{
-                width: '100%',
-                padding: '10px 14px',
-                borderRadius: '8px',
-                background: 'rgba(0, 0, 0, 0.4)',
-                border: '1px solid var(--glass-border)',
-                color: 'var(--cream)',
-                fontSize: '0.9rem',
-                fontFamily: 'inherit',
-                resize: 'vertical',
-                outline: 'none',
-              }}
-            />
-          </div>
-        </ConfirmationModal>
+        {/* Dedicated Return Request Modal */}
+        <ReturnRequestModal
+          isOpen={returnModalOrder !== null}
+          order={returnModalOrder}
+          photoRequired={returnModalOrder?.return_photo_required}
+          onClose={() => setReturnModalOrder(null)}
+          onSuccess={handleReturnSuccess}
+        />
 
         {/* Toast Notification Container */}
         <ToastContainer toasts={toasts} onDismiss={removeToast} />

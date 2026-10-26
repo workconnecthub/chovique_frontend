@@ -139,4 +139,54 @@ describe('ProtectedRoute Component Security and RBAC', () => {
 
     expect(screen.getByText('Superadmin Theme & Controls')).toBeInTheDocument();
   });
+
+  it('allows super_admin role access when allowedRoles includes superadmin or super_admin', () => {
+    mockUseApp.mockReturnValue({
+      role: 'super_admin',
+      isAuthLoading: false,
+    });
+
+    render(
+      <MemoryRouter initialEntries={['/superadmin']}>
+        <Routes>
+          <Route
+            path="/superadmin"
+            element={
+              <ProtectedRoute allowedRoles={['superadmin', 'super_admin']}>
+                <div>Superadmin Theme & Controls</div>
+              </ProtectedRoute>
+            }
+          />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    expect(screen.getByText('Superadmin Theme & Controls')).toBeInTheDocument();
+  });
+
+  it('blocks admin from accessing superadmin-only route and redirects to /', () => {
+    mockUseApp.mockReturnValue({
+      role: 'admin',
+      isAuthLoading: false,
+    });
+
+    render(
+      <MemoryRouter initialEntries={['/superadmin']}>
+        <Routes>
+          <Route
+            path="/superadmin"
+            element={
+              <ProtectedRoute allowedRoles={['superadmin', 'super_admin']}>
+                <div>Superadmin Only Controls</div>
+              </ProtectedRoute>
+            }
+          />
+          <Route path="/" element={<div>Home Page</div>} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    expect(screen.getByText('Home Page')).toBeInTheDocument();
+    expect(screen.queryByText('Superadmin Only Controls')).not.toBeInTheDocument();
+  });
 });

@@ -21,7 +21,7 @@ import { shippingService } from '../services/shippingService';
 import { orderService } from '../services/orderService';
 import { chatService, type ChatMessage, type ChatAction } from '../services/chatService';
 import { getBrowserCoordinates, reverseGeocodeCoordinates } from '../lib/googleMaps';
-import type { Product, CustomerAddress, ShippingCalculateResponse, OrderPayload } from '../types';
+import { type Product, type CustomerAddress, type ShippingCalculateResponse, type OrderPayload, isSuperAdminRole, isAdminRole } from '../types';
 import {
   ShoppingBag,
   Package,
@@ -416,7 +416,7 @@ const DELIVERY_SUGGESTIONS = [
 // ─── Hidden routes (only login/auth pages) ─────────────────────────
 
 const HIDDEN_ON_PATHS = [
-  '/login', '/register', '/set-password', '/forgot-password',
+  '/login', '/forgot-password',
 ];
 
 // ─── Asset paths (served from /public) ───────────────────────────
@@ -1632,12 +1632,14 @@ const ChatbotWidgetInner: React.FC = () => {
   };
 
   const canSend = input.trim().length > 0 && !isLoading;
+  const isSuperadmin = isSuperAdminRole(role);
+  const isAdmin = isAdminRole(role);
   const isDelivery = role === 'delivery_boy' || (role as string) === 'delivery' || location.pathname.startsWith('/delivery');
 
   const currentSuggestions =
-    role === 'superadmin'
+    isSuperadmin
       ? SUPERADMIN_SUGGESTIONS
-      : role === 'admin'
+      : isAdmin
         ? ADMIN_SUGGESTIONS
         : isDelivery
           ? DELIVERY_SUGGESTIONS
@@ -1646,9 +1648,9 @@ const ChatbotWidgetInner: React.FC = () => {
             : GUEST_SUGGESTIONS;
 
   const teaserTitle =
-    role === 'superadmin'
+    isSuperadmin
       ? `Welcome, Superadmin ${firstName || displayName}! 📊`
-      : role === 'admin'
+      : isAdmin
         ? `Welcome, Admin ${firstName || displayName}! ⚙️`
         : isDelivery
           ? `Welcome, Delivery Partner ${firstName || displayName}! 🛵`
@@ -1657,9 +1659,9 @@ const ChatbotWidgetInner: React.FC = () => {
             : "Hi, I'm Coco Chatbot! 👋";
 
   const teaserSub =
-    role === 'superadmin'
+    isSuperadmin
       ? "Review today's sales, revenue analytics, or executive reports ✨"
-      : role === 'admin'
+      : isAdmin
         ? "Check live inventory, stock levels, or manage products ✨"
         : isDelivery
           ? "Check your assigned queue, route stops, or OTP handoff ✨"
@@ -1668,9 +1670,9 @@ const ChatbotWidgetInner: React.FC = () => {
             : "Looking for chocolates or need help? Click to chat with me ✨";
 
   const headerTitle =
-    role === 'superadmin'
+    isSuperadmin
       ? 'Coco · Superadmin Analytics'
-      : role === 'admin'
+      : isAdmin
         ? 'Coco · Admin Assistant'
         : isDelivery
           ? 'Coco · Delivery Assistant'
@@ -1678,9 +1680,9 @@ const ChatbotWidgetInner: React.FC = () => {
 
   const headerStatus = isLoading
     ? 'Thinking…'
-    : role === 'superadmin'
+    : isSuperadmin
       ? `Online · Executive Insights for ${firstName || 'you'} 📊`
-      : role === 'admin'
+      : isAdmin
         ? `Online · Store Operations for ${firstName || 'you'} ⚙️`
         : isDelivery
           ? `Online · Dispatch Assistant for ${firstName || 'you'} 🛵`
@@ -1689,9 +1691,9 @@ const ChatbotWidgetInner: React.FC = () => {
             : 'Online · Here to help ✨';
 
   const welcomeHeroBubble =
-    role === 'superadmin'
+    isSuperadmin
       ? `Welcome, Superadmin ${firstName || displayName}! 📊`
-      : role === 'admin'
+      : isAdmin
         ? `Welcome, Admin ${firstName || displayName}! ⚙️`
         : isDelivery
           ? `Welcome, Delivery Partner ${firstName || displayName}! 🛵`
@@ -1700,9 +1702,9 @@ const ChatbotWidgetInner: React.FC = () => {
             : "Welcome to Chovique! 👋";
 
   const welcomeHeroSub =
-    role === 'superadmin'
+    isSuperadmin
       ? "I'm Coco, your executive analytics assistant. Ask me about today's sales, specific date reports (e.g. September 14th sales), or revenue trends directly from the database ✨"
-      : role === 'admin'
+      : isAdmin
         ? "I'm Coco, your store operations assistant. Ask me about live inventory stocks, low-stock alerts, or steps to add new products ✨"
         : isDelivery
           ? "I'm Coco, your delivery fulfillment assistant. Ask me about your assigned queue, route stops, delivery history, or OTP handoff instructions ✨"
@@ -1711,9 +1713,9 @@ const ChatbotWidgetInner: React.FC = () => {
             : "I'm Coco, your personal Chovique chocolate assistant. Ask me anything about our products, orders, or gifts ✨";
 
   const fabTitle =
-    role === 'superadmin'
+    isSuperadmin
       ? `Chat with Coco · Superadmin Analytics (${firstName})`
-      : role === 'admin'
+      : isAdmin
         ? `Chat with Coco · Admin Operations (${firstName})`
         : isDelivery
           ? `Chat with Coco · Delivery Assistant (${firstName})`

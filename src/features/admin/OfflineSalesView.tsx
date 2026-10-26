@@ -35,6 +35,7 @@ import { productService } from '../../services/productService';
 import { Button } from '../../components/ui/Button';
 import { Pagination } from '../../components/ui/Pagination';
 import { exportToCSV } from '../../utils/exportCsv';
+import { isSuperAdminRole } from '../../types';
 
 interface OfflineSalesViewProps {
   addToast: (type: 'success' | 'error' | 'info', message: string, title?: string) => void;
@@ -107,12 +108,12 @@ export const OfflineSalesView: React.FC<OfflineSalesViewProps> = ({ addToast, cu
 
   // Background Role Detection (No visible role toggle button in header)
   const isSuperAdmin = useMemo(() => {
-    if (currentUserRole) return currentUserRole.toLowerCase() === 'superadmin';
+    if (currentUserRole) return isSuperAdminRole(currentUserRole);
     const storedUser = localStorage.getItem('user') || localStorage.getItem('admin_user');
     if (storedUser) {
       try {
         const parsed = JSON.parse(storedUser);
-        if (parsed.role?.toLowerCase() === 'superadmin') return true;
+        if (isSuperAdminRole(parsed.role)) return true;
       } catch (e) {}
     }
     return false;

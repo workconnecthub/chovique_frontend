@@ -54,7 +54,15 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   }
 
   // Authenticated but wrong role → redirect to home
-  if (!allowedRoles.includes(role)) {
+  const userRoleStr = String(role);
+  const normalizedUserRole = userRoleStr === 'super_admin' ? 'superadmin' : userRoleStr === 'delivery_person' ? 'delivery_boy' : userRoleStr;
+  const isAllowed = allowedRoles.some((r) => {
+    const rStr = String(r);
+    const normalizedR = rStr === 'super_admin' ? 'superadmin' : rStr === 'delivery_person' ? 'delivery_boy' : rStr;
+    return rStr === userRoleStr || normalizedR === normalizedUserRole;
+  });
+
+  if (!isAllowed) {
     return <Navigate to="/" replace />;
   }
 

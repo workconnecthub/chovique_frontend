@@ -11,26 +11,52 @@
 import { apiGet, apiPost, setAuthToken, setRefreshToken, getRefreshToken, clearTokens } from '../lib/api';
 import type {
   User,
-  LoginPayload,
-  RegisterPayload,
   AuthResponse,
-  SendOtpPayload,
-  VerifyOtpPayload,
   SendOtpResponse,
-  GoogleAuthResponse,
+  ForgotPasswordPayload,
   ForgotPasswordResponse,
+  ResetPasswordPayload,
+  StaffCheckMobilePayload,
+  StaffCheckMobileResponse,
+  StaffLoginPayload,
+  IdentifyPayload,
+  IdentifyResponse,
 } from '../types';
 
 export const authService = {
   /**
-   * Login — POST /auth/login.
-   * Backend sets httpOnly access + refresh cookies on success and returns tokens.
+   * Unified Single Login: Validate mobile number and determine next authentication step (OTP or Password).
+   * Sends country_code and mobile_number as separate fields: { country_code: '+91', mobile_number: '8074182784' }.
    */
-  login: async (payload: LoginPayload): Promise<AuthResponse> => {
-    const res = await apiPost<AuthResponse>('/auth/login', {
-      email: payload.email,
-      password: payload.password,
-    });
+  identify: async (payloadOrNumber: string | IdentifyPayload): Promise<IdentifyResponse> => {
+    const payload = typeof payloadOrNumber === 'string'
+      ? { country_code: '+91', mobile_number: payloadOrNumber }
+      : {
+          country_code: payloadOrNumber.country_code || '+91',
+          mobile_number: payloadOrNumber.mobile_number || payloadOrNumber.phone || '',
+        };
+    return apiPost<IdentifyResponse>('/auth/identify', payload);
+  },
+
+  /**
+   * Customer OTP: Step 1 — Send OTP to customer mobile number (MSG91).
+   */
+  sendCustomerOtp: async (phone: string): Promise<SendOtpResponse> => {
+    return apiPost<SendOtpResponse>('/auth/customer/send-otp', { phone });
+  },
+
+  /**
+   * Customer OTP: Resend OTP to customer mobile number.
+   */
+  resendCustomerOtp: async (phone: string): Promise<SendOtpResponse> => {
+    return apiPost<SendOtpResponse>('/auth/customer/resend-otp', { phone });
+  },
+
+  /**
+   * Customer OTP: Step 2 — Verify OTP. Auto-creates customer account if new.
+   */
+  verifyCustomerOtp: async (phone: string, otp: string): Promise<AuthResponse> => {
+    const res = await apiPost<AuthResponse>('/auth/customer/verify-otp', { phone, otp });
     if (res?.access_token) {
       setAuthToken(res.access_token);
     }
@@ -41,41 +67,17 @@ export const authService = {
   },
 
   /**
-   * Register — Step 1: POST /auth/register.
-   * Sends OTP to the user's email. No account is created at this point.
+   * Staff Auth: Step 1 — Validate active staff account exists for mobile & role.
    */
-  register: async (payload: RegisterPayload): Promise<SendOtpResponse> => {
-    return apiPost<SendOtpResponse>('/auth/register', {
-      full_name: payload.name,
-      email: payload.email,
-      password: payload.password,
-      confirm_password: payload.confirmPassword,
-    });
+  checkStaffMobile: async (payload: StaffCheckMobilePayload): Promise<StaffCheckMobileResponse> => {
+    return apiPost<StaffCheckMobileResponse>('/auth/staff/check-mobile', payload);
   },
 
   /**
-   * Send OTP — alias for register step (backend sends OTP on /auth/register).
+   * Staff Auth: Step 2 — Authenticate staff with password and verify role.
    */
-  sendOtp: async (payload: SendOtpPayload): Promise<SendOtpResponse> => {
-    return apiPost<SendOtpResponse>('/auth/register', {
-      full_name: payload.name,
-      email: payload.email,
-      password: payload.password,
-      confirm_password: payload.confirmPassword,
-    });
-  },
-
-  /**
-   * Verify 6-digit OTP and complete registration.
-   * Backend sets auth cookies and returns the created User.
-   */
-  verifyOtp: async (payload: VerifyOtpPayload): Promise<AuthResponse> => {
-    const res = await apiPost<AuthResponse>('/auth/verify-otp', {
-      email: payload.email,
-      otp: payload.otp,
-      full_name: payload.fullName,
-      password: payload.password,
-    });
+  staffLogin: async (payload: StaffLoginPayload): Promise<AuthResponse> => {
+    const res = await apiPost<AuthResponse>('/auth/staff/login', payload);
     if (res?.access_token) {
       setAuthToken(res.access_token);
     }
@@ -85,43 +87,61 @@ export const authService = {
     return res;
   },
 
-  /**
-   * Resend registration OTP.
-   */
-  resendOtp: async (email: string): Promise<SendOtpResponse> => {
-    return apiPost<SendOtpResponse>('/auth/resend-otp', { email });
-  },
+
 
   /**
-   * Forgot password — sends reset OTP to email.
+   * Forgot password — sends reset OTP to email or mobile number.
    */
-  forgotPassword: async (email: string): Promise<ForgotPasswordResponse> => {
-    return apiPost<ForgotPasswordResponse>('/auth/forgot-password', { email });
+  forgotPassword: async (identifierOrPayload: string | ForgotPasswordPayload): Promise<ForgotPasswordResponse> => {
+    let payload: ForgotPasswordPayload;
+    if (typeof identifierOrPayload === 'string') {
+      const isEmail = identifierOrPayload.includes('@');
+      payload = isEmail ? { email: identifierOrPayload.trim() } : { phone: identifierOrPayload.replace(/\D/g, '').slice(-10) };
+    } else {
+      payload = identifierOrPayload;
+    }
+    return apiPost<ForgotPasswordResponse>('/auth/forgot-password', payload);
   },
-
 
   /**
    * Resend forgot-password OTP.
    */
-  resendForgotOtp: async (email: string): Promise<ForgotPasswordResponse> => {
-    return apiPost<ForgotPasswordResponse>('/auth/resend-forgot-otp', { email });
+  resendForgotOtp: async (identifierOrPayload: string | ForgotPasswordPayload): Promise<ForgotPasswordResponse> => {
+    let payload: ForgotPasswordPayload;
+    if (typeof identifierOrPayload === 'string') {
+      const isEmail = identifierOrPayload.includes('@');
+      payload = isEmail ? { email: identifierOrPayload.trim() } : { phone: identifierOrPayload.replace(/\D/g, '').slice(-10) };
+    } else {
+      payload = identifierOrPayload;
+    }
+    return apiPost<ForgotPasswordResponse>('/auth/resend-forgot-otp', payload);
   },
 
   /**
    * Reset password using OTP token.
    */
   resetPassword: async (
-    email: string,
+    identifierOrPayload: string | { email?: string; phone?: string },
     otp: string,
     password: string,
     confirmPassword: string
   ): Promise<{ message: string }> => {
-    return apiPost<{ message: string }>('/auth/reset-password', {
-      email,
-      otp,
+    const body: Record<string, string> = {
+      otp: otp.trim(),
       password,
       confirm_password: confirmPassword,
-    });
+    };
+    if (typeof identifierOrPayload === 'string') {
+      if (identifierOrPayload.includes('@')) {
+        body.email = identifierOrPayload.trim();
+      } else {
+        body.phone = identifierOrPayload.replace(/\D/g, '').slice(-10);
+      }
+    } else {
+      if (identifierOrPayload.email) body.email = identifierOrPayload.email.trim();
+      if (identifierOrPayload.phone) body.phone = identifierOrPayload.phone.replace(/\D/g, '').slice(-10);
+    }
+    return apiPost<{ message: string }>('/auth/reset-password', body);
   },
 
   /**
@@ -168,36 +188,7 @@ export const authService = {
     });
   },
 
-  /**
-   * Google Sign-In — exchange a Google id_token for a Chovique session.
-   */
-  googleSignIn: async (idToken: string): Promise<GoogleAuthResponse> => {
-    const res = await apiPost<GoogleAuthResponse>('/auth/google', { id_token: idToken });
-    if (res?.access_token) {
-      setAuthToken(res.access_token);
-    }
-    if (res?.refresh_token) {
-      setRefreshToken(res.refresh_token);
-    }
-    return res;
-  },
 
-  /**
-   * Set password for OAuth / Google users who don't have a password yet — POST /auth/set-password.
-   */
-  setPassword: async (password: string, confirmPassword: string): Promise<AuthResponse> => {
-    const res = await apiPost<AuthResponse>('/auth/set-password', {
-      password,
-      confirm_password: confirmPassword,
-    });
-    if (res?.access_token) {
-      setAuthToken(res.access_token);
-    }
-    if (res?.refresh_token) {
-      setRefreshToken(res.refresh_token);
-    }
-    return res;
-  },
 
   /**
    * Logout — clears server-side session (cookie) and client auth tokens.
@@ -235,6 +226,10 @@ export const authService = {
    * Returns null-equivalent if not authenticated (401 redirects to /login).
    */
   getMe: async (): Promise<User> => {
-    return apiGet<User>('/users/me');
+    try {
+      return await apiGet<User>('/auth/me');
+    } catch {
+      return await apiGet<User>('/users/me');
+    }
   },
 };

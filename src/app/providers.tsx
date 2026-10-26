@@ -15,6 +15,8 @@ import {
   DEFAULT_LANDING_SECTIONS,
   FooterConfig,
   DEFAULT_FOOTER_CONFIG,
+  isSuperAdminRole,
+  isAdminRole,
 } from '../types';
 import { authService } from '../services/authService';
 import { cartService, BackendCartItem } from '../services/cartService';
@@ -80,11 +82,8 @@ interface AppContextType {
   setUser: React.Dispatch<React.SetStateAction<User | null>>;
   role: UserRole;
   isAuthLoading: boolean;
-  login: (email: string, password: string) => Promise<{ success: boolean; error?: string; role?: UserRole }>;
-  googleLogin: (idToken: string) => Promise<{ success: boolean; error?: string; role?: UserRole; user?: User }>;
-  setPassword: (password: string, confirmPassword: string) => Promise<{ success: boolean; error?: string }>;
-  register: (name: string, email: string, password: string, confirmPassword: string) => Promise<{ success: boolean; error?: string }>;
-  verifyOtp: (email: string, otp: string, fullName: string, password: string) => Promise<{ success: boolean; error?: string; status?: number }>;
+  customerOtpLogin: (phone: string, otp: string) => Promise<{ success: boolean; error?: string; role?: UserRole; user?: User }>;
+  staffLogin: (phone: string, password: string, role?: string) => Promise<{ success: boolean; error?: string; role?: UserRole; user?: User }>;
   logout: () => Promise<void>;
 
   // Products
@@ -153,6 +152,7 @@ interface AppContextType {
   updateSupportTicketStatus: (ticketId: string, status: string, adminNotes?: string) => Promise<void>;
   submitTicketFeedback: (ticketId: string, feedback: 'Resolved' | 'Not Resolved') => Promise<void>;
   acknowledgeTicketNotification: (ticketId: string) => void;
+  refreshTickets: () => Promise<void>;
 
   // Profile
   updateUserProfilePicture: (avatarUrl: string) => void;
@@ -486,7 +486,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [wallet, setWallet] = useState<UserWallet | null>(null);
 
   const refreshWallet = useCallback(async () => {
-    if (role === 'guest') return;
+    if (role !== 'customer') {
+      setWallet(null);
+      return;
+    }
     try {
       const res = await walletService.getWallet();
       setWallet(res);
@@ -562,106 +565,62 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  const login = useCallback(
-    async (email: string, password: string): Promise<{ success: boolean; error?: string; role?: UserRole }> => {
+
+  const customerOtpLogin = useCallback(
+    async (phone: string, otp: string): Promise<{ success: boolean; error?: string; role?: UserRole; user?: User }> => {
       try {
-        const response = await authService.login({ email, password });
+        const response = await authService.verifyCustomerOtp(phone, otp);
         const loggedInUser = response.user as User;
         setUser(loggedInUser);
         setRole(loggedInUser.role);
-        
+
         await mergeGuestSession();
         await refreshUserCartAndWishlist();
 
-        return { success: true, role: loggedInUser.role };
+        return { success: true, role: loggedInUser.role, user: loggedInUser };
       } catch (err: unknown) {
-        const message =
-          err instanceof Error ? err.message : 'Login failed. Please check your credentials.';
-        return { success: false, error: message };
-      }
-    },
-    [syncCartFromBackend]
-  );
-
-  const register = useCallback(
-    async (name: string, email: string, password: string, confirmPassword: string): Promise<{ success: boolean; error?: string }> => {
-      try {
-        await authService.register({ name, email, password, confirmPassword });
-        return { success: true };
-      } catch (err: unknown) {
-        const message =
-          err instanceof Error ? err.message : 'Registration failed. Please try again.';
-        return { success: false, error: message };
-      }
-    },
-    []
-  );
-
-  const verifyOtp = useCallback(
-    async (email: string, otp: string, fullName: string, password: string): Promise<{ success: boolean; error?: string; status?: number }> => {
-      try {
-        const response = await authService.verifyOtp({ email, otp, fullName, password });
-        const newUser = response.user as User;
-        setUser(newUser);
-        setRole(newUser.role);
-        
-        await mergeGuestSession();
-        await refreshUserCartAndWishlist();
-
-        return { success: true };
-      } catch (err: unknown) {
-        let message = 'OTP verification failed. Please try again.';
-        let status = 0;
+        let message = 'Verification failed. Please check the OTP and try again.';
         if (err instanceof ApiError) {
           message = err.detail;
-          status = err.status;
         } else if (err instanceof Error) {
           message = err.message;
         }
-        return { success: false, error: message, status };
-      }
-    },
-    [syncCartFromBackend]
-  );
-
-  const googleLogin = useCallback(
-    async (idToken: string): Promise<{ success: boolean; error?: string; role?: UserRole; user?: User }> => {
-      try {
-        const response = await authService.googleSignIn(idToken);
-        if (response.user) {
-          const loggedInUser = response.user as User;
-          setUser(loggedInUser);
-          setRole(loggedInUser.role);
-          
-          await mergeGuestSession();
-          await refreshUserCartAndWishlist();
-
-          return { success: true, role: loggedInUser.role, user: loggedInUser };
-        }
-        return { success: false, error: response.message || 'Google Sign-In failed.' };
-      } catch (err: unknown) {
-        const message = err instanceof Error ? err.message : 'Google Sign-In failed.';
         return { success: false, error: message };
       }
     },
     [syncCartFromBackend]
   );
 
-  const setPassword = useCallback(
-    async (password: string, confirmPassword: string): Promise<{ success: boolean; error?: string }> => {
+  const staffLogin = useCallback(
+    async (phone: string, password: string, staffRole?: string): Promise<{ success: boolean; error?: string; role?: UserRole; user?: User }> => {
       try {
-        const response = await authService.setPassword(password, confirmPassword);
-        if (response.user) {
-          setUser(response.user as User);
-        }
-        return { success: true };
+        const response = await authService.staffLogin({
+          phone,
+          password,
+          role: staffRole ? (staffRole as any) : undefined,
+        });
+        const loggedInUser = response.user as User;
+        setUser(loggedInUser);
+        setRole(loggedInUser.role);
+
+        await mergeGuestSession();
+        await refreshUserCartAndWishlist();
+
+        return { success: true, role: loggedInUser.role, user: loggedInUser };
       } catch (err: unknown) {
-        const message = err instanceof Error ? err.message : 'Failed to set password.';
+        let message = 'Staff authentication failed. Please check your credentials.';
+        if (err instanceof ApiError) {
+          message = err.detail;
+        } else if (err instanceof Error) {
+          message = err.message;
+        }
         return { success: false, error: message };
       }
     },
-    []
+    [syncCartFromBackend]
   );
+
+
 
   const logout = useCallback(async (): Promise<void> => {
     try {
@@ -694,7 +653,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     orderService.getOrders().then((res) => setOrders(res)).catch(() => { });
 
     // Fetch tickets (admin sees all site-wide tickets, user sees personal tickets)
-    if (['admin', 'superadmin'].includes(role)) {
+    if (isAdminRole(role) || isSuperAdminRole(role)) {
       ticketService.getAllTickets().then((res) => setTickets(res)).catch(() => { });
     } else {
       ticketService.getTickets().then((res) => setTickets(res)).catch(() => { });
@@ -720,8 +679,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       })
       .catch(() => { });
 
-    // Fetch wallet
-    refreshWallet();
+    // Fetch wallet (customer accounts only)
+    if (role === 'customer') {
+      refreshWallet();
+    } else {
+      setWallet(null);
+    }
 
   }, [isAuthLoading, role, syncCartFromBackend, refreshWallet]);
 
@@ -1552,7 +1515,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     window.dispatchEvent(new CustomEvent('chovique:theme-updated', { detail: updatedTheme }));
 
-    if (role === 'admin' || role === 'superadmin') {
+    if (isAdminRole(role) || isSuperAdminRole(role)) {
       try {
         const { adminService } = await import('../services/adminService');
         await adminService.updateTheme(updatedTheme);
@@ -1620,6 +1583,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       prev.map((t) => (t.id === ticketId ? { ...t, notified: true } : t))
     );
   };
+
+  const refreshTickets = useCallback(async (): Promise<void> => {
+    try {
+      if (isAdminRole(role) || isSuperAdminRole(role)) {
+        const res = await ticketService.getAllTickets();
+        setTickets(res);
+      } else if (role !== 'guest') {
+        const res = await ticketService.getTickets();
+        setTickets(res);
+      }
+    } catch (err) {
+      console.error('Failed to refresh tickets:', err);
+    }
+  }, [role]);
 
   // ---------------------------------------------------------------------------
   // Profile & Address Operations — wired to userService
@@ -1791,11 +1768,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setUser,
         role,
         isAuthLoading,
-        login,
-        googleLogin,
-        setPassword,
-        register,
-        verifyOtp,
+        customerOtpLogin,
+        staffLogin,
         logout,
 
         // Config
@@ -1841,6 +1815,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         updateSupportTicketStatus,
         submitTicketFeedback,
         acknowledgeTicketNotification,
+        refreshTickets,
         updateUserProfilePicture,
         updateUserProfile,
         addresses,

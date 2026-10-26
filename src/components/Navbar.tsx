@@ -27,6 +27,7 @@ import { useApp } from '../app/providers';
 import { Button } from './ui/Button';
 import { getImageUrl } from '../utils/imageUrl';
 import { NotificationHeaderDropdown } from './NotificationHeaderDropdown';
+import { isSuperAdminRole, isAdminRole } from '../types';
 
 export const Navbar: React.FC = () => {
   const { role, cart, wishlist, logout, user, wallet, notifications, removeNotification } = useApp();
@@ -162,14 +163,9 @@ export const Navbar: React.FC = () => {
           </Link>
 
           {role === 'guest' ? (
-            <>
-              <Button variant="text" size="sm" onClick={() => navigate('/login')}>
-                Sign In
-              </Button>
-              <Button variant="gold" size="sm" onClick={() => navigate('/register')} glow>
-                Register
-              </Button>
-            </>
+            <Button variant="gold" size="sm" onClick={() => navigate('/login')} glow>
+              Sign In
+            </Button>
           ) : role === 'customer' ? (
             <>
 
@@ -293,11 +289,12 @@ export const Navbar: React.FC = () => {
               {/* Admin or Superadmin — Back to Dashboard button */}
               <button
                 onClick={() => {
+                  const isSuperAdmin = isSuperAdminRole(role);
                   const storedReturn = sessionStorage.getItem('chovique_dashboard_return_path');
-                  if (storedReturn) {
+                  if (storedReturn && (isSuperAdmin ? storedReturn.startsWith('/superadmin') : storedReturn.startsWith('/admin'))) {
                     navigate(storedReturn);
                   } else {
-                    navigate(role === 'admin' ? '/admin' : '/superadmin');
+                    navigate(isSuperAdmin ? '/superadmin' : '/admin');
                   }
                 }}
                 className="nav-back-to-dashboard-btn"
@@ -319,7 +316,7 @@ export const Navbar: React.FC = () => {
                   boxShadow: '0 2px 12px rgba(201, 168, 76, 0.3)',
                 }}
               >
-                <span className="hide-on-mobile">← Back to {role === 'admin' ? 'Admin' : 'Superadmin'} Dashboard</span>
+                <span className="hide-on-mobile">← Back to {isSuperAdminRole(role) ? 'Superadmin' : 'Admin'} Dashboard</span>
                 <span className="show-on-mobile">← Dashboard</span>
               </button>
 
@@ -408,22 +405,23 @@ export const Navbar: React.FC = () => {
                 </button>
               )}
 
-              {(role === 'admin' || role === 'superadmin') && (
+              {(isAdminRole(role) || isSuperAdminRole(role)) && (
                 <button
                   type="button"
                   className="mobile-drawer-quick-btn gold"
                   onClick={() => {
                     setMobileMenuOpen(false);
+                    const isSuperAdmin = isSuperAdminRole(role);
                     const storedReturn = sessionStorage.getItem('chovique_dashboard_return_path');
-                    if (storedReturn) {
+                    if (storedReturn && (isSuperAdmin ? storedReturn.startsWith('/superadmin') : storedReturn.startsWith('/admin'))) {
                       navigate(storedReturn);
                     } else {
-                      navigate(role === 'admin' ? '/admin' : '/superadmin');
+                      navigate(isSuperAdmin ? '/superadmin' : '/admin');
                     }
                   }}
                 >
                   <LayoutDashboard size={18} />
-                  <span>Dashboard</span>
+                  <span>{isSuperAdminRole(role) ? 'Superadmin Dashboard' : 'Admin Dashboard'}</span>
                 </button>
               )}
             </div>
@@ -609,20 +607,14 @@ export const Navbar: React.FC = () => {
             {/* 5. Guest Sign In / Register OR Log Out Button */}
             <div className="mobile-drawer-footer-actions">
               {role === 'guest' ? (
-                <div className="mobile-drawer-guest-auth">
+                <div className="mobile-drawer-guest-auth" style={{ display: 'flex', width: '100%' }}>
                   <Link
                     to="/login"
                     className="mobile-drawer-auth-btn signin"
+                    style={{ flex: 1, textAlign: 'center' }}
                     onClick={() => setMobileMenuOpen(false)}
                   >
                     Sign In
-                  </Link>
-                  <Link
-                    to="/register"
-                    className="mobile-drawer-auth-btn register"
-                    onClick={() => setMobileMenuOpen(false)}
-                  >
-                    Register
                   </Link>
                 </div>
               ) : (

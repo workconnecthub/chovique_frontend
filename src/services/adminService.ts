@@ -1543,6 +1543,10 @@ export interface PlatformSettingsRecord {
   order_cancellation_enabled: boolean;
   cancellation_time_limit: number;
   return_refund_enabled: boolean;
+  return_requests_enabled: boolean;
+  return_window_value: number;
+  return_window_unit: string;
+  return_photo_required: boolean;
 
   // System & Security
   maintenance_mode: boolean;
@@ -1552,6 +1556,14 @@ export interface PlatformSettingsRecord {
 
   updated_at: string;
   updated_by?: string | null;
+}
+
+export interface ReturnPolicyRecord {
+  return_requests_enabled: boolean;
+  return_window_value: number;
+  return_window_unit: string;
+  return_window_seconds: number;
+  return_photo_required: boolean;
 }
 
 export type PlatformSettingsUpdatePayload = Omit<
@@ -1571,6 +1583,9 @@ Object.assign(adminService, {
 
   updatePlatformSettings: (payload: PlatformSettingsUpdatePayload): Promise<PlatformSettingsRecord> =>
     apiPut<PlatformSettingsRecord>('/superadmin/platform-settings', payload),
+
+  getReturnPolicy: (): Promise<ReturnPolicyRecord> =>
+    apiGet<ReturnPolicyRecord>('/returns/policy'),
 
   toggleMaintenanceMode: (enable: boolean): Promise<MaintenanceModeResponse> =>
     apiPost<MaintenanceModeResponse>('/superadmin/platform-settings/maintenance-mode', {

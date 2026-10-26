@@ -92,7 +92,7 @@ const handleUnauthorized = (path?: string): void => {
     return;
   }
   const { pathname } = window.location;
-  const publicPages = ['/', '/shop', '/our-story', '/contact', '/product', '/cart', '/wishlist', '/login', '/register', '/forgot-password', '/reset-password', '/verify-otp'];
+  const publicPages = ['/', '/shop', '/our-story', '/contact', '/product', '/cart', '/wishlist', '/login', '/forgot-password', '/reset-password'];
   const isPublicPage = publicPages.some((p) => pathname === p || (p !== '/' && pathname.startsWith(p)));
   if (!isPublicPage) {
     window.location.href = '/login';
@@ -331,8 +331,9 @@ const fetchWithAuth = async (path: string, init: RequestInit & { _isCsrfRetry?: 
   if (
     response.status === 401 && 
     !path.includes('/auth/refresh') && 
-    !path.includes('/auth/login') && 
-    !path.includes('/auth/register') &&
+    !path.includes('/auth/identify') && 
+    !path.includes('/auth/customer/') &&
+    !path.includes('/auth/staff/') &&
     (Boolean(getAuthToken()) || Boolean(getRefreshToken()))
   ) {
     if (!refreshPromise) {
