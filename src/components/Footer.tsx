@@ -167,9 +167,12 @@ export const Footer: React.FC = () => {
           <div className="footer-brand-col">
             <Link to="/" className="footer-brand-header">
               <img 
-                src={getImageUrl(brandLogo)} 
+                src={getImageUrl(brandLogo || '/assets/logo.png')} 
                 alt="Chovique Logo" 
                 className="footer-main-logo" 
+                onError={(e) => {
+                  (e.target as HTMLImageElement).src = '/assets/logo.png';
+                }}
               />
             </Link>
 
@@ -298,12 +301,31 @@ export const Footer: React.FC = () => {
               <div className="payment-badges-row">
                 {activePaymentBadges.map((badge) => (
                   <div key={badge.id} className="payment-badge-pill" title={badge.name}>
-                    <img
-                      src={getImageUrl(badge.image_url)}
-                      alt={badge.name}
-                      className="payment-badge-logo-img"
-                      loading="lazy"
-                    />
+                    {badge.image_url ? (
+                      <img
+                        src={getImageUrl(badge.image_url)}
+                        alt={badge.name}
+                        className={`payment-badge-logo-img ${badge.id === 'pay-3' || badge.name.toLowerCase().includes('upi') ? 'payment-badge-upi' : ''}`}
+                        loading="lazy"
+                        onError={(e) => {
+                          (e.target as HTMLElement).style.display = 'none';
+                          const fallback = (e.target as HTMLElement).nextElementSibling as HTMLElement;
+                          if (fallback) fallback.style.display = 'inline-block';
+                        }}
+                      />
+                    ) : null}
+                    <span
+                      style={{
+                        display: badge.image_url ? 'none' : 'inline-block',
+                        fontSize: '0.65rem',
+                        fontWeight: 700,
+                        color: '#333',
+                        textTransform: 'uppercase',
+                        textAlign: 'center',
+                      }}
+                    >
+                      {badge.name}
+                    </span>
                   </div>
                 ))}
               </div>

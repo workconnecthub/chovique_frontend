@@ -956,7 +956,7 @@ export interface FooterConfig {
 }
 
 export const DEFAULT_FOOTER_CONFIG: FooterConfig = {
-  brand_logo_url: '/assets/popular-bg.jpg',
+  brand_logo_url: '/assets/logo.png',
   brand_description: 'Luxury handmade chocolates crafted with the finest cocoa and pure ingredients.',
   social_links: [
     { id: 'soc-1', platform: 'instagram', name: 'Instagram', url: 'https://instagram.com', is_active: true },

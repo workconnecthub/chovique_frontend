@@ -39,4 +39,10 @@ describe('getImageUrl Utility', () => {
     expect(result).toContain('/api/v1/media/chovique/chocolates/luxury-box.jpg');
     expect(result).not.toContain('storageapi.dev');
   });
+
+  it('preserves frontend public static assets starting with /assets/ or assets/', () => {
+    expect(getImageUrl('/assets/logo.png')).toBe('/assets/logo.png');
+    expect(getImageUrl('assets/payments/razorpay.png')).toBe('/assets/payments/razorpay.png');
+    expect(getImageUrl('/assets/payments/googlepay.png')).toBe('/assets/payments/googlepay.png');
+  });
 });

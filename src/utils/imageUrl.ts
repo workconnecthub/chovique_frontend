@@ -35,6 +35,11 @@ export const getImageUrl = (url?: string | null): string => {
     return url;
   }
 
+  // Frontend public static assets (e.g. /assets/logo.png, /assets/payments/...)
+  if (url.startsWith('/assets/') || url.startsWith('assets/') || url.startsWith('/favicon') || url.startsWith('/vite.svg')) {
+    return url.startsWith('/') ? url : `/${url}`;
+  }
+
   // Relative path starting with / (e.g. /api/v1/media/..., /static/...)
   if (url.startsWith('/')) {
     return `${backendBase}${url}`;
