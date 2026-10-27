@@ -143,7 +143,7 @@ import { formatApiErrorMessage, getStatusFallback } from '../utils/errorUtils';
 export { formatApiErrorMessage };
 
 /** Parse error response from FastAPI into human-friendly ApiError */
-const parseError = async (response: Response): Promise<ApiError> => {
+const parseError = async (response: Response, fallbackMessage?: string): Promise<ApiError> => {
   try {
     const text = await response.text();
     const trimmed = text.trim();
@@ -154,15 +154,16 @@ const parseError = async (response: Response): Promise<ApiError> => {
       );
     }
     const data = JSON.parse(text);
+    const fallback = fallbackMessage || getStatusFallback(response.status);
     const detail = formatApiErrorMessage(
       data.detail !== undefined ? data.detail : data,
-      getStatusFallback(response.status)
+      fallback
     );
     return new ApiError(response.status, detail);
   } catch {
     return new ApiError(
       response.status,
-      getStatusFallback(response.status, response.statusText || 'An unexpected error occurred')
+      fallbackMessage || getStatusFallback(response.status, response.statusText || 'An unexpected error occurred')
     );
   }
 };
@@ -388,8 +389,20 @@ const fetchWithAuth = async (path: string, init: RequestInit & { _isCsrfRetry?: 
   }
 
   if (response.status === 401) {
+    const isAuthRoute =
+      path.includes('/auth/staff/') ||
+      path.includes('/auth/customer/') ||
+      path.includes('/auth/identify') ||
+      path.includes('/auth/login') ||
+      path.includes('/auth/forgot-password') ||
+      path.includes('/auth/reset-password');
+
+    if (isAuthRoute) {
+      throw await parseError(response, 'Invalid credentials. Please check your details and try again.');
+    }
+
     handleUnauthorized(path);
-    throw new ApiError(401, 'Session expired. Please log in again.');
+    throw await parseError(response, 'Session expired. Please log in again.');
   }
 
   if (!response.ok) {
