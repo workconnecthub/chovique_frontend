@@ -304,19 +304,39 @@ export const ForgotPasswordPage: React.FC = () => {
         justifyContent: 'center',
         backgroundColor: '#090706',
         backgroundImage:
-          'radial-gradient(ellipse at 50% 40%, rgba(46, 32, 18, 0.65) 0%, rgba(16, 12, 10, 0.95) 70%, #080605 100%)',
-        padding: '24px 16px',
-        overflow: 'hidden',
+          'radial-gradient(ellipse at 50% 35%, rgba(48, 33, 19, 0.7) 0%, rgba(18, 13, 10, 0.96) 65%, #080605 100%)',
+        padding: 'clamp(70px, 10vh, 90px) 16px clamp(24px, 5vh, 40px)',
+        overflowX: 'hidden',
         boxSizing: 'border-box',
         fontFamily: "'Inter', sans-serif",
       }}
     >
+      {/* Background Circular Geometric Emblem Watermark */}
+      <div
+        style={{
+          position: 'absolute',
+          top: '50%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)',
+          width: 'clamp(580px, 95vw, 780px)',
+          height: 'clamp(580px, 95vw, 780px)',
+          backgroundImage: 'url(/assets/dashboard-watermark.png)',
+          backgroundSize: 'contain',
+          backgroundPosition: 'center',
+          backgroundRepeat: 'no-repeat',
+          opacity: 0.38,
+          pointerEvents: 'none',
+          zIndex: 0,
+          filter: 'drop-shadow(0 0 35px rgba(212, 175, 55, 0.3))',
+        }}
+      />
+
       {/* Top Left "BACK TO LOGIN" Button */}
       <div
         style={{
           position: 'absolute',
-          top: '28px',
-          left: '28px',
+          top: 'clamp(16px, 3vh, 28px)',
+          left: 'clamp(16px, 3vw, 28px)',
           zIndex: 10,
         }}
       >
@@ -326,27 +346,30 @@ export const ForgotPasswordPage: React.FC = () => {
             display: 'inline-flex',
             alignItems: 'center',
             gap: '8px',
-            padding: '8px 18px',
+            padding: 'clamp(6px, 1.5vw, 8px) clamp(12px, 3vw, 18px)',
             borderRadius: '9999px',
-            background: 'rgba(18, 14, 11, 0.65)',
-            border: '1px solid rgba(212, 175, 55, 0.65)',
+            background: 'rgba(22, 16, 12, 0.55)',
+            border: '1px solid rgba(212, 175, 55, 0.5)',
             color: '#ECC56C',
-            fontSize: '0.78rem',
+            fontSize: 'clamp(0.72rem, 1.8vw, 0.78rem)',
             fontWeight: 600,
             letterSpacing: '0.12em',
             textDecoration: 'none',
             textTransform: 'uppercase',
             transition: 'all 0.2s ease',
-            backdropFilter: 'blur(8px)',
-            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.4)',
+            backdropFilter: 'blur(12px)',
+            WebkitBackdropFilter: 'blur(12px)',
+            boxShadow: '0 4px 15px rgba(0, 0, 0, 0.45)',
           }}
           onMouseEnter={(e) => {
             e.currentTarget.style.borderColor = '#ECC56C';
             e.currentTarget.style.boxShadow = '0 0 16px rgba(236, 197, 108, 0.35)';
+            e.currentTarget.style.background = 'rgba(32, 24, 18, 0.75)';
           }}
           onMouseLeave={(e) => {
-            e.currentTarget.style.borderColor = 'rgba(212, 175, 55, 0.65)';
-            e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.4)';
+            e.currentTarget.style.borderColor = 'rgba(212, 175, 55, 0.5)';
+            e.currentTarget.style.boxShadow = '0 4px 15px rgba(0, 0, 0, 0.45)';
+            e.currentTarget.style.background = 'rgba(22, 16, 12, 0.55)';
           }}
         >
           <ArrowLeft size={14} color="#ECC56C" />
@@ -354,7 +377,7 @@ export const ForgotPasswordPage: React.FC = () => {
         </Link>
       </div>
 
-      {/* Brand Header: Cocoa Pod Icon + CHOVIQUE + PREMIUM CHOCOLATES */}
+      {/* Brand Header: Official Logo + CHOVIQUE + PREMIUM CHOCOLATES */}
       <div
         style={{
           position: 'relative',
@@ -362,54 +385,42 @@ export const ForgotPasswordPage: React.FC = () => {
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
-          marginBottom: '28px',
+          marginBottom: 'clamp(20px, 4vh, 28px)',
         }}
       >
-        {/* Cocoa Pod Geometric Emblem SVG */}
-        <div style={{ marginBottom: '10px' }}>
-          <svg
-            width="52"
-            height="52"
-            viewBox="0 0 64 64"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-            style={{ filter: 'drop-shadow(0 0 10px rgba(236, 197, 108, 0.3))' }}
-          >
-            <path
-              d="M32 6C20 6 12 18 12 32C12 46 22 58 32 58C42 58 52 46 52 32C52 18 44 6 32 6Z"
-              stroke="#ECC56C"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-            <path
-              d="M32 6V58M23 11C18 20 18 44 23 53M41 11C46 20 46 44 41 53"
-              stroke="#ECC56C"
-              strokeWidth="1.5"
-              strokeLinecap="round"
-              strokeDasharray="2 3"
-            />
-            <path
-              d="M32 6C30 2 36 -1 42 2C42 8 36 6 32 6Z"
-              stroke="#ECC56C"
-              strokeWidth="1.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              fill="rgba(236, 197, 108, 0.15)"
-            />
-          </svg>
+        {/* Official Chovique Geometric Emblem Logo */}
+        <div
+          style={{
+            marginBottom: '12px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <img
+            src="/assets/logo.png"
+            alt="Chovique Logo"
+            style={{
+              width: 'clamp(54px, 12vw, 64px)',
+              height: 'clamp(54px, 12vw, 64px)',
+              objectFit: 'contain',
+              borderRadius: '50%',
+              filter: 'drop-shadow(0 4px 14px rgba(236, 197, 108, 0.35))',
+            }}
+          />
         </div>
 
         <h1
           style={{
             margin: 0,
             fontFamily: "'Playfair Display', 'Cinzel', serif",
-            fontSize: '1.85rem',
-            letterSpacing: '0.28em',
+            fontSize: 'clamp(1.5rem, 5vw, 1.85rem)',
+            letterSpacing: 'clamp(0.2em, 2vw, 0.28em)',
             color: '#ECC56C',
             fontWeight: 600,
             textTransform: 'uppercase',
-            textShadow: '0 2px 10px rgba(0, 0, 0, 0.7)',
+            textAlign: 'center',
+            textShadow: '0 2px 10px rgba(0, 0, 0, 0.8)',
           }}
         >
           C H O V I Q U E
@@ -417,30 +428,33 @@ export const ForgotPasswordPage: React.FC = () => {
         <span
           style={{
             marginTop: '4px',
-            fontSize: '0.68rem',
-            letterSpacing: '0.32em',
+            fontSize: 'clamp(0.62rem, 1.8vw, 0.68rem)',
+            letterSpacing: 'clamp(0.24em, 1.5vw, 0.32em)',
             color: '#C9A84C',
             fontWeight: 500,
             textTransform: 'uppercase',
+            textAlign: 'center',
           }}
         >
           PREMIUM CHOCOLATES
         </span>
       </div>
 
-      {/* Gold-Outlined Card */}
+      {/* Gold-Outlined Card (Glassmorphic) */}
       <div
         style={{
           position: 'relative',
           zIndex: 1,
           width: '100%',
-          maxWidth: '470px',
-          background: 'rgba(16, 12, 9, 0.92)',
-          border: '1.5px solid rgba(212, 175, 55, 0.78)',
-          borderRadius: '24px',
-          padding: '40px 36px',
-          boxShadow: '0 25px 60px rgba(0, 0, 0, 0.85), 0 0 35px rgba(212, 175, 55, 0.12)',
-          backdropFilter: 'blur(16px)',
+          maxWidth: '460px',
+          background: 'linear-gradient(135deg, rgba(24, 18, 14, 0.28) 0%, rgba(12, 9, 7, 0.18) 100%)',
+          border: '1.2px solid rgba(212, 175, 55, 0.55)',
+          borderRadius: 'clamp(18px, 4vw, 24px)',
+          padding: 'clamp(28px, 6vw, 40px) clamp(18px, 5vw, 36px)',
+          boxShadow:
+            '0 25px 60px rgba(0, 0, 0, 0.65), 0 0 35px rgba(212, 175, 55, 0.15), inset 0 1px 1px rgba(255, 235, 175, 0.35), inset 0 -1px 1px rgba(0, 0, 0, 0.3)',
+          backdropFilter: 'blur(8px) saturate(160%)',
+          WebkitBackdropFilter: 'blur(8px) saturate(160%)',
           boxSizing: 'border-box',
         }}
       >
