@@ -432,6 +432,32 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
   box-shadow: 0 12px 30px rgba(0, 0, 0, 0.45), 0 0 20px rgba(var(--gold-rgb), 0.15);
 }
 
+.cart-item-image-link {
+  display: block;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.cart-item-image-link:hover {
+  border-color: var(--gold) !important;
+  box-shadow: 0 6px 20px rgba(var(--gold-rgb), 0.4) !important;
+}
+
+.cart-item-image-link:hover img {
+  transform: scale(1.08);
+}
+
+.cart-item-title-link {
+  text-decoration: none;
+  color: inherit;
+  display: inline-block;
+}
+
+.cart-item-title-link:hover .cart-item-title,
+.cart-item-title:hover {
+  color: var(--gold) !important;
+}
+
 .cart-summary {
   padding: 24px;
   background: var(--product-card-bg, rgba(26, 18, 13, 0.75));

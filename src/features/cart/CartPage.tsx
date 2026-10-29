@@ -278,26 +278,86 @@ export const CartPage: React.FC = () => {
                 }}
               >
                 {/* Product image */}
-                <div style={{ width: '100px', height: '100px', borderRadius: '8px', overflow: 'hidden', border: '1px solid rgba(var(--gold-rgb), 0.25)', boxShadow: '0 4px 12px rgba(0,0,0,0.3)', flexShrink: 0 }}>
+                <Link
+                  to={`/product/${item.product.id}`}
+                  className="cart-item-image-link"
+                  title={`View details for ${item.product.name}`}
+                  aria-label={`View details for ${item.product.name}`}
+                  style={{
+                    width: '100px',
+                    height: '100px',
+                    borderRadius: '8px',
+                    overflow: 'hidden',
+                    border: '1px solid rgba(var(--gold-rgb), 0.25)',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+                    flexShrink: 0,
+                    display: 'block',
+                    cursor: 'pointer',
+                    textDecoration: 'none',
+                    transition: 'border-color 0.25s ease, box-shadow 0.25s ease',
+                  }}
+                >
                   <img
                     src={getImageUrl(item.product.image)}
                     alt={item.product.name}
-                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.35s ease' }}
                     onError={(e) => {
                       (e.target as HTMLImageElement).src =
                         'https://images.unsplash.com/photo-1548907040-4d42b52115ca?auto=format&fit=crop&w=200&q=80';
                     }}
                   />
-                </div>
+                </Link>
 
                 {/* Details */}
-                <div>
-                  <h3 style={{ fontSize: '1.15rem', color: 'var(--product-card-text, var(--cream))', fontWeight: 600, margin: '0 0 6px 0' }}>
-                    {item.product.name}
-                  </h3>
-                  <span style={{ fontSize: '0.8rem', color: 'var(--gold)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                    {item.product.weight} · {item.product.category}
-                  </span>
+                <div style={{ minWidth: 0, display: 'flex', flexDirection: 'column' }}>
+                  <Link
+                    to={`/product/${item.product.id}`}
+                    className="cart-item-title-link"
+                    title={`View details for ${item.product.name}`}
+                    style={{
+                      textDecoration: 'none',
+                      color: 'inherit',
+                      display: 'inline-block',
+                      maxWidth: '100%',
+                    }}
+                  >
+                    <h3
+                      className="cart-item-title"
+                      style={{
+                        fontSize: '1.15rem',
+                        color: 'var(--product-card-text, var(--cream))',
+                        fontWeight: 600,
+                        margin: '0 0 6px 0',
+                        cursor: 'pointer',
+                        transition: 'color 0.2s ease',
+                      }}
+                    >
+                      {item.product.name}
+                    </h3>
+                  </Link>
+                  <Link
+                    to={`/product/${item.product.id}`}
+                    style={{
+                      textDecoration: 'none',
+                      display: 'inline-block',
+                      width: 'fit-content',
+                    }}
+                    title={`View details for ${item.product.name}`}
+                    tabIndex={-1}
+                  >
+                    <span
+                      style={{
+                        fontSize: '0.8rem',
+                        color: 'var(--gold)',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.5px',
+                        cursor: 'pointer',
+                        transition: 'opacity 0.2s ease',
+                      }}
+                    >
+                      {item.product.weight} · {item.product.category}
+                    </span>
+                  </Link>
                 </div>
 
                 {/* Quantity Controls */}
